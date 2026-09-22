@@ -1,0 +1,20 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+# results tree: nothing tracked except the placeholders. Numbers reach the ledger only via a
+# fail-closed summarizer, never by committing artifacts. results/fstar is a seal artifact root
+# (config/seal.toml) and must exist in a fresh clone, so the directory is un-ignored and its
+# contents re-ignored one level down (see linear-ceiling's .gitignore for the reasoning).
+results/*
+!results/.gitkeep
+!results/fstar
+results/fstar/*
+!results/fstar/.gitkeep
+# mappers (the MAPPED arm, appendix only) is also a seal artifact root; same pattern.
+mappers/*
+!mappers/.gitkeep
+# KV dumps and model snapshots: acquired locally, never committed
+dumps/
+data/

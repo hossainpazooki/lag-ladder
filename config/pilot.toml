@@ -1,0 +1,28 @@
+# The (A)-only pilot: f*(tau_K) on the OLMo-2 RLVR1 revisions (design doc §9 step 3).
+#
+# UNREGISTERED. Every value below is the design doc's proposal, carried here so the loader has
+# something to validate; `registered_by` is empty until a numbered ledger entry fixes them, and the
+# pilot driver (not yet written) must refuse to run while it is empty. tau_K and the ladder are
+# inherited from linear-ceiling entry 0023 (see ledger entry 0001), not recalibrated.
+[pilot]
+source = "allenai/OLMo-2-0425-1B-RLVR1"
+base = "allenai/OLMo-2-0425-1B-DPO"
+# 13 `step_*` branches at stride 200 (verified 2026-09-02 in the 09-02 design); `main` is NOT a lag point.
+revisions = ["step_200", "step_400", "step_600", "step_800", "step_1000", "step_1200", "step_1400",
+             "step_1600", "step_1800", "step_2000", "step_2200", "step_2400", "step_2600"]
+stride_steps = 200
+anchors = ["step_200", "step_1200"]
+results_dir = "results/fstar"
+upstream_path = "../kv-transfer-replication"
+# The commit that gives kvt/pairs.py::Pair a revision field (design §9 step 2). Pinned by the
+# registering entry; the gate refuses the placeholder by name.
+upstream_sha = "UPSTREAM_SHA_PENDING"
+seed = 0
+registered_by = ""
+
+[pilot.rule]
+statistic = "median over held-out sequences of the oracle selective-recompute fraction f*(tau_K) on the K read-out"
+tau_K = 0.3186
+tau_ladder = [0.3186, 0.10, 0.03]
+holds_max = 0.15
+degrades_min = 0.50

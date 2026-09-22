@@ -1,0 +1,38 @@
+name: ci
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # seal immutability check and the ledger block-diff read history
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: pytest -q
+      - run: python -m lag_ladder.seal verify
+      - run: python -m lag_ladder.lint_scope
+      # Structure, chain, verdict-cell provenance; blocks vs HEAD (trivial in CI).
+      - run: python -m lag_ladder.ledger_check
+      # Block diff against the base of this push / pull request: every entry block committed at
+      # the base must be byte-identical now. An unreadable base (force-push) FAILS, never skips.
+      # A squash-merge shows the PR's net change only -- see ledger_check's docstring.
+      - name: ledger blocks unchanged vs base
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            BASE="$PR_BASE"
+          elif [ -n "$BEFORE" ] && ! echo "$BEFORE" | grep -qE '^0+$'; then
+            BASE="$BEFORE"
+          else
+            BASE="HEAD~1"
+          fi
+          echo "base revision: $BASE"
+          python -m lag_ladder.ledger_check --against "$BASE"

@@ -1,0 +1,23 @@
+# Seal protocol configuration. Paths are relative to the repo root; "${upstream}" expands to
+# upstream_path. A "pair" here is writer -> reader: the checkpoint that wrote the cache and the one
+# that reads it (e.g. olmo2-1b-rlvr1-step200-to-step400).
+predictions_dir = "ledger/predictions"
+upstream_path = "../kv-transfer-replication"
+
+# Every root below MUST exist when a prediction is written (the writer fails closed on a missing
+# root). The CI verifier checks hashes and immutability only and does not consult roots.
+[[artifact_roots]]
+path = "results/fstar"
+pattern = "{pair}/**/report.json"
+
+[[artifact_roots]]
+path = "mappers"
+pattern = "{pair}/**/k*.safetensors"
+
+[[artifact_roots]]
+path = "${upstream}/mappers"
+pattern = "{pair}/**/k*.safetensors"
+
+[[artifact_roots]]
+path = "${upstream}/results/mapper"
+pattern = "{pair}/**/r2.json"
