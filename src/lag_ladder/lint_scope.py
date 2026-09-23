@@ -17,7 +17,11 @@ SCOPE_SENTENCE = ("The ladder measures what a KV cache written under one policy 
 
 # Verbatim source documents: committed exactly as authored. They must not be edited to dodge this lint,
 # so they are exempted by exact filename instead of relying on the paraphrase heuristic to spare them.
-EXEMPT = {"docs/2026-09-19-holdover-design.md"}
+EXEMPT = {
+    "docs/2026-09-19-holdover-design.md",
+    # quotes the sentence the lint flagged, as evidence; exempt by exact name, never by directory
+    "docs/learnings/2026-09-22-scope-lint-flags-a-casual-restatement-of-what-the-repo-measures.md",
+}
 
 _SENTENCE_BOUNDARY = r"(?<=[.!?])\s+"
 
