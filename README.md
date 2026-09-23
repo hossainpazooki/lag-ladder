@@ -1,6 +1,7 @@
 # lag-ladder
 
-**Holdover** — what happens to a language model's KV cache when the weights change underneath it.
+**Holdover: The Shelf Life of a KV Cache Across Policy Updates** (working title) — what happens to a
+language model's KV cache when the weights change underneath it.
 
 ## The situation, in one picture
 

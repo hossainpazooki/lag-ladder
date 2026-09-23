@@ -1,7 +1,10 @@
 # Holdover — a KV cache held over a weight update (async RL on the weights axis)
 
-**Working title:** *Holdover* (pairs with *Carryover*: a cache carried across a change of context; a
-holdover is one held over a weight update). **Repo:** `hossainpazooki/lag-ladder`, package `lag_ladder`
+**Working title (2026-09-23):** *Holdover: The Shelf Life of a KV Cache Across Policy Updates* (pairs
+with *Carryover: The Reuse Margin of a Stale KV Cache* — a cache carried across a change of context; a
+holdover is one held over a weight update; "Weight Syncs" for an MLSys audience, "Policy Updates" for
+ARR/ICML). Fallback if the tail shows nothing: *Holdover: Stale KV Caches in Asynchronous RL, from One
+Update to Thousands*. **Repo:** `hossainpazooki/lag-ladder`, package `lag_ladder`
 — named for the instrument, not the claim, so it survives a reframing and does not lead a reviewer from
 the title to the repo. Both locked 2026-09-20; the repo was scaffolded 2026-09-22 (§11) and this document
 lives there.
