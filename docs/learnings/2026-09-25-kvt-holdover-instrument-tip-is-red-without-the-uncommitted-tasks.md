@@ -1,0 +1,9 @@
+# The pushed `holdover-instrument` tip is red on its own: the two committed tasks depend on the two uncommitted ones
+
+ts: 2026-09-25T04:30:32Z
+commit: 04169c6abbb7fb01e1b0818192e8ef11442b6330
+session: claude-code session 77a5d0ae-ac85-4e14-8091-8829150e0696 ("Holdover ARR design & experiments"), session close; independently checks the kv-transfer-replication session's own brief (`kv-transfer-replication/docs/handoff/2026-09-25-holdover-instrument.md`, "BROKEN TREES")
+status: verified
+fact: kv-transfer-replication branch `holdover-instrument` at `47bdd39` (pushed) fails its own suite when checked out alone: the `--probe` test in `tests/test_scripts.py` fails because the committed `scripts/dump_kv.py` uses `DTYPES` / `Pair.resolve` / `load_dtype` that live in the six uncommitted files of tasks 1 and 3. The working tree with those six files is 165 passed. So "pushed" here means "pushed, not green"; a fresh clone of the branch, or CI on it, is red until tasks 1 + 3 land as a forward commit. Pushed history is not rewritten (global git rule); the repair is one more commit, after which the tip is green and the intermediate commits stay broken in history, documented in that repo's brief.
+basis: `git worktree add <scratch> 47bdd39 && python -m pytest -q -x` in the worktree → `FAILED tests/test_scripts.py::test_dump_kv_probe_records_device_dtype_attn_and_peak` … `1 failed, 141 passed in 25.61s` (stopped at first failure; the other session reports `1 failed, 156 passed` on the same tip without `-x`); `git status --short | wc -l` in the real checkout → `9` (six ` M` task files plus untracked); worktree removed afterwards (captured 2026-09-25T04:30Z; lag-ladder HEAD 04169c6 is this repo's anchor, the fact is about the instrument branch).
+re-verify: git -C ~/dev/kv-transfer-replication log --oneline -1 holdover-instrument; git -C ~/dev/kv-transfer-replication status --short
