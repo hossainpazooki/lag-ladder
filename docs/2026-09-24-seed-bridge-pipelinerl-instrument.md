@@ -27,10 +27,9 @@ edit PipelineRL (a fork with additive config only, if at all — §3 G3); never 
 (output commit commands). Every upstream change lands as a commit the operator makes, then a re-pin
 here by a numbered ledger entry (`UPSTREAM.md` §1).
 
-Precondition the operator has **not** ruled on (2026-09-24): whether kv-transfer-replication stays the
-instrument for statistic (A) only (recommended) or is ported into `lag_ladder/`. This seed assumes
-**(A) only**; if the ruling is "port", §3 G4–G6 become `lag_ladder/` work and the pin clause of ledger
-0001 is superseded by a new entry first.
+Precondition, **ruled 2026-09-24** (ledger entry 0002, verbatim): "kv-transfer-replication stays the
+instrument for (A) only." G1, G3, G4, G5 are upstream-branch work; G6 (the Fig. 7 companion to (B))
+and everything for (C) are `lag_ladder/` work.
 
 ## 2. What is established (re-verify before building; nothing below is to be trusted from this file)
 

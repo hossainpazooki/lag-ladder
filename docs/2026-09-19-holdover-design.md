@@ -281,6 +281,9 @@ Ruled 2026-09-22 (operator, via the four-question pick; option text quoted as pi
 - **R8 — checkpoint producer: "OLMo only for now."** §6; the own run and its producer wait on the pilot.
 - **R9 — scope today: "Doc + scaffold lag-ladder."** §11; the design doc moves to the new repo.
 - **Names (2026-09-20):** paper *Holdover*, repo `lag-ladder`, package `lag_ladder`.
+- **R10 — instrument scope (2026-09-24): "kv-transfer-replication stays the instrument for (A) only."**
+  Ledger entry 0002. (B)'s log-prob scorer and (C)'s swap scorer are built in `src/lag_ladder/`; the
+  upstream still needs the `Pair` revision field and the bridge items G1/G4/G5 (seed 2026-09-24).
 
 Open, with the recommendation on record (unruled; a recommendation is not a ruling):
 
@@ -302,7 +305,8 @@ Open, with the recommendation on record (unruled; a recommendation is not a ruli
   `{sourceRepo: linear-ceiling, filePath, commitSha}`. GPU protocol linked, not copied.
 - Ledger starts at 0001; 0001 cites linear-ceiling entry 0023 for f* and τ_K by `{repo, entry, sha}`.
 - Two upstreams in `UPSTREAM.md`: the **instrument** `kv-transfer-replication` (pinned as now; needs
-  the `Pair` revision field and the swap scorer for (C)) and the **checkpoint producer** — the author's
+  the `Pair` revision field; **statistic (A) only, by R10** — the (B) and (C) scorers live here) and the
+  **checkpoint producer** — the author's
   `ServiceNow/PipelineRL` (Apache-2.0) through a fork whose only changes are additive config; the gate
   records both shas and asserts trainer paths unchanged from the author sha. Checked 2026-09-20: the
   author repo's code search has no `recompute` / `kv_cache` / `reset_prefix_cache` hit (default branch

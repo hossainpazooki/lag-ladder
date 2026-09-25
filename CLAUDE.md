@@ -7,7 +7,8 @@ from the title to it.
 
 ## Rules that override nothing global but must never be broken here
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never
-  `import kvt`, never copy its code. Borrowed facts carry `{sourceRepo, filePath, commitSha}`.
+  `import kvt`, never copy its code. Borrowed facts carry `{sourceRepo, filePath, commitSha}`. It is the
+  instrument for **statistic (A) only** (ledger 0002); the (B) and (C) scorers are built here.
 - The chassis is **copied from linear-ceiling, not shared**. Do not import from it or symlink to it;
   a change there is not a change here until an entry says so.
 - Never write a number into the ledger that was not recomputed from `results/` by a summarizer.
