@@ -91,3 +91,38 @@ operator's local machine (seed G4).
 
 **Consequences recorded elsewhere in this commit set:** design doc §10 (R10) and §11; `UPSTREAM.md`
 §1 scope line; `CLAUDE.md` rules; seed §1 precondition marked ruled.
+
+### 0003 — 2026-09-30 — Re-pin: instrument at 9ca6258 (Pair revision/local_path, device(), --dtype, CI)
+
+prior-entries-sha256: b5e0ecf0f2a7201665f4c86aa1eec37fdaeb2ac2ae187672548092424773bdcc
+
+**What it fixes.** `INSTRUMENT_SHA` moves from `063f4023fdde67dedbee01a92518ce7f83f6cf5d` to
+`9ca6258c91acf5c43b74026a7cc3649d61165104` — kv-transfer-replication `main` after the operator's
+fast-forward of `holdover-instrument` (commits e54c102, 47bdd39, 8b72f19, 9ca6258). This is the
+re-pin entry 0002 and `UPSTREAM.md` §1 reserved for "the entry that lands `kvt/pairs.py::Pair`'s
+revision / local-path field" (design §9 step 2).
+
+**What the pin now carries, on the (A) paths.** `Pair.with_revision` / `with_local_path` /
+`resolve(which)`; `dump_kv` records `revision`, `local_path`, `load_dtype` in meta.json (the nine
+prior keys unchanged); `kvt.models.device()` prefers cuda, mps, cpu with `KVT_DEVICE` override;
+`--dtype` on the dump (K/V stay float16 on disk); `kvt-dump` / `kvt-score-positions` entry points;
+`--probe`; a CI workflow. `scripts/score_positions.py` and `kvt/pertoken.py` are byte-identical to
+063f402, so f*(τ_K) is still computed by the bytes linear-ceiling 0023 defined it with.
+
+**Basis.** Upstream suite 165 passed at 8b72f19 and 9ca6258 (CI run 36094690258 green on 8b72f19;
+local run 2026-09-27 and 2026-09-30); `git diff --stat 063f402 9ca6258 -- scripts/score_positions.py
+kvt/pertoken.py` is empty (re-run 2026-09-30 by the appending session: empty; `origin/main` =
+`origin/holdover-instrument` = 9ca6258; `git status --porcelain -- kvt scripts` empty; 9ca6258 is
+docs-only over 8b72f19); e54c102 and 47bdd39 are individually broken trees (ImportError DTYPES),
+documented in the upstream brief `docs/handoff/2026-09-25-holdover-instrument.md` — the pin is the
+tip, never an intermediate.
+
+**What it does not change.** τ_K = 0.3186 and the ladder (0001); R10 scope (0002); `config/pilot.toml`
+stays UNREGISTERED with `upstream_sha = "UPSTREAM_SHA_PENDING"` — the registering entry fills it.
+Not in this pin: kv-transfer-replication PR #2 (G3 checkpoint manifests, per-side `ModelRef`),
+which conflicts with this branch in four files and awaits the operator's design ruling; it will be
+a later entry.
+
+**Consequences in this commit set:** `src/lag_ladder/__init__.py::INSTRUMENT_SHA`; `UPSTREAM.md` §1
+pinned-commit line and its re-pin sentence; design §6 "fork" sentence amended per the 2026-09-25
+checkpoint-config learning (handoff 2026-09-25 named this for the same commit).

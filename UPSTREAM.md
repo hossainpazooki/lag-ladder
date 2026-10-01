@@ -6,11 +6,12 @@ every sha below; `tests/test_imports.py` asserts this file names exactly those s
 ## 1. Instrument for statistic (A) only — `kv-transfer-replication` (invoked, never imported; ledger 0002)
 
 - Repo: https://github.com/hossainpazooki/kv-transfer-replication
-- Pinned commit: `063f4023fdde67dedbee01a92518ce7f83f6cf5d` — its HEAD on 2026-09-22, which is also
-  linear-ceiling's entry-0036 pin ("RoPE spec from the model's rotary embedding"). Re-pin by the ledger
-  entry that lands `kvt/pairs.py::Pair`'s revision / local-path field (design §9 step 2) and, later, the
-  swap scorer for statistic (C); the operator records each new sha here and in `config/*.toml` after
-  committing upstream. Scope (ruled 2026-09-24, entry 0002): the dump writer and the per-token scorer
+- Pinned commit: `9ca6258c91acf5c43b74026a7cc3649d61165104` — `main` after the operator's fast-forward of
+  `holdover-instrument` (ledger 0003, 2026-09-30): `Pair.revision` / `local_path`, `device()` with mps,
+  `--dtype`, `--probe`, console entry points, CI. The prior pin (linear-ceiling's entry-0036 pin, "RoPE
+  spec from the model's rotary embedding") is named in ledger 0001/0003; `scripts/score_positions.py` and
+  `kvt/pertoken.py` are byte-identical to it. Later re-pins come by numbered entry (PR #2's G3 checkpoint
+  interface; the operator records each new sha here and in `config/*.toml` after committing upstream. Scope (ruled 2026-09-24, entry 0002): the dump writer and the per-token scorer
   for statistic (A). Statistic (B)'s log-prob scorer and (C)'s swap scorer are `src/lag_ladder/` code.
 - Local path (used by `config/seal.toml` as `${upstream}`): `../kv-transfer-replication`
 - Rule: nothing in this repo writes into the upstream tree, imports `kvt`, or copies its code. Dumping,

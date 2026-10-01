@@ -223,9 +223,10 @@ per-prompt task flips is descriptive.
   200–2400 (base `OLMo-2-0425-1B-DPO`; `main` is not a lag point — 09-02 design pick-up). Under the
   prefix-persistence framing (§1) this tail is engine-relevant, not "decides nothing". Needs the upstream
   `Pair` revision field before the first dump.
-- **Own run — deferred.** Producer options, in order of preference once the pilot shows signal: a fork of
-  the author's `ServiceNow/PipelineRL` (real in-flight updates; 4×H100 minimum documented, Linux, conda +
-  flash-attn; per-step checkpoint saving unverified; not fundable on the 09-18 RunPod balance), else a
+- **Own run — deferred.** Producer options, in order of preference once the pilot shows signal: the
+  author's `ServiceNow/PipelineRL` unmodified (real in-flight updates; 4×H100 minimum documented, Linux,
+  conda + flash-attn; per-step checkpoints are config — `save_checkpoint_steps` / `also_save_steps`,
+  learning 2026-09-25 — so no fork is needed; not fundable on the 09-18 RunPod balance), else a
   single-GPU GRPO loop stated as a limitation. If run: Qwen3-0.6B, GRPO on GSM8K train, full-weight, a
   checkpoint every optimizer step to **step 40**; lags 1–8, 10, 12, 20 and **32** from anchor step 8 (= step
   40; the 09-19 text listed lag 40 from step 8, which needs step 48 — dropped; 12 and 32 added per §2). Add
