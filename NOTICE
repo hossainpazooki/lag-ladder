@@ -1,0 +1,16 @@
+lag-ladder
+Copyright 2026 Hossain Pazooki
+
+Licensed under the Apache License, Version 2.0. See LICENSE.
+
+------------------------------------------------------------------------
+
+The chassis modules under src/lag_ladder/ (hashing, rng, seal and
+upstream_gate verbatim; config, ledger_check and lint_scope adapted) are
+copied from the same author's linear-ceiling repository at the commit named
+in UPSTREAM.md.
+
+The measurement instrument, kv-transfer-replication, is invoked at the commit
+pinned in UPSTREAM.md; no code from it is included in this repository.
+
+No third-party material is included.

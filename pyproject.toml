@@ -3,6 +3,8 @@ name = "lag-ladder"
 version = "0.0.1"
 description = "Holdover: ledger, seal and gates for measuring a KV cache held over a weight update, as a function of policy lag"
 requires-python = ">=3.12,<3.13"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 dependencies = [
     "numpy>=1.26",
 ]
@@ -11,7 +13,7 @@ dependencies = [
 dev = ["pytest>=8"]
 
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]      # the first release that reads an SPDX license string
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
