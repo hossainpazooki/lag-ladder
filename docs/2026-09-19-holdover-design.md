@@ -41,8 +41,18 @@ system prompt, tool schema or few-shot block sits in the engine's prefix cache a
 something invalidates it, so its lag is unbounded (this is exactly SkyRL #2246's mechanism). Under that
 reading the long ladder is the engine-relevant result, the 8-shot condition is primary, and the OLMo tail
 is the main event rather than a descriptive appendix. The in-flight reading survives as the short end of
-the same ladder. Prior-art search for this framing specifically: **not yet run** (the 09-20 search asked
-the in-flight question); it is the first item of §9.
+the same ladder. Prior-art search for this framing, run 2026-10-09 from the engines' source (shas in §2):
+the premise holds as a **shipped default** in NeMo RL's async path (`recompute_kv_cache_after_weight_updates:
+false`, prefix caching on by default on Ampere+) and in slime with `--flush-cache-interval <= 0`, as an opt-in
+in SkyRL (`use_cache_salt: false`), and as a bug class (SkyRL #2246, open; vllm-omni #6739, cache resets were
+no-op stubs until 2026-09). It is **bounded** where the cache is version-salted — prime-rl, SkyRL's default,
+PSRL's `multi_version_kv`, TRL (a fresh adapter name per sync), open-instruct (a salt per request) — and
+absent where every sync resets (verl, OpenRLHF, ROLL, AReaL, SGLang's `flush_cache=True`). PipelineRL's own
+config disables vLLM prefix caching, so its stale cache is in-flight only; the SkyRL mechanism is not
+PipelineRL's. vLLM's API makes the choice one boolean, `pause_generation(clear_cache=…)`, and its doc names
+the False branch "stale KV cache" with no cost attached. Nobody has measured either side: the version salt
+re-prefills every shared prefix after every sync, the keep-default serves prefixes of unbounded age, and the
+ladder's (A)/(C) at lag k is the number both decisions are made without.
 
 Topic sentence *(proposed under the ruling)*: "An async RL engine that does not invalidate its prefix
 cache at a weight sync serves every later rollout from KV an older policy wrote. We measure, per token
@@ -74,9 +84,12 @@ Prior art, re-read from the primary PDFs on 2026-09-20 (rev 2 of this section; r
 - vLLM ships the switch (`clear_cache`) with no guidance; AReaL recomputes; Laminar calls recompute a cost
   and staleness a risk, and measures neither (09-02 design §1, quotes verified there).
 
-Concurrent and adjacent work, search run 2026-09-20 (18 sources; **coverage gap:** SGLang, slime, prime-rl,
-verl, OpenRLHF, NeMo-RL, LlamaRL, ROLL, Kimi, MiniMax, GLM, DeepSeek, Composer, KVCOMM, C2C and the vLLM /
-open-instruct / TRL / AReaL issue trackers were not reached; re-run before submission). Marked *[checked]*
+Concurrent and adjacent work, search run 2026-09-20 (18 sources) and re-run 2026-10-09 for the prefix-persistence
+framing from the engines' source — vLLM, PipelineRL `58d3934`, prime-rl `88faa6d`, SkyRL `b896332`, NeMo RL
+`c989568`, slime `c933787`, PSRL `0eeead8`, verl `fc72e2f`, OpenRLHF `dc2a7ad`, ROLL `581046a`, TRL `f4526e1`,
+open-instruct `1182625`, AReaL `298412a`, SGLang docs — plus KVCOMM, C2C and the papers below (**coverage gap
+remaining:** Nemotron 3 Super, Magistral, MiniMax, DeepSeek, GLM and LlamaRL were not re-read for a
+prefix-cache policy; Kimi's flush policy was not found in `checkpoint-engine`). Marked *[checked]*
 where I read the primary source myself, *[relayed]* where the wording came through a summarizer:
 
 - **No in-RL stale-vs-recomputed experiment found beyond PipelineRL Fig. 7.** The systems split by
@@ -105,16 +118,33 @@ where I read the primary source myself, *[relayed]* where the wording came throu
 Net: nothing found pre-empts (i), (ii)'s tail, the NULL arm, or (iv)'s calibration; (iii) must be worded
 as *in-RL, fixed-policy, across a lag ladder*, not as a new kind of read-out.
 
+Added 2026-10-09 *[checked]*: **Olmo 3 (2512.13961) §4.4.3** follows PipelineRL — "continue generating,
+without invalidating the KV cache … up to 4x faster with the same resources, without hurting accuracy" —
+and its Table 23 has no accuracy column; **Motif 3 (2608.09119) §5.2.2** "retain the existing KV cache rather
+than recomputing it after each update", no measurement. **CacheReforge (2609.30884)**: stale KV under continual
+LoRA updates at serving time, a per-layer sensitivity/drift statistic deciding reuse vs bounded recompute,
+KL only (Qwen2.5-1.5B/7B, 16K QA) — the adapter-time precedent of (iv), without RL, task units, a lag axis or
+a null arm. **"Aborted but Not Forgotten" (2608.15939)**: a "same-token/different-cache audit" — identical
+decision-step tokens, cached prefix stale or rebuilt — on the *context* axis (same weights, a discarded
+branch), seven families 3.8B–36B; the construction of (i), one axis over. **UniRL #94** (Tencent) measured
+keeping the radix cache across syncs as flat on single-turn DAPO because "cross-sync KV is stale; the real
+benefit is multi-turn / shared-prefix" — the throughput side of the trade, with the cost side unmeasured.
+**vllm-omni #6739** saw stale prefix KV after updates as a logprob-divergence jump and doubled generation
+length, unquantified. ThunderSyncRL (2610.05935), VenusRL (2610.03286) and CacheRL (2606.14179) do not touch
+the axis.
+
 So the field is split by assertion — keep the stale cache (PipelineRL, Magistral, Nemotron, Olmo 3) or
 reset it (AReaL, Laguna, AsyncOPD, StaleFlow), or design around it (DORA) — and the only measurement
 under either position is one KL figure to lag 32 on one 7B run. Nobody reports where "it does not
 matter" stops being true, and nobody reports it in task units. That disagreement is the paper's opening.
 
 Novelty *(proposed, to be attacked before any GPU spend)*:
-**(i)** a paired, same-token contrast at a single clean cache age. PipelineRL's two curves are two
-separately *sampled* distributions each compared to on-policy by sequence KL, and the cache inside one
-sequence is a mixture of ages 1…g; here the prefix tokens and reader weights are identical, the cache is
-written by exactly θ_t, and the difference is read per token and per prompt.
+**(i)** a paired, same-token contrast at a single clean cache age, **on the weights axis**. PipelineRL's two
+curves are two separately *sampled* distributions each compared to on-policy by sequence KL, and the cache
+inside one sequence is a mixture of ages 1…g; here the prefix tokens and reader weights are identical, the
+cache is written by exactly θ_t, and the difference is read per token and per prompt. The construction
+itself has a precedent on the context axis (2608.15939's same-token/different-cache audit, same weights);
+claim the axis and the clean age, not the contrast.
 **(ii)** range, *not* the existence of a ladder. Within lags ≤ 32 a ladder is prior art (PipelineRL
 Fig. 7); what is new is the tail beyond it (OLMo, 200–2400), a second model family, and the NULL arm —
 no prior report asks whether the effect is about RL updates or about any weight delta of that size.
@@ -122,7 +152,8 @@ no prior report asks whether the effect is about RL updates or about any weight 
 (PipelineRL) and an undocumented training outcome (Magistral). Do not claim "first task-level evidence"
 without that qualifier.
 **(iv)** whether a cheap tensor-space statistic (f*, no generation needed) predicts the task-level loss —
-i.e. τ calibrated in task units. Untouched by any of the above. (iv) is the contribution an NLP reviewer
+i.e. τ calibrated in task units. Untouched in RL and in task units; CacheReforge (2609.30884) is the
+adapter-time precedent of a statistic that decides recompute, read against KL. (iv) is the contribution an NLP reviewer
 can use, and it is also the gap Carryover's reviewers will raise; it is also the item with nothing to
 predict if (C) is flat, so it cannot carry the paper alone.
 
@@ -260,7 +291,7 @@ no scorer exists for teacher-forced log-probs or generation under a supplied cac
 | step | what | needs | decides |
 |---|---|---|---|
 | 0 | `lag-ladder` repo scaffolded (§11), design doc moved there, ledger 0001 | — | — |
-| 1 | prior-art search under the prefix-persistence framing (§1) + the Q6 framework list the 09-20 search missed | web | whether §2 survives the reframe |
+| 1 | prior-art search under the prefix-persistence framing (§1) + the Q6 framework list the 09-20 search missed — **done 2026-10-09**: §2 survives; §1 premise holds for named defaults, bounded by version salts elsewhere | web | whether §2 survives the reframe |
 | 2 | upstream `Pair` gains `revision` / local-path; pinned by ledger entry — **done** (0003; G3 per-side `ModelRef` at 0004) | kv-transfer-replication commit | first dump |
 | 3 | **pilot:** (A) alone — f*(τ_K), τ ladder — on the 13 OLMo revisions, anchors step_200 and step_1200; dumps only, no generation | one GPU-day at most; A100 class for 1B fp32 dumps | if f* ≈ 0 out to lag 2400: short note, lane closed. If f* crosses τ_K in the tail: there is a paper, and (iv) has something to predict |
 | 4 | registration entry: statistics, bounds (R2), tasks (R1), lags, seeds, SCRAMBLED positive control | pilot result | — |
