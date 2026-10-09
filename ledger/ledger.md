@@ -126,3 +126,41 @@ a later entry.
 **Consequences in this commit set:** `src/lag_ladder/__init__.py::INSTRUMENT_SHA`; `UPSTREAM.md` §1
 pinned-commit line and its re-pin sentence; design §6 "fork" sentence amended per the 2026-09-25
 checkpoint-config learning (handoff 2026-09-25 named this for the same commit).
+
+### 0004 — 2026-10-08 — Re-pin: instrument at 0d27c68 (G3 checkpoint provenance, per-side ModelRef)
+
+prior-entries-sha256: 88fea86e5df18f2bdeb550ef3ee665d31a40530b8b36a9eb0446ed33a3792c3c
+
+**What it fixes.** `INSTRUMENT_SHA` moves from `9ca6258c91acf5c43b74026a7cc3649d61165104` to
+`0d27c6856c7ed6e138bb0540f3874a7e5d37a0fb` — kv-transfer-replication `main` after the operator merged
+PR #1 (`50983a2`, Llama 3 pair, 2026-09-30; touches `kvt/pairs.py` only) and PR #2 (`0d27c68`, G3
+checkpoint provenance, 2026-10-01 04:00Z). This is the entry 0003 reserved for PR #2 ("it will be a
+later entry"). The merge is the design ruling 0003 was waiting on: G3's per-side `ModelRef` replaces
+task 1's `Pair.with_revision` / `with_local_path` / `resolve`.
+
+**What the pin now carries, on the (A) paths.** Two of the four changed: `scripts/dump_kv.py` and
+`kvt/data.py`. `Pair` gains per-side `source_revision` / `source_local_path` / `target_revision` /
+`target_local_path` and `model_ref(which)`; `kvt-dump --revision` / `--local-path` apply to the
+`--which` model only and are refused when the pair already pins that side. The dump hashes the
+checkpoint before loading (`record_checkpoint`), loads exactly the hashed ref, re-verifies after the
+dump (a changed checkpoint renames meta.json to `meta.json.INVALID`), writes `checkpoint_manifest.json`,
+and records a `checkpoint` provenance block in meta.json; 0003's `revision` / `local_path` keys are
+gone and `model` is the provenance's model_id. `KVDump.load` verifies provenance on every load and
+raises `CheckpointMismatch` when the checkpoint is changed, missing or unlocatable; dumps without
+provenance load as before. `scripts/score_positions.py` and `kvt/pertoken.py` are byte-identical to
+063f402 and 9ca6258, so f*(τ_K) is still computed by the bytes linear-ceiling 0023 defined it with.
+
+**Basis.** Upstream suite 191 passed at 0d27c68 (CI run 36813097382 green 2026-10-01; local run
+2026-10-08 in the upstream's own venv); `git diff --stat 063f402 0d27c68 -- scripts/score_positions.py
+kvt/pertoken.py` empty (re-run 2026-10-08); `origin/main` = local `main` = 0d27c68 and
+`git status --porcelain -- kvt scripts` empty; the gate against the 9ca6258 pin said `REFUSED` on the
+live tree 2026-10-08 — the gate working; the answer is this entry, not a wider path tuple.
+
+**What it does not change.** τ_K = 0.3186 and the ladder (0001); R10 scope (0002); `config/pilot.toml`
+stays UNREGISTERED with `upstream_sha = "UPSTREAM_SHA_PENDING"` — the registering entry fills it. A
+lag-ladder driver that reads dumps must expect `CheckpointMismatch` and the `checkpoint` block in
+place of `revision` / `local_path` (design work, not this entry).
+
+**Consequences in this commit set:** `src/lag_ladder/__init__.py::INSTRUMENT_SHA`; `UPSTREAM.md` §1
+pinned-commit line and its re-pin sentence; `UPSTREAM.md` §2 "fork" sentence aligned with design §6
+(per-step checkpoints are config, learning 2026-09-25 — no fork; a producer pin records the author sha).

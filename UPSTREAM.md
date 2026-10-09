@@ -6,13 +6,17 @@ every sha below; `tests/test_imports.py` asserts this file names exactly those s
 ## 1. Instrument for statistic (A) only — `kv-transfer-replication` (invoked, never imported; ledger 0002)
 
 - Repo: https://github.com/hossainpazooki/kv-transfer-replication
-- Pinned commit: `9ca6258c91acf5c43b74026a7cc3649d61165104` — `main` after the operator's fast-forward of
-  `holdover-instrument` (ledger 0003, 2026-09-30): `Pair.revision` / `local_path`, `device()` with mps,
-  `--dtype`, `--probe`, console entry points, CI. The prior pin (linear-ceiling's entry-0036 pin, "RoPE
-  spec from the model's rotary embedding") is named in ledger 0001/0003; `scripts/score_positions.py` and
-  `kvt/pertoken.py` are byte-identical to it. Later re-pins come by numbered entry (PR #2's G3 checkpoint
-  interface; the operator records each new sha here and in `config/*.toml` after committing upstream. Scope (ruled 2026-09-24, entry 0002): the dump writer and the per-token scorer
-  for statistic (A). Statistic (B)'s log-prob scorer and (C)'s swap scorer are `src/lag_ladder/` code.
+- Pinned commit: `0d27c6856c7ed6e138bb0540f3874a7e5d37a0fb` — `main` after PR #1 (Llama 3 pair) and
+  PR #2 (G3 checkpoint provenance) merged; ledger 0004, 2026-10-08: per-side `ModelRef` pins on `Pair`
+  (`source_revision` / `target_revision` / `*_local_path`), checkpoint manifest hashed before load and
+  verified on every `KVDump.load`, `device()` with mps, `--dtype`, `--probe`, console entry points, CI.
+  Ledger 0003's `Pair.with_revision` interface (pin 9ca6258) is replaced. The prior pins (linear-ceiling's
+  entry-0036 pin, "RoPE spec from the model's rotary embedding"; 9ca6258) are named in ledger
+  0001/0003/0004; `scripts/score_positions.py` and `kvt/pertoken.py` are byte-identical to both. Later
+  re-pins come by numbered entry (the swap scorer for (C)); each new sha is recorded here and in
+  `config/*.toml` after it lands upstream. Scope (ruled 2026-09-24, entry 0002): the dump writer and the
+  per-token scorer for statistic (A). Statistic (B)'s log-prob scorer and (C)'s swap scorer are
+  `src/lag_ladder/` code.
 - Local path (used by `config/seal.toml` as `${upstream}`): `../kv-transfer-replication`
 - Rule: nothing in this repo writes into the upstream tree, imports `kvt`, or copies its code. Dumping,
   fitting and scoring are invoked there, by subprocess, in the upstream's own environment. Experiment
@@ -23,14 +27,15 @@ every sha below; `tests/test_imports.py` asserts this file names exactly those s
 - The pilot uses published checkpoints (`allenai/OLMo-2-0425-1B-RLVR1`, 13 `step_*` revisions at stride
   200) and needs no trainer.
 - Preferred producer once the pilot shows signal: the author implementation
-  https://github.com/ServiceNow/PipelineRL (Apache-2.0), through a fork whose only changes are additive
-  config (a checkpoint every optimizer step). `main` observed at
+  https://github.com/ServiceNow/PipelineRL (Apache-2.0), unmodified — a checkpoint every optimizer
+  step is config (`save_checkpoint_steps` / `also_save_steps`, checked 2026-09-25), so no fork. `main`
+  observed at
   `58d393458625ad63ed539f2dcd072c85700c557f` on 2026-09-22 — recorded so a later pin can state what
   moved. Checked that day: the repo's code search has no `recompute` / `kv_cache` /
   `reset_prefix_cache` hit (default branch only), so Figure 7's measurement code is not published;
   the smallest documented configuration is 4×H100.
-- When pinned: record author sha AND fork sha; the gate asserts the trainer paths are unchanged from
-  the author sha.
+- When pinned: record the author sha (and a fork sha only if a fork ever becomes necessary); the gate
+  asserts the trainer paths are unchanged from the author sha.
 
 ## 3. Chassis — copied from `linear-ceiling` with provenance
 

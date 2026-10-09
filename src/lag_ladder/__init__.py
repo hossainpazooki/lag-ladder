@@ -13,7 +13,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # Single source of truth for every pin; UPSTREAM.md repeats them for humans and tests/test_imports.py
 # asserts the two agree (every 40-hex sha in UPSTREAM.md is one of these, and each of these is there).
 INSTRUMENT_REPO = "https://github.com/hossainpazooki/kv-transfer-replication"
-INSTRUMENT_SHA = "9ca6258c91acf5c43b74026a7cc3649d61165104"   # main after the holdover-instrument fast-forward (2026-09-30); ledger 0003
+INSTRUMENT_SHA = "0d27c6856c7ed6e138bb0540f3874a7e5d37a0fb"   # main after PR #1 (Llama pair) + PR #2 (G3) merged (2026-10-01); ledger 0004
 
 CHASSIS_REPO = "https://github.com/hossainpazooki/linear-ceiling"
 CHASSIS_SHA = "888f745084c63eb52d114acd951dc787db82a71a"      # the commit the copied modules were read at (src/ clean at that HEAD, 2026-09-22)
