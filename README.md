@@ -66,8 +66,10 @@ Statistic (A) needs no generation. It is read from cache dumps alone by the pinn
 Nothing has run and no hypothesis is registered. The ledger holds the founding record (chassis
 provenance, inherited definitions, the first rulings), the ruling that the instrument serves
 statistic (A) only, and two re-pins of the instrument as it gained checkpoint selection and verified
-checkpoint provenance. The pilot's configuration exists and is unregistered; no driver may run against
-it until a numbered entry registers it. `ledger/ledger.md` is the record of what has been registered
+checkpoint provenance. The pilot's driver and summarizer exist: two controls (the anchor read by itself,
+and one sequence's cache read against another's) run before any rung, and every number is recomputed
+from disk. The pilot's configuration is unregistered; the driver refuses to run until a numbered entry
+registers it. `ledger/ledger.md` is the record of what has been registered
 and ruled, and it says what has not.
 
 ## How the record stays auditable

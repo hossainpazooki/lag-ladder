@@ -35,6 +35,10 @@ per-side `ModelRef` pins and verified checkpoint provenance.
 .venv/Scripts/python.exe -m lag_ladder.seal verify
 .venv/Scripts/python.exe -m lag_ladder.lint_scope
 .venv/Scripts/python.exe -m lag_ladder.ledger_check   # --against <rev> in CI
+.venv/Scripts/python.exe -m lag_ladder.pilot plan     # the dump and score jobs; decides nothing
+.venv/Scripts/python.exe -m lag_ladder.pilot check    # the gate: registration, pin, token hash, seal
+.venv/Scripts/python.exe -m lag_ladder.pilot run      # refuses until the gate passes; resumable, --limit N
+.venv/Scripts/python.exe -m lag_ladder.summarize_pilot   # recomputes every f* from disk; refuses on mismatch
 ```
 On macOS/Linux the interpreter is `.venv/bin/python`. The project pins Python 3.12.
 
@@ -45,7 +49,10 @@ The upstream gate, as every driver will call it:
 
 ## Layout
 `src/lag_ladder/` — `hashing` · `rng` · `config` (seal + pilot loaders) · `seal` · `upstream_gate` ·
-`ledger_check` · `lint_scope`. No experiment driver or summarizer exists yet (design §9 steps 3–5).
+`ledger_check` · `lint_scope` · `pertoken` (centered deviation, f\*, the band; copied from linear-ceiling 0023) ·
+`fstar_record` (one scored job read back: hash, sums, the exact bridge to 1 − R²) · `pilot` (the (A)-only
+driver: identity and scrambled controls, then the ladder, by subprocess into the pinned instrument) ·
+`summarize_pilot` (recomputes the ladder from disk). The (B) and (C) scorers do not exist yet (design §9 step 5).
 `config/` — `seal.toml`, `pilot.toml`. `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
 `mappers/` — seal artifact roots, gitignored past their placeholders. `docs/` — the design doc.
 
@@ -54,7 +61,8 @@ Scaffolded, nothing run, no hypothesis registered. The instrument is pinned at k
 `0d27c68` (ledger 0004): `Pair` carries per-side revision or local-path pins, the dump hashes the
 checkpoint before loading and records a verified `checkpoint` block in `meta.json`, and `KVDump.load`
 refuses a dump whose checkpoint has changed. The two scorer paths are byte-identical to the pin
-linear-ceiling 0023 defined f\*(τ_K) with. `config/pilot.toml` is unregistered. Next, in order: the
-kernel-identity pre-flight on the run machine (`KVT_DEVICE=mps` against `cpu` on a short toy), the
-prior-art search under the prefix-persistence framing (design §9 step 1), then the pilot's registration
-entry (R1 and R2 still open).
+linear-ceiling 0023 defined f\*(τ_K) with. The pilot driver and its summarizer are built and tested
+against a stand-in for the instrument; `config/pilot.toml` is unregistered, so `pilot run` refuses. The
+prior-art search (design §9 step 1) is done. Next, in order: the registering entry for the pilot (an OLMo
+pair and its held-out token file upstream, the pin, the seal, the control bounds), the kernel-identity
+pre-flight on the run machine (`KVT_DEVICE=mps` against `cpu` on a short toy), then the run.

@@ -41,6 +41,9 @@ every sha below; `tests/test_imports.py` asserts this file names exactly those s
 
 - Repo: https://github.com/hossainpazooki/linear-ceiling, read at
   `888f745084c63eb52d114acd951dc787db82a71a` (`src/` clean at that HEAD on 2026-09-22).
+- `src/lag_ladder/pertoken.py` is copied from `src/linear_ceiling/e9_pertoken.py` at the same commit
+  (`centered_delta`, `token_mean`, `layer_mean`, `F_STAR_REL_TOL`, `f_star`, `band_outcome` verbatim; the seam,
+  block, bootstrap and null-pairing helpers dropped), added 2026-10-09 for the pilot driver.
 - Copied, not shared, so a repo under active amendment cannot move this one's gates. The GPU protocol
   (`docs/gpu-experiment-protocol.md`, rules R1–R12) is LINKED, not copied: it governs every GPU run here.
 
