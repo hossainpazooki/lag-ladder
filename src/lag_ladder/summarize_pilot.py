@@ -81,7 +81,11 @@ def summarize(cfg: PilotConfig, p: Plan | None = None) -> dict:
                 med = {tau_key(t): float(np.median([c["fstar"][tau_key(t)] for c in cells])) for t in taus}
                 ladder.append({"partner": r, "lag": lag, "n_seqs": len(cells),
                                "per_seq_fstar_tau_K": [c["fstar"][tk] for c in cells],
-                               "median_fstar": med, "band": band_outcome(med[tk], cfg.rule)})
+                               "median_fstar": med, "band": band_outcome(med[tk], cfg.rule),
+                               # descriptive, in R^2's own units (0023): where the whole-cache deviation sits
+                               # when f* saturates at 0, i.e. the mean centered deviation is already under tau
+                               "per_seq_one_minus_r2": [c["one_minus_r2"] for c in cells],
+                               "median_one_minus_r2": float(np.median([c["one_minus_r2"] for c in cells]))})
             entry["ladder"] = ladder
         out["anchors"][a] = entry
     return out
@@ -97,10 +101,12 @@ def render(summary: dict) -> str:
         if not e["controls_passed"]:
             lines.append("  no ladder table: a control failed, so the instrument cannot see the cache here")
             continue
-        lines.append("  lag     median f*(tau_K)  band        " + "  ".join(f"f*({tau_key(t)})" for t in summary["tau_ladder"][1:]))
+        lines.append("  lag     median f*(tau_K)  band        " + "  ".join(f"f*({tau_key(t)})" for t in summary["tau_ladder"][1:])
+                     + "  median 1-R^2 (K)")
         for c in e["ladder"]:
             rest = "  ".join(f"{c['median_fstar'][tau_key(t)]:.4f}" for t in summary["tau_ladder"][1:])
-            lines.append(f"  {c['lag']:<7d} {c['median_fstar'][tau_key(summary['tau_K'])]:.4f}            {c['band']:<10s}  {rest}")
+            lines.append(f"  {c['lag']:<7d} {c['median_fstar'][tau_key(summary['tau_K'])]:.4f}            {c['band']:<10s}  {rest}"
+                         f"  {c['median_one_minus_r2']:.3e}")
     lines.append(summary["oracle"])
     return "\n".join(lines)
 

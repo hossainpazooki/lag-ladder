@@ -28,8 +28,12 @@ def test_summary_bands_each_lag_and_carries_the_oracle_sentence(repo, seal_cfg):
     assert a["ladder"][0]["band"] == "HOLDS" and a["ladder"][0]["median_fstar"]["0.3186"] == 0.0
     assert a["ladder"][1]["band"] in ("UNRESOLVED", "DEGRADES") and a["ladder"][1]["median_fstar"]["0.3186"] > 0.0
     assert a["ladder"][1]["median_fstar"]["0.03"] >= a["ladder"][1]["median_fstar"]["0.1"] >= a["ladder"][1]["median_fstar"]["0.3186"]
+    # the descriptive 1 - R^2 per lag follows the fake's deviation rule (lag / 1000) and is reported beside f*
+    assert a["ladder"][0]["median_one_minus_r2"] == pytest.approx(0.2, abs=1e-6)
+    assert a["ladder"][1]["median_one_minus_r2"] == pytest.approx(0.4, abs=1e-6)
+    assert len(a["ladder"][1]["per_seq_one_minus_r2"]) == 3
     text = render(s)
-    assert "oracle lower bound" in text and "HOLDS" in text and "400" in text
+    assert "oracle lower bound" in text and "HOLDS" in text and "400" in text and "median 1-R^2" in text
 
 
 def test_summary_refuses_a_tampered_per_token_file(repo, seal_cfg):
