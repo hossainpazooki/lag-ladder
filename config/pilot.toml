@@ -1,9 +1,9 @@
 # The (A)-only pilot: f*(tau_K) on the OLMo-2 RLVR1 revisions (design doc §9 step 3).
 #
 # UNREGISTERED. Every value below is the design doc's proposal, carried here so the loader has
-# something to validate; `registered_by` is empty until a numbered ledger entry fixes them, and the
-# pilot driver (not yet written) must refuse to run while it is empty. tau_K and the ladder are
-# inherited from linear-ceiling entry 0023 (see ledger entry 0001), not recalibrated.
+# something to validate; `registered_by` is empty until a numbered ledger entry fixes them, and
+# `lag_ladder.pilot run` refuses while it is empty. tau_K and the ladder are inherited from
+# linear-ceiling entry 0023 (see ledger entry 0001), not recalibrated.
 [pilot]
 source = "allenai/OLMo-2-0425-1B-RLVR1"
 base = "allenai/OLMo-2-0425-1B-DPO"
@@ -14,9 +14,19 @@ stride_steps = 200
 anchors = ["step_200", "step_1200"]
 results_dir = "results/fstar"
 upstream_path = "../kv-transfer-replication"
-# The commit that gives kvt/pairs.py::Pair a revision field (design §9 step 2). Pinned by the
-# registering entry; the gate refuses the placeholder by name.
+# The instrument commit the run invokes; the gate refuses the placeholder by name. The registering
+# entry records the sha (ledger 0004 pins 0d27c68; the pair below must exist upstream at the sha).
 upstream_sha = "UPSTREAM_SHA_PENDING"
+# The upstream `Pair` name under which both checkpoints are the same model id; each dump pins one
+# revision through `--revision`. Registered upstream by its own commit.
+pair = "olmo2-1b-rlvr1"
+# Held-out sequences: the upstream's `prepare_tokens` output (relative to upstream_path), its hash,
+# and the [lo, hi) range of sequence indices read as held out (the last ten of fifty, as 0023 did).
+tokens = "data/tokens/olmo2-1b-rlvr1_n50_len1024_seed0.npy"
+tokens_sha256 = "TOKENS_SHA256_PENDING"
+heldout = [40, 50]
+# Forward dtype of every dump (the arrays on disk are float16 regardless); the engine runs bf16.
+dtype = "float32"
 seed = 0
 registered_by = ""
 
@@ -26,3 +36,12 @@ tau_K = 0.3186
 tau_ladder = [0.3186, 0.10, 0.03]
 holds_max = 0.15
 degrades_min = 0.50
+
+[pilot.controls]
+# identity: an anchor's cache read by the same revision. f*(tau_K) must be at most this, per sequence;
+# the run halts on the first sequence above it (design §3: at k = 0 every arm is the fresh cache).
+identity_max = 0.0
+# scrambled: an anchor's cache for one sequence read against the same revision's cache for another
+# sequence at the same positions. The median f*(tau_K) must be at least this, or the instrument cannot
+# see the cache and no ladder table is produced.
+scrambled_min = 0.90

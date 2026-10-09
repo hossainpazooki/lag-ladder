@@ -49,6 +49,11 @@ anchors = ["step_200"]
 results_dir = "results/fstar"
 upstream_path = "../kv-transfer-replication"
 upstream_sha = "UPSTREAM_SHA_PENDING"
+pair = "olmo2-1b-rlvr1"
+tokens = "data/tokens/olmo2-1b-rlvr1_n50_len1024_seed0.npy"
+tokens_sha256 = "TOKENS_SHA256_PENDING"
+heldout = [40, 50]
+dtype = "float32"
 seed = 7
 registered_by = ""
 [pilot.rule]
@@ -57,6 +62,9 @@ tau_K = 0.3186
 tau_ladder = [0.3186, 0.10, 0.03]
 holds_max = 0.15
 degrades_min = 0.50
+[pilot.controls]
+identity_max = 0.0
+scrambled_min = 0.90
 '''
 
 
@@ -65,6 +73,9 @@ def test_pilot_config_loads_and_records_unregistered(tmp_path):
     assert cfg.revisions == ("step_200", "step_400", "step_600") and cfg.anchors == ("step_200",)
     assert cfg.results_dir == tmp_path / "results" / "fstar" and cfg.seed == 7
     assert cfg.registered_by == "" and cfg.rule["tau_K"] == 0.3186
+    assert cfg.pair == "olmo2-1b-rlvr1" and cfg.heldout == (40, 50) and cfg.dtype == "float32"
+    assert cfg.tokens == (tmp_path / "../kv-transfer-replication").resolve() / "data/tokens/olmo2-1b-rlvr1_n50_len1024_seed0.npy"
+    assert cfg.controls == {"identity_max": 0.0, "scrambled_min": 0.90}
 
 
 @pytest.mark.parametrize("old, new, msg", [
@@ -75,6 +86,13 @@ def test_pilot_config_loads_and_records_unregistered(tmp_path):
     ('registered_by = ""', 'registered_by = "12"', "four-digit"),
     ('seed = 7', 'seed = true', "seed"),
     ('revisions = ["step_200", "step_400", "step_600"]', 'revisions = ["step_200", "step_200"]', "distinct"),
+    ('pair = "olmo2-1b-rlvr1"', 'pair = "a/b"', "path separators"),
+    ('tokens = "data/tokens/olmo2-1b-rlvr1_n50_len1024_seed0.npy"', 'tokens = "/abs/tokens.npy"', "relative path"),
+    ('tokens_sha256 = "TOKENS_SHA256_PENDING"', 'tokens_sha256 = "abc"', "64-hex"),
+    ('heldout = [40, 50]', 'heldout = [50, 40]', "lo < hi"),
+    ('dtype = "float32"', 'dtype = "int8"', "dtype"),
+    ('identity_max = 0.0', 'identity_max = 1.0', "identity_max"),
+    ('scrambled_min = 0.90', 'scrambled_min = 0.0', "scrambled_min"),
 ])
 def test_pilot_config_refuses_bad_values(tmp_path, old, new, msg):
     assert PILOT.count(old) == 1
