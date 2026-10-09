@@ -170,7 +170,7 @@ zero-shot as the contrast.
 the 09-02 design; τ not recalibrated. Needs dumps, no generation.
 
 **(B) Does the trainer notice — stale-vs-fresh importance ratio, ESS / N.** Unchanged from 09-02 §2(B).
-Bounds remain "the operator's stated judgment".
+Bounds remain stated judgment, fixed in the registration entry.
 
 **(C) Does the task notice — NEW, verdict-bearing for this paper.** Per (task, lag, arm): final-answer
 exact-match accuracy; the paired difference STALE − FRESH with a seeded paired bootstrap (2,000 reps) —
@@ -190,7 +190,7 @@ Multiplicity: the "crossing lag" is a maximum over cells, and no correction is c
 interval is reported as is and the crossing is stated as the first cell whose interval excludes the
 HOLDS bound, with the count of cells named.
 
-Bounds for (C) *(proposed; operator's stated judgment, to be fixed in the registration entry)*:
+Bounds for (C) *(proposed; stated judgment, to be fixed in the registration entry)*:
 HOLDS_C — paired accuracy drop ≤ 1.0 point and its 95 % interval below 2.0; DEGRADES_C — drop ≥ 5.0
 points with the interval above 2.0; UNRESOLVED between. Per Nanda's threshold advice and the ledger's
 habit, no claim rests on .01 < p < .05. *Two cautions for R2:* the band leaves 1–5 points UNRESOLVED,
@@ -221,12 +221,12 @@ per-prompt task flips is descriptive.
 
 - **OLMo-2-0425-1B-RLVR1 — primary, and the only source this week:** 13 revisions, stride 200, lags
   200–2400 (base `OLMo-2-0425-1B-DPO`; `main` is not a lag point — 09-02 design pick-up). Under the
-  prefix-persistence framing (§1) this tail is engine-relevant, not "decides nothing". Needs the upstream
-  `Pair` revision field before the first dump.
+  prefix-persistence framing (§1) this tail is engine-relevant, not "decides nothing". The upstream
+  per-side `Pair` revision pin it needs landed (ledger 0003; G3 `ModelRef` shape at 0004).
 - **Own run — deferred.** Producer options, in order of preference once the pilot shows signal: the
   author's `ServiceNow/PipelineRL` unmodified (real in-flight updates; 4×H100 minimum documented, Linux,
   conda + flash-attn; per-step checkpoints are config — `save_checkpoint_steps` / `also_save_steps`,
-  learning 2026-09-25 — so no fork is needed; not fundable on the 09-18 RunPod balance), else a
+  checked 2026-09-25 — so no fork is needed; not funded at this writing), else a
   single-GPU GRPO loop stated as a limitation. If run: Qwen3-0.6B, GRPO on GSM8K train, full-weight, a
   checkpoint every optimizer step to **step 40**; lags 1–8, 10, 12, 20 and **32** from anchor step 8 (= step
   40; the 09-19 text listed lag 40 from step 8, which needs step 48 — dropped; 12 and 32 added per §2). Add
@@ -244,7 +244,7 @@ per-prompt task flips is descriptive.
 
 ## 8. Out of scope, stated
 
-Whether *training on* stale-cache rollouts changes the final policy (the operator's 09-02 ruling: not an
+Whether *training on* stale-cache rollouts changes the final policy (ruled 2026-09-02: not an
 RL-algorithms paper); any serving-latency number (that is the MLSys reading); a selective-recompute scheme
 that achieves f* (the `[STRETCH]` of 0023). Each is a Limitations sentence; ARR requires that section.
 
@@ -254,14 +254,14 @@ Oct 12 is dropped (R6). The ARR October kill table of the 09-19 draft is retired
 on the pilot's result — ARR December cycle or ICML if (C) has something to say, MLSys if only (A)/(B) do,
 a short note if nothing does.
 
-Inherited blockers (09-02 §7–8): upstream `Pair` has no revision or local-path field; no scorer exists for
-teacher-forced log-probs or generation under a supplied cache; (B)'s bounds blank.
+Inherited blockers (09-02 §7–8): upstream `Pair` revision / local-path field — landed (ledger 0003/0004);
+no scorer exists for teacher-forced log-probs or generation under a supplied cache; (B)'s bounds blank.
 
 | step | what | needs | decides |
 |---|---|---|---|
 | 0 | `lag-ladder` repo scaffolded (§11), design doc moved there, ledger 0001 | — | — |
 | 1 | prior-art search under the prefix-persistence framing (§1) + the Q6 framework list the 09-20 search missed | web | whether §2 survives the reframe |
-| 2 | upstream `Pair` gains `revision` / local-path; pinned by ledger entry | kv-transfer-replication commit | first dump |
+| 2 | upstream `Pair` gains `revision` / local-path; pinned by ledger entry — **done** (0003; G3 per-side `ModelRef` at 0004) | kv-transfer-replication commit | first dump |
 | 3 | **pilot:** (A) alone — f*(τ_K), τ ladder — on the 13 OLMo revisions, anchors step_200 and step_1200; dumps only, no generation | one GPU-day at most; A100 class for 1B fp32 dumps | if f* ≈ 0 out to lag 2400: short note, lane closed. If f* crosses τ_K in the tail: there is a paper, and (iv) has something to predict |
 | 4 | registration entry: statistics, bounds (R2), tasks (R1), lags, seeds, SCRAMBLED positive control | pilot result | — |
 | 5 | swap scorer for (C) upstream; k = 0 identity on the run GPU; (B) + (C) on OLMo | GPU | the verdict cells |
@@ -275,7 +275,7 @@ second task — still a few GPU-days on a ≤ 1B model, but not the number the d
 
 ## 10. Rulings
 
-Ruled 2026-09-22 (operator, via the four-question pick; option text quoted as picked):
+Ruled 2026-09-22 (option text quoted as picked):
 
 - **R6 — "Drop Oct 12; pilot first."** §9 rewritten accordingly. Not a ruling on the venue.
 - **R7 — framing: "Prefix-cache persistence."** §1, §3 (8-shot primary), §6 (OLMo tail engine-relevant).
@@ -284,7 +284,8 @@ Ruled 2026-09-22 (operator, via the four-question pick; option text quoted as pi
 - **Names (2026-09-20):** paper *Holdover*, repo `lag-ladder`, package `lag_ladder`.
 - **R10 — instrument scope (2026-09-24): "kv-transfer-replication stays the instrument for (A) only."**
   Ledger entry 0002. (B)'s log-prob scorer and (C)'s swap scorer are built in `src/lag_ladder/`; the
-  upstream still needs the `Pair` revision field and the bridge items G1/G4/G5 (seed 2026-09-24).
+  upstream's `Pair` revision field and G3 landed (ledger 0003/0004); bridge items G1/G4/G5 still owed
+  (seed 2026-09-24).
 
 Open, with the recommendation on record (unruled; a recommendation is not a ruling):
 
@@ -298,17 +299,19 @@ Open, with the recommendation on record (unruled; a recommendation is not a ruli
   not appear in the title, and Carryover is cited in the third person. No ruling needed unless the venue
   is not double-blind.
 
-## 11. Repo shape (locked 2026-09-20; scaffolded 2026-09-22, uncommitted — see the repo's own CLAUDE.md)
+## 11. Repo shape (locked 2026-09-20; scaffolded 2026-09-22)
 
 - A separate repo, `lag-ladder`, with linear-ceiling's chassis **copied, not shared**: ledger + checker,
   sealed predictions, scope linter, `config/*.toml` seeds and thresholds, `rng`, `hashing`, the
   upstream ancestry gate, fail-closed summarizers, one CI job. Each copied module gets a provenance row
   `{sourceRepo: linear-ceiling, filePath, commitSha}`. GPU protocol linked, not copied.
 - Ledger starts at 0001; 0001 cites linear-ceiling entry 0023 for f* and τ_K by `{repo, entry, sha}`.
-- Two upstreams in `UPSTREAM.md`: the **instrument** `kv-transfer-replication` (pinned as now; needs
-  the `Pair` revision field; **statistic (A) only, by R10** — the (B) and (C) scorers live here) and the
+- Two upstreams in `UPSTREAM.md`: the **instrument** `kv-transfer-replication` (pinned by numbered entry,
+  0004 at this writing; per-side `Pair` revision pins landed; **statistic (A) only, by R10** — the (B) and
+  (C) scorers live here) and the
   **checkpoint producer** — the author's
-  `ServiceNow/PipelineRL` (Apache-2.0) through a fork whose only changes are additive config; the gate
-  records both shas and asserts trainer paths unchanged from the author sha. Checked 2026-09-20: the
+  `ServiceNow/PipelineRL` (Apache-2.0) unmodified — per-step checkpoints are config (`save_checkpoint_steps`
+  / `also_save_steps`, checked 2026-09-25), so no fork (§6); the gate records the author sha and asserts
+  trainer paths unchanged from it. Checked 2026-09-20: the
   author repo's code search has no `recompute` / `kv_cache` / `reset_prefix_cache` hit (default branch
   only), so Fig. 7's measurement code is not published; smallest documented config is 4 H100s.
