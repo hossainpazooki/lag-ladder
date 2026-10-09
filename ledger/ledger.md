@@ -211,3 +211,43 @@ states against this rule once `summarize_pilot` has run.
 **Consequences in this commit set:** `config/pilot.toml` (`registered_by`, `upstream_sha`,
 `tokens_sha256`); `src/lag_ladder/__init__.py::INSTRUMENT_SHA`; `UPSTREAM.md` §1; the sealed prediction
 and its sidecar; `tests/test_config.py` (the repo config is now registered).
+
+### 0006 — 2026-10-09 — Pilot outcome: f*(τ_K) is 0 at every lag to 2400 on OLMo-2 RLVR1; the cache HOLDS [BASELINE]
+
+prior-entries-sha256: 7522fe8ef0b25aac3524b8ccb4c1026bc9cae356d508a2b034575f5421c073ad
+
+**Ran** as registered by 0005: 230 jobs (130 dumps, 230 scores) on the run machine, 2026-10-09
+16:28–17:02 UTC, instrument `1380635`, no halt, `run.json` complete; `summary.json` (sha256
+`c8290607b615b6f0…`) recomputed from the score records on two machines with identical values on every
+field the rule reads (`run.json` sha256 `3ae7d871f9174382…`).
+
+**Controls passed on both anchors.** Identity: f*(τ_K) = 0 on all ten sequences (bound 0.0). Scrambled:
+median f*(τ_K) = 0.999 on both anchors (bound 0.90) — the instrument sees the cache.
+
+**Outcome against the rule** (median over held-out sequences [40, 50) of f*(τ_K = 0.3186), K read-out):
+
+| anchor | lags | median f*(τ_K) | f*(0.10), f*(0.03) | band |
+|---|---|---|---|---|
+| step_200 | 200, 400, …, 2400 (12 rungs) | 0.0 at every rung | 0.0 at every rung | HOLDS at every rung |
+| step_1200 | 200, 400, …, 1400 (7 rungs) | 0.0 at every rung | 0.0 at every rung | HOLDS at every rung |
+
+Descriptive, in R²'s units (0023): the whole-cache deviation 1 − R²(K), median over sequences, rises
+from 5.5e-5 at lag 200 to 7.3e-4 at lag 2200 from step_200 and flattens from lag ~1200; from step_1200 it
+is 4.6e-5 at lag 200 and 3.1e-4 at lag 1400 — about two thirds of the first anchor's at the same lag.
+The worst single sequence at any lag is 1.2e-2 (step_200 → step_2400), under the ladder's floor 0.03; the
+worst layer is the last (1.2e-3 median at lag 2400) and deviation grows with depth; the largest
+single-token deviation observed is 0.70 (one token of 10,240 at lag 2400). f* removes by the mean, and
+the mean never reaches 0.03.
+
+**Seal.** The sealed prediction (0005: HOLDS at lag 200, DEGRADES at lag 2400 from step_200) is **met at
+lag 200 and falsified at lag 2400**; the outcome is the "holds throughout" shape.
+
+**What the design's rule says** (§9 step 3, ruled 2026-09-22: "if f* ≈ 0 out to lag 2400: short note,
+lane closed"): on this source, statistic (A) reads no cost of a stale K cache at any lag the published
+ladder offers. Whether the lane closes, or moves to a source whose updates are larger (the RLVR
+updates here move K by under a tenth of a percent of its variance), is the operator's ruling, not this
+entry's. No hypothesis was registered for the pilot; nothing in the table changes. Status: [BASELINE] —
+ran, numbers here, not refuted.
+
+**Not measured.** Statistics (B) and (C); the V read-out as a verdict (recorded in every report, not
+read by the rule); the second prompt set (G7); any lag below 200.
