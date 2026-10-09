@@ -327,3 +327,67 @@ higher median f*(τ_K) than the nearest isotropic rung.
 
 **Not registered here.** Statistics (B) and (C); the own run (R8); any hypothesis in the table. The pilot's
 registration (0005) stands as run.
+
+### 0009 — 2026-10-09 — Weight-distance outcome: the backbone HOLDS through 3e-2 and DEGRADES at 1e-1; the sealed knee at 3e-3 is falsified; real directions tie it in f* [BASELINE]
+
+prior-entries-sha256: 555bc9c46403fc5df18d49c25238869f722ec981fb524ef979b54c5dc181a52d
+
+**Ran** as registered by 0008: 250 jobs on the run machine, 2026-10-09 19:32–20:20 UTC, instrument
+`5d4aa4a`, no halt, `run.json` complete (sha256 `b398ce827090…`); `summary.json` (sha256 `53f65ab75363…`)
+recomputed from the score and distance records on two machines with identical values on every field the rule
+reads. Each rung's distance is tied by file hash to the checkpoint manifests of the two dumps it compares.
+
+**Controls passed on all six writers.** Identity: f*(τ_K) = 0 on every sequence (bound 0.0). Scrambled:
+median f*(τ_K) = 0.999 on every writer (bound 0.90).
+
+**Outcome against the rule** (median over held-out sequences [40, 50) of f*(τ_K = 0.3186), K read-out; rungs
+by relative L2 weight distance over the whole parameter vector, K-projection distance beside it; the median
+1 − R²(K) is descriptive, in 0023's units):
+
+| rung | kind | rel. distance, whole | k_proj | median f*(τ_K) | f*(0.10) | f*(0.03) | band | median 1 − R²(K) |
+|---|---|---|---|---|---|---|---|---|
+| `olmo-dpo-to-rlvr1-step_200` | real | 8.6e-05 | 6.1e-04 | 0.000 | 0.000 | 0.000 | HOLDS | 8.8e-05 |
+| `noise-0.0001` | noise | 1.0e-04 | 5.4e-04 | 0.000 | 0.000 | 0.000 | HOLDS | 1.1e-06 |
+| `noise-0.0003` | noise | 3.0e-04 | 1.6e-03 | 0.000 | 0.000 | 0.000 | HOLDS | 8.9e-06 |
+| `olmo-sft-to-dpo` | real | 8.5e-04 | 4.9e-03 | 0.000 | 0.000 | 0.000 | HOLDS | 1.2e-02 |
+| `olmo-sft-to-rlvr1-step_2600` | real | 9.4e-04 | 5.5e-03 | 0.000 | 0.000 | 0.000 | HOLDS | 1.2e-02 |
+| `noise-0.001` | noise | 1.0e-03 | 5.4e-03 | 0.000 | 0.000 | 0.000 | HOLDS | 9.7e-05 |
+| `noise-0.003` | noise | 3.0e-03 | 1.6e-02 | 0.000 | 0.000 | 0.000 | HOLDS | 8.7e-04 |
+| `noise-0.01` | noise | 1.0e-02 | 5.4e-02 | 0.000 | 0.000 | 0.000 | HOLDS | 9.7e-03 |
+| `qwen-base-to-instruct` | real | 1.0e-02 | 9.9e-04 | 0.000 | 0.000 | 0.000 | HOLDS | 1.1e-02 |
+| `noise-0.03` | noise | 3.0e-02 | 1.6e-01 | 0.000 | 0.000 | 0.998 | HOLDS | 9.1e-02 |
+| `noise-0.1` | noise | 1.0e-01 | 5.4e-01 | 0.999 | 0.999 | 1.000 | DEGRADES | 1.7e+00 |
+| `qwen-math-to-r1-distill` | real | 1.2e-01 | 1.5e-02 | 0.993 | 0.999 | 1.000 | DEGRADES | 5.1e-01 |
+| `qwen-base-to-math` | real | 1.1e+00 | 4.4e-01 | 1.000 | 1.000 | 1.000 | DEGRADES | 5.2e+01 |
+
+**Backbone.** Seven rungs, realized relative norms equal to their targets to three figures. Median f*(τ_K)
+= 0 through 3e-2 (HOLDS) and 0.999 at 1e-1 (DEGRADES); no rung reads UNRESOLVED, so at τ_K the knee lies
+between 3e-2 and 1e-1 and the backbone resolves it no finer. At τ = 0.03 it lies between 1e-2 and 3e-2
+(f*(0.03) = 0.998 at 3e-2). The whole-cache deviation grows as the square of the distance: 1.1e-06 at
+1e-4, 9.7e-05 at 1e-3, 9.7e-03 at 1e-2, 1.7e+00 at 1e-1.
+
+**Real directions.** By the rule's statistic, every real rung inside the backbone's HOLDS range ties its
+nearest isotropic rung at f*(τ_K) = 0, and the one real rung with an isotropic neighbour in the DEGRADES
+range reads below it (Qwen Math → R1-Distill 0.993 at 1.2e-01 against 0.999 at 1e-1). Qwen base → Math
+sits at 1.1e+00, ten times past the backbone's last rung and with no neighbour: at this measure Math is
+not a fine-tune of the base. Descriptively, in 1 − R²(K) at matched distance, the three OLMo-2 directions
+sit 78–130 times above the backbone (SFT → DPO 1.2e-02 against 9.7e-05 at 1e-3), Qwen base → Instruct sits
+on it (1.1e-02 against 9.7e-03), and Math → R1-Distill sits at a third of it (5.1e-01 against 1.7e+00).
+Distance alone does not set the cache's deviation; the direction does, in either sense.
+
+**Seal.** The sealed prediction (0008: HOLDS through 1e-3, first above 0.15 at 3e-3, DEGRADES by 1e-2; a
+real direction at matched distance above the nearest isotropic rung): **met on the first clause (HOLDS
+through 1e-3) and falsified on the other three.** The backbone holds more than an order of magnitude past
+the sealed knee, and no real direction reads above the backbone by the rule's statistic; Qwen base → Math
+reads 1.000 against the last backbone rung's 0.999, but at ten times its distance, which is not a matched
+comparison.
+
+**Read with.** f* at τ_K steps from 0 to 0.999 between two adjacent rungs, so the ladder's band is a step
+function of distance and the real rungs' ties are ties at zero. The noise checkpoints were written in
+float32 and pruned after their last score; their provenance (source commit, seed, realized norm, output
+sha256) and the dumps' manifests stay under `results/distance/checkpoints/` and `pairs/`. A first launch
+of the run halted before any job was recorded, on a driver fault (the instrument was not told where local
+checkpoints live) fixed in `632f914`; the run on record is the second launch.
+
+**Not measured.** Statistics (B) and (C); the V read-out as a verdict; any own run (R8); any hypothesis in
+the table. Status: [BASELINE] — ran, numbers here, not refuted.

@@ -67,15 +67,20 @@ The pilot has run: on a published RL ladder of thirteen checkpoints 200 updates 
 by the first checkpoint and read by any later one needs no token recomputed at any tolerance on the ladder,
 because 2,400 updates of that run move the weights by a few hundredths of a percent. The ledger records the
 ruling that followed: the axis is the distance between the writer's and the reader's weights, and the
-optimizer lag is one way of producing it. A second ladder, over weight distance, is built and unregistered.
+optimizer lag is one way of producing it. The second ladder, over weight distance, has run: an
+isotropic-noise backbone of seven rungs on OLMo-2 1B and six real training directions (OLMo-2 SFT, DPO and
+RLVR; Qwen2.5-1.5B base, Instruct, Math and R1-Distill). The backbone holds through a relative distance of
+3e-2 and degrades at 1e-1, so the sealed knee at 3e-3 was falsified; by the rule's statistic the real
+directions tie the backbone wherever both are measured, and by whole-cache deviation they scatter around it
+by two orders of magnitude either way. Direction, not distance alone, sets what the cache costs.
 No hypothesis is registered. The ledger holds the founding record (chassis
 provenance, inherited definitions, the first rulings), the ruling that the instrument serves
 statistic (A) only, and two re-pins of the instrument as it gained checkpoint selection and verified
 checkpoint provenance. The pilot's driver and summarizer exist: two controls (the anchor read by itself,
 and one sequence's cache read against another's) run before any rung, and every number is recomputed
-from disk. The pilot's configuration is unregistered; the driver refuses to run until a numbered entry
-registers it. `ledger/ledger.md` is the record of what has been registered
-and ruled, and it says what has not.
+from disk. Both configurations are registered by numbered entries; a driver refuses to run on an
+unregistered one. `ledger/ledger.md` is the record of what has been registered and ruled, and it says what
+has not.
 
 ## How the record stays auditable
 

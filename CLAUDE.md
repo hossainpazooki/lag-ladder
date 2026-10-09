@@ -5,8 +5,9 @@ carries the rulings (§10), the build order (§9) and the re-aim (§12). `ledger
 is append-only by numbered entry; entry 0001 carries the chassis provenance, the inherited definitions (f\*,
 τ_K) and the first rulings, entry 0002 the ruling that the instrument serves statistic (A) only, entries
 0003 and 0004 the instrument re-pins (checkpoint selection; per-side `ModelRef` with verified provenance),
-entry 0005 the pilot's registration, entry 0006 its outcome (f\* = 0 at every lag to 2400: HOLDS), and
-entry 0007 the ruling that weight distance is the axis.
+entry 0005 the pilot's registration, entry 0006 its outcome (f\* = 0 at every lag to 2400: HOLDS),
+entry 0007 the ruling that weight distance is the axis, entry 0008 the weight-distance ladder's registration
+and entry 0009 its outcome.
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never
@@ -66,9 +67,9 @@ interpreter, import nothing from it. The (B) and (C) scorers do not exist yet (d
 ## State
 The pilot ran (ledger 0005, 0006): on OLMo-2 1B RLVR1, f\*(τ_K) = 0 at every lag from 200 to 2400 on
 both anchors, every τ; the sealed DEGRADES at lag 2400 was falsified. Ruled (0007): the axis is weight
-distance. The instrument is pinned at kv-transfer-replication `1380635` (the OLMo pair); the three Qwen2.5
-pairs are a branch upstream awaiting merge and a re-pin. The weight-distance driver, summarizer, tools and
-`config/distance.toml` (seven noise rungs, six real rungs, four pairs) are built and tested against the
-stand-in; the config is unregistered, so `distance run` refuses. Next: the Qwen pairs merged and pinned,
-the SFT/DPO conversions and the Qwen token file made on the run machine, the registering entry with the
-backbone's sealed knee (R-D4), then the run.
+distance. The weight-distance ladder ran (0008, 0009) on the instrument pinned at kv-transfer-replication
+`5d4aa4a`: the isotropic backbone on OLMo-2 1B HOLDS through a relative distance of 3e-2 and DEGRADES at
+1e-1 (the sealed knee at 3e-3 falsified); the six real directions tie the backbone at f\* = 0 wherever
+both are measured and scatter around it by two orders of magnitude in whole-cache deviation. Nothing is
+registered beyond 0009; the next step is the operator's ruling on what the ladder measures next (a finer
+backbone between 3e-2 and 1e-1, the (B)/(C) statistics, or the own run R8).
