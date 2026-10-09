@@ -19,6 +19,7 @@ every real local checkpoint exists with its provenance, the tools exist, and a p
 """
 import argparse
 import json
+import os
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -235,9 +236,15 @@ def assert_ready(cfg: DistanceConfig, repo_root: Path, *, seal_cfg=None, upstrea
 
 # --- the instrument, by subprocess ------------------------------------------------------------------------
 
+CHECKPOINT_ROOT_ENV = "KVT_CHECKPOINT_ROOT"   # the instrument locates a dump's local checkpoint under it to verify the dump
+
+
 def _run(cfg: DistanceConfig, cmd_tail: list[str], runner, what: str) -> None:
     cmd = [str(upstream_python(cfg.upstream_path)), *cmd_tail]
-    r = runner(cmd, cwd=str(cfg.upstream_path), capture_output=True)
+    # KVDump.load re-verifies a local checkpoint's manifest on every load (dumps from converted or perturbed
+    # checkpoints); the instrument finds it as $KVT_CHECKPOINT_ROOT/<local_checkpoint>.
+    env = {**os.environ, CHECKPOINT_ROOT_ENV: str(checkpoints_dir(cfg).resolve())}
+    r = runner(cmd, cwd=str(cfg.upstream_path), capture_output=True, env=env)
     if r.returncode != 0:
         err = r.stderr.decode("utf-8", errors="replace") if isinstance(r.stderr, bytes) else str(r.stderr)
         raise _refuse(f"{what} failed:\n{err[-2000:]}")

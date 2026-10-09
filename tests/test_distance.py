@@ -165,6 +165,9 @@ def test_run_records_rungs_distances_and_prunes_noise_weights(repo, seal_cfg):
     ck = repo / "results" / "distance" / "checkpoints"
     assert not (ck / "noise-0.1" / "model.safetensors").exists() and (ck / "noise-0.1" / "provenance.json").exists()
     assert (ck / "olmo2-1b-sft" / "model.safetensors").exists(), "real local checkpoints are never pruned"
+    ck_root = str((repo / "results" / "distance" / "checkpoints").resolve())
+    assert fake.envs and all(e is not None and e.get("KVT_CHECKPOINT_ROOT") == ck_root for e in fake.envs), (
+        "every instrument call must carry KVT_CHECKPOINT_ROOT so a dump from a local checkpoint verifies")
     tools_calls = [c for c in fake.calls if c[1] != "-m"]
     assert sorted({Path(c[1]).name for c in tools_calls}) == ["perturb_checkpoint.py", "weight_distance.py"]
     perturb = [c for c in tools_calls if c[1].endswith("perturb_checkpoint.py")]

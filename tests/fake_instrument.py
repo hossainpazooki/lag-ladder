@@ -70,9 +70,11 @@ class FakeInstrument:
         self.deviation = deviation
         self.distance = distance
         self.calls = []
+        self.envs = []
 
     def __call__(self, cmd, cwd=None, capture_output=False, **kw):
         self.calls.append(list(cmd))
+        self.envs.append(kw.get("env"))
         if cmd[1] == "-m":
             module, rest = cmd[2], cmd[3:]
         else:
