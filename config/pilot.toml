@@ -1,9 +1,8 @@
 # The (A)-only pilot: f*(tau_K) on the OLMo-2 RLVR1 revisions (design doc §9 step 3).
 #
-# UNREGISTERED. Every value below is the design doc's proposal, carried here so the loader has
-# something to validate; `registered_by` is empty until a numbered ledger entry fixes them, and
-# `lag_ladder.pilot run` refuses while it is empty. tau_K and the ladder are inherited from
-# linear-ceiling entry 0023 (see ledger entry 0001), not recalibrated.
+# REGISTERED by ledger entry 0005 (2026-10-09); every value below is fixed by it. A change is a new
+# entry. tau_K and the ladder are inherited from linear-ceiling entry 0023 (see ledger entry 0001),
+# not recalibrated.
 [pilot]
 source = "allenai/OLMo-2-0425-1B-RLVR1"
 base = "allenai/OLMo-2-0425-1B-DPO"
@@ -14,21 +13,21 @@ stride_steps = 200
 anchors = ["step_200", "step_1200"]
 results_dir = "results/fstar"
 upstream_path = "../kv-transfer-replication"
-# The instrument commit the run invokes; the gate refuses the placeholder by name. The registering
-# entry records the sha (ledger 0004 pins 0d27c68; the pair below must exist upstream at the sha).
-upstream_sha = "UPSTREAM_SHA_PENDING"
+# The instrument commit the run invokes (ledger 0005): main after the pair below landed; the four (A)
+# paths are byte-identical to ledger 0004's 0d27c68.
+upstream_sha = "1380635da3b80cb5b8e669fab0eee87438abfa96"
 # The upstream `Pair` name under which both checkpoints are the same model id; each dump pins one
-# revision through `--revision`. Registered upstream by its own commit.
+# revision through `--revision` (kv-transfer-replication PR #3).
 pair = "olmo2-1b-rlvr1"
 # Held-out sequences: the upstream's `prepare_tokens` output (relative to upstream_path), its hash,
 # and the [lo, hi) range of sequence indices read as held out (the last ten of fifty, as 0023 did).
 tokens = "data/tokens/olmo2-1b-rlvr1_n50_len1024_seed0.npy"
-tokens_sha256 = "TOKENS_SHA256_PENDING"
+tokens_sha256 = "462a7a743326085462a8fdf0f7a63d79045167e71b596230117066e7ac2eeeeb"
 heldout = [40, 50]
 # Forward dtype of every dump (the arrays on disk are float16 regardless); the engine runs bf16.
 dtype = "float32"
 seed = 0
-registered_by = ""
+registered_by = "0005"
 
 [pilot.rule]
 statistic = "median over held-out sequences of the oracle selective-recompute fraction f*(tau_K) on the K read-out"

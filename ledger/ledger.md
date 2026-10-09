@@ -164,3 +164,50 @@ place of `revision` / `local_path` (design work, not this entry).
 **Consequences in this commit set:** `src/lag_ladder/__init__.py::INSTRUMENT_SHA`; `UPSTREAM.md` §1
 pinned-commit line and its re-pin sentence; `UPSTREAM.md` §2 "fork" sentence aligned with design §6
 (per-step checkpoints are config, learning 2026-09-25 — no fork; a producer pin records the author sha).
+
+### 0005 — 2026-10-09 — Pilot registered: f*(τ_K) on the OLMo-2 RLVR1 ladder, statistic (A) only
+
+prior-entries-sha256: 909907063ec5641b9ac2cdd1e675a99406705a69ef172e5e93222e0c48a25c0f
+
+**Registers** `config/pilot.toml`, now `registered_by = "0005"`: source `allenai/OLMo-2-0425-1B-RLVR1`,
+the thirteen `step_*` revisions at stride 200, anchors `step_200` and `step_1200`, held-out sequences
+[40, 50) of the instrument's `data/tokens/olmo2-1b-rlvr1_n50_len1024_seed0.npy` (FineWeb-Edu
+`sample-10BT`, streaming, shuffle seed 0, fifty sequences of 1,024 tokens, made by the instrument's
+`prepare_tokens` on 2026-10-09; sha256 `462a7a743326085462a8fdf0f7a63d79045167e71b596230117066e7ac2eeeeb`;
+the instrument ignores `data/`, so the file travels by hash and the driver refuses any other), forward
+dtype float32, seed 0. Rule: median over held-out sequences of f*(τ_K = 0.3186) on the K read-out;
+HOLDS ≤ 0.15, DEGRADES ≥ 0.50, UNRESOLVED between; τ ladder {0.3186, 0.10, 0.03} descriptive. τ_K and
+f* are linear-ceiling 0023 (entry 0001), not recalibrated. Ruled 2026-10-09: dtype, grid, bounds, seal.
+
+**Instrument.** Re-pinned at kv-transfer-replication `1380635da3b80cb5b8e669fab0eee87438abfa96` (`main`
+after PR #3: the pair `olmo2-1b-rlvr1`, both sides the same model id, revisions pinned per dump through
+`--revision`). The four (A) paths are byte-identical to `0d27c68` (0004): `git diff --stat 0d27c68
+1380635 -- scripts/dump_kv.py kvt/data.py scripts/score_positions.py kvt/pertoken.py` is empty.
+`INSTRUMENT_SHA`, `UPSTREAM.md` §1 and `pilot.toml.upstream_sha` agree.
+
+**Construction** (`lag_ladder.pilot`). Per anchor a, later revision r and held-out sequence: two
+stride-1 single-sequence prefill dumps of the same tokens (the pinned scorer reads one sequence at a
+time), scored at every position with the writer's K as the candidate and the reader's own K as the
+reference; f*(τ) from the per-token record (`lag_ladder.fstar_record`, which refuses unless the record
+hashes, sums to the recorded SSE and reproduces 1 − R²). Per-sequence f*, then the median per lag.
+
+**Controls, run before any rung; the run halts on failure.** Identity: an anchor read by itself must
+give f*(τ_K) ≤ 0.0 on every sequence. Scrambled: an anchor's cache for one sequence read against the
+same revision's cache for the next held-out sequence must give a median f*(τ_K) ≥ 0.90; below it no
+ladder table is produced. Both bounds are stated judgment. Kernel identity on the run machine (Apple
+M6, MPS against CPU, float32, 48 tokens, this pin's bytes): OLMo-2-1B `step_200` 1 − R² = 1.7e-9 on K,
+per-token centered deviation ≤ 6.6e-9, f* = 0 at every rung; the on-disk float16 arrays differ by at
+most one ulp; attention kernel `sdpa_repeat_kv` on both devices. Same on Qwen3-0.6B (1 − R² = 3.0e-9).
+The model loads under the instrument: 16 layers, 16 KV heads, d_h 128, peak 5.99 GB at 48 tokens.
+
+**Seal.** `ledger/predictions/olmo2-1b-rlvr1.json`, sidecar sha256 `31f4e5659db321dba1c4c157d29826a9c3056978de933da9320fa37d9a874bde`, written
+before any dump: from anchor `step_200`, median f*(τ_K) ≤ 0.15 at lag 200 (HOLDS) and ≥ 0.50 at lag
+2400 (DEGRADES).
+
+**Not registered here.** Statistics (B) and (C); the second prompt set (G7: the pilot reads FineWeb-Edu
+only); the own run (R8); the precision (G1) and origin (G2) controls; hypotheses, which the verdict entry
+states against this rule once `summarize_pilot` has run.
+
+**Consequences in this commit set:** `config/pilot.toml` (`registered_by`, `upstream_sha`,
+`tokens_sha256`); `src/lag_ladder/__init__.py::INSTRUMENT_SHA`; `UPSTREAM.md` §1; the sealed prediction
+and its sidecar; `tests/test_config.py` (the repo config is now registered).

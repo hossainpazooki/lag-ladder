@@ -104,5 +104,5 @@ def test_repo_configs_load():
     from lag_ladder import REPO_ROOT
     load_seal_config(REPO_ROOT / "config" / "seal.toml", REPO_ROOT)
     cfg = load_pilot_config(REPO_ROOT / "config" / "pilot.toml", REPO_ROOT)
-    assert cfg.registered_by == "", "the pilot config is registered: update this test with the entry number"
+    assert cfg.registered_by == "0005", "the pilot config's registering entry changed: update this test"
     assert len(cfg.revisions) == 13 and cfg.stride_steps == 200
