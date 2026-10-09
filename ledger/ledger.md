@@ -251,3 +251,38 @@ ran, numbers here, not refuted.
 
 **Not measured.** Statistics (B) and (C); the V read-out as a verdict (recorded in every report, not
 read by the rule); the second prompt set (G7); any lag below 200.
+
+### 0007 — 2026-10-09 — Ruling: the ladder's axis is weight distance; the lag ladder is one source of it
+
+prior-entries-sha256: 16ad43d9a4b9afdd8abc795734f7ca2b9e0616bd9fa831239c76baf9f9a7a589
+
+**Ruled 2026-10-09, after 0006** ("re-aim at weight-distance"). The pilot read f*(τ_K) = 0 at every published
+lag because the quantity the cache responds to is the distance between the writer's and the reader's
+weights, and 2,400 RLVR optimizer steps on this model put almost none on the axis. Lag in optimizer steps
+is not the quantity; relative weight distance is, and an RL run's lag is one way of producing it.
+
+**What the lane measures from here** (the scope sentence is unchanged; "how many optimizer updates apart"
+is read through the distance those updates produced): f*(τ) as a function of the relative L2 distance
+between writer and reader over the **whole parameter vector** (R-D1; the K-projection distance is reported
+beside it), with real training directions as labelled points and an isotropic-noise ladder as the
+calibrated backbone — design §3's NULL arm, promoted from control to axis.
+
+- **R-D2 — the backbone:** one checkpoint (OLMo-2 RLVR1 `step_200`) perturbed by seeded isotropic Gaussian
+  noise at relative norms {1e-4, 3e-4, 1e-3, 3e-3, 1e-2, 3e-2, 1e-1}, each written as a local checkpoint
+  and read against the clean checkpoint, ten held-out sequences per rung.
+- **R-D3 — the real points:** the Qwen2.5-1.5B family (base → Instruct, base → Math, Math → R1-Distill;
+  same architecture, safetensors; Math and R1-Distill carry a different RoPE base, compared in content
+  space as the instrument does) and the OLMo-2 1B chain SFT → DPO → RLVR1 (SFT and DPO ship `.bin` weights
+  and enter through a converted local checkpoint whose provenance the registering entry records).
+- **R-D5 — framing:** the async-RL framing stays. The first result is the pilot's: on a published RL
+  ladder the cache never goes stale; the distance curve says why, and where it would.
+
+**Measured today, descriptive, not of record:** relative weight distances on OLMo-2 1B — one RLVR rung
+~1e-4, the whole RLVR ladder ~4e-4, SFT → DPO ~9e-4, and the public base checkpoint unrelated to the
+post-training lineage (near-zero cosine on every matrix; it is excluded as a writer). These came from an
+ad-hoc script over Hub files, not from a summarizer over `results/`, so they are not ledger numbers; the
+registering entry's run re-derives every distance from the dumped checkpoints' manifests.
+
+**Open before registration:** the sealed prediction for the backbone (the distance at which median
+f*(τ_K) first leaves HOLDS) — R-D4; the rung list and controls for each pair; the conversion step's
+provenance rule. Nothing is registered by this entry; `config/pilot.toml` (0005) stands as run.

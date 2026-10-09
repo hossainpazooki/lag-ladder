@@ -346,3 +346,25 @@ Open, with the recommendation on record (unruled; a recommendation is not a ruli
   trainer paths unchanged from it. Checked 2026-09-20: the
   author repo's code search has no `recompute` / `kv_cache` / `reset_prefix_cache` hit (default branch
   only), so Fig. 7's measurement code is not published; smallest documented config is 4 H100s.
+
+## 12. Re-aim (ruled 2026-10-09, ledger 0007): weight distance is the axis
+
+The pilot (0005/0006) read f*(τ_K) = 0 at every published lag to 2400 on OLMo-2 1B RLVR1: the cache responds
+to the distance between writer and reader weights, and 2,400 RLVR steps put ~4e-4 of relative L2 distance on
+the axis (descriptive, re-derived under the next registration). Consequences, by ruling:
+
+- **Axis (R-D1):** relative L2 distance over the whole parameter vector; K-projection distance reported beside it.
+- **Backbone (R-D2):** §3's NULL arm promoted — isotropic Gaussian noise added to RLVR1 `step_200` at relative
+  norms {1e-4, 3e-4, 1e-3, 3e-3, 1e-2, 3e-2, 1e-1}, each a local checkpoint read against the clean one; ten
+  held-out sequences per rung; seeded.
+- **Real points (R-D3):** Qwen2.5-1.5B base → Instruct, base → Math, Math → R1-Distill (content-space comparison;
+  Math and R1-Distill use a different RoPE base) and the OLMo-2 1B chain SFT → DPO → RLVR1 (SFT, DPO converted
+  from `.bin` to local safetensors checkpoints with provenance). The public OLMo-2 1B base is off the
+  post-training lineage (near-zero weight cosine) and is excluded.
+- **Framing (R-D5):** async RL stays the framing; the pilot's null is the first result, the distance curve
+  explains it and locates the knee.
+- **Open (R-D4):** the sealed prediction for the backbone's knee, at registration.
+
+Build order from here: the perturbation and conversion tools (run with the instrument's interpreter; no
+`kvt` import), a rung-based config and driver generalised from the pilot's (writer ref → reader ref, revision
+or local path), the Qwen pairs upstream, then registration, seal, run.

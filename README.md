@@ -63,7 +63,12 @@ Statistic (A) needs no generation. It is read from cache dumps alone by the pinn
 
 ## Status
 
-Nothing has run and no hypothesis is registered. The ledger holds the founding record (chassis
+The pilot has run: on a published RL ladder of thirteen checkpoints 200 updates apart, the K cache written
+by the first checkpoint and read by any later one needs no token recomputed at any tolerance on the ladder,
+because 2,400 updates of that run move the weights by a few hundredths of a percent. The ledger records the
+ruling that followed: the axis is the distance between the writer's and the reader's weights, and the
+optimizer lag is one way of producing it. A second ladder, over weight distance, is built and unregistered.
+No hypothesis is registered. The ledger holds the founding record (chassis
 provenance, inherited definitions, the first rulings), the ruling that the instrument serves
 statistic (A) only, and two re-pins of the instrument as it gained checkpoint selection and verified
 checkpoint provenance. The pilot's driver and summarizer exist: two controls (the anchor read by itself,
