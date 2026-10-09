@@ -1,0 +1,25 @@
+{
+  "pair": "olmo2-1b-rlvr1",
+  "prediction": {
+    "predictions": {
+      "lag_200": {
+        "band": "HOLDS",
+        "median_fstar_tau_K": "<= 0.15"
+      },
+      "lag_2400": {
+        "band": "DEGRADES",
+        "median_fstar_tau_K": ">= 0.50"
+      }
+    },
+    "registering_entry": "0005",
+    "rule": {
+      "degrades_min": 0.5,
+      "holds_max": 0.15
+    },
+    "ruled": "2026-10-09",
+    "shape": "null at engine lags, degrades in the tail",
+    "statistic": "median over held-out sequences [40, 50) of the oracle selective-recompute fraction f*(tau_K = 0.3186), K read-out, writer anchor step_200"
+  },
+  "prior_artifacts": [],
+  "sealed_pre_fit": true
+}
