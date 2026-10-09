@@ -1,0 +1,101 @@
+# The weight-distance ladder (design §12, ruled 2026-10-09, ledger 0007): f*(tau) as a function of the
+# relative L2 distance between the writer's and the reader's weights, with an isotropic-noise backbone and
+# real training directions as labelled points.
+#
+# UNREGISTERED. Every value below is the proposal; `registered_by` is empty until a numbered ledger entry
+# fixes them, and `lag_ladder.distance run` refuses while it is empty. tau_K and the ladder are inherited
+# from linear-ceiling entry 0023 (see ledger entry 0001), not recalibrated.
+[distance]
+results_dir = "results/distance"
+upstream_path = "../kv-transfer-replication"
+upstream_sha = "UPSTREAM_SHA_PENDING"
+# Held-out sequences [lo, hi) of each pair's token file (the last ten of fifty, as 0005).
+heldout = [40, 50]
+dtype = "float32"
+seed = 0
+registered_by = ""
+
+[distance.rule]
+statistic = "median over held-out sequences of the oracle selective-recompute fraction f*(tau_K) on the K read-out, per rung"
+tau_K = 0.3186
+tau_ladder = [0.3186, 0.10, 0.03]
+holds_max = 0.15
+degrades_min = 0.50
+
+[distance.controls]
+# Per pair, on its writer: identity (the writer read by itself) and scrambled (one sequence's cache read
+# against the next sequence's at the same positions). The run halts on failure.
+identity_max = 0.0
+scrambled_min = 0.90
+
+# The backbone (R-D2): the anchor checkpoint perturbed by seeded isotropic Gaussian noise at these relative
+# L2 norms over the whole parameter vector, each written as a float32 local checkpoint (bfloat16 cannot carry a
+# 1e-4 relative perturbation) and read against the clean anchor. Checkpoints are written under results_dir,
+# dumped, scored, and may be deleted afterwards; their manifests and provenance stay with the records.
+[distance.noise]
+pair = "olmo2-1b-rlvr1"
+which = "source"
+anchor_revision = "step_200"
+rel_norms = [1e-4, 3e-4, 1e-3, 3e-3, 1e-2, 3e-2, 1e-1]
+
+# Token files, one per pair, made by the instrument's `prepare_tokens` (relative to upstream_path) and
+# pinned by hash. A pair whose two tokenizers differ in special tokens (R1-Distill) uses its writer family's
+# file: the ids are the shared vocabulary's.
+[[distance.pairs]]
+name = "olmo2-1b-rlvr1"
+tokens = "data/tokens/olmo2-1b-rlvr1_n50_len1024_seed0.npy"
+tokens_sha256 = "462a7a743326085462a8fdf0f7a63d79045167e71b596230117066e7ac2eeeeb"
+
+[[distance.pairs]]
+name = "qwen2.5-1.5b-to-instruct"
+tokens = "data/tokens/qwen2.5-1.5b-to-instruct_n50_len1024_seed0.npy"
+tokens_sha256 = "TOKENS_SHA256_PENDING"
+
+[[distance.pairs]]
+name = "qwen2.5-1.5b-to-math"
+tokens = "data/tokens/qwen2.5-1.5b-to-instruct_n50_len1024_seed0.npy"
+tokens_sha256 = "TOKENS_SHA256_PENDING"
+
+[[distance.pairs]]
+name = "qwen2.5-math-1.5b-to-r1-distill"
+tokens = "data/tokens/qwen2.5-1.5b-to-instruct_n50_len1024_seed0.npy"
+tokens_sha256 = "TOKENS_SHA256_PENDING"
+
+# The real points (R-D3). A ref is one side of the pair at a revision (Hub) or a local checkpoint directory
+# (relative to results_dir/checkpoints; written by tools/convert_bin_checkpoint.py with provenance). The
+# writer's cache is the candidate; the reader's own cache is the reference, as in the pilot.
+[[distance.rungs]]
+label = "olmo-dpo-to-rlvr1-step_200"
+pair = "olmo2-1b-rlvr1"
+writer = { which = "source", local_path = "olmo2-1b-dpo" }
+reader = { which = "target", revision = "step_200" }
+
+[[distance.rungs]]
+label = "olmo-sft-to-dpo"
+pair = "olmo2-1b-rlvr1"
+writer = { which = "source", local_path = "olmo2-1b-sft" }
+reader = { which = "target", local_path = "olmo2-1b-dpo" }
+
+[[distance.rungs]]
+label = "olmo-sft-to-rlvr1-step_2600"
+pair = "olmo2-1b-rlvr1"
+writer = { which = "source", local_path = "olmo2-1b-sft" }
+reader = { which = "target", revision = "step_2600" }
+
+[[distance.rungs]]
+label = "qwen-base-to-instruct"
+pair = "qwen2.5-1.5b-to-instruct"
+writer = { which = "source" }
+reader = { which = "target" }
+
+[[distance.rungs]]
+label = "qwen-base-to-math"
+pair = "qwen2.5-1.5b-to-math"
+writer = { which = "source" }
+reader = { which = "target" }
+
+[[distance.rungs]]
+label = "qwen-math-to-r1-distill"
+pair = "qwen2.5-math-1.5b-to-r1-distill"
+writer = { which = "source" }
+reader = { which = "target" }
