@@ -2,18 +2,17 @@
 # relative L2 distance between the writer's and the reader's weights, with an isotropic-noise backbone and
 # real training directions as labelled points.
 #
-# UNREGISTERED. Every value below is the proposal; `registered_by` is empty until a numbered ledger entry
-# fixes them, and `lag_ladder.distance run` refuses while it is empty. tau_K and the ladder are inherited
-# from linear-ceiling entry 0023 (see ledger entry 0001), not recalibrated.
+# REGISTERED by ledger entry 0008 (2026-10-09); every value below is fixed by it. A change is a new entry.
+# tau_K and the ladder are inherited from linear-ceiling entry 0023 (see ledger entry 0001), not recalibrated.
 [distance]
 results_dir = "results/distance"
 upstream_path = "../kv-transfer-replication"
-upstream_sha = "UPSTREAM_SHA_PENDING"
+upstream_sha = "5d4aa4a98b40f5ab37dd83ebb6b2ee802203994a"
 # Held-out sequences [lo, hi) of each pair's token file (the last ten of fifty, as 0005).
 heldout = [40, 50]
 dtype = "float32"
 seed = 0
-registered_by = ""
+registered_by = "0008"
 
 [distance.rule]
 statistic = "median over held-out sequences of the oracle selective-recompute fraction f*(tau_K) on the K read-out, per rung"
@@ -49,17 +48,17 @@ tokens_sha256 = "462a7a743326085462a8fdf0f7a63d79045167e71b596230117066e7ac2eeee
 [[distance.pairs]]
 name = "qwen2.5-1.5b-to-instruct"
 tokens = "data/tokens/qwen2.5-1.5b-to-instruct_n50_len1024_seed0.npy"
-tokens_sha256 = "TOKENS_SHA256_PENDING"
+tokens_sha256 = "01bd7698f7413ab9a3b6958991487bbba626f5a8cc4f24142cd22091d96af747"
 
 [[distance.pairs]]
 name = "qwen2.5-1.5b-to-math"
 tokens = "data/tokens/qwen2.5-1.5b-to-instruct_n50_len1024_seed0.npy"
-tokens_sha256 = "TOKENS_SHA256_PENDING"
+tokens_sha256 = "01bd7698f7413ab9a3b6958991487bbba626f5a8cc4f24142cd22091d96af747"
 
 [[distance.pairs]]
 name = "qwen2.5-math-1.5b-to-r1-distill"
 tokens = "data/tokens/qwen2.5-1.5b-to-instruct_n50_len1024_seed0.npy"
-tokens_sha256 = "TOKENS_SHA256_PENDING"
+tokens_sha256 = "01bd7698f7413ab9a3b6958991487bbba626f5a8cc4f24142cd22091d96af747"
 
 # The real points (R-D3). A ref is one side of the pair at a revision (Hub) or a local checkpoint directory
 # (relative to results_dir/checkpoints; written by tools/convert_bin_checkpoint.py with provenance). The

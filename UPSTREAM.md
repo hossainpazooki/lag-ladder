@@ -6,9 +6,10 @@ every sha below; `tests/test_imports.py` asserts this file names exactly those s
 ## 1. Instrument for statistic (A) only — `kv-transfer-replication` (invoked, never imported; ledger 0002)
 
 - Repo: https://github.com/hossainpazooki/kv-transfer-replication
-- Pinned commit: `1380635da3b80cb5b8e669fab0eee87438abfa96` — `main` after PR #3 (the `olmo2-1b-rlvr1`
-  pair for the pilot) merged; ledger 0005, 2026-10-09. Before it, 0d27c68 (ledger 0004: PR #1 Llama 3 pair and
-  PR #2 G3 checkpoint provenance), to which the four (A) paths are byte-identical: per-side `ModelRef` pins on `Pair`
+- Pinned commit: `5d4aa4a98b40f5ab37dd83ebb6b2ee802203994a` — `main` after the three Qwen2.5-1.5B
+  weight-distance pairs merged; ledger 0008, 2026-10-09. Before it, 1380635 (ledger 0005: the `olmo2-1b-rlvr1`
+  pair) and 0d27c68 (ledger 0004: PR #1 Llama 3 pair and PR #2 G3 checkpoint provenance), to which the four (A)
+  paths are byte-identical: per-side `ModelRef` pins on `Pair`
   (`source_revision` / `target_revision` / `*_local_path`), checkpoint manifest hashed before load and
   verified on every `KVDump.load`, `device()` with mps, `--dtype`, `--probe`, console entry points, CI.
   Ledger 0003's `Pair.with_revision` interface (pin 9ca6258) is replaced. The prior pins (linear-ceiling's

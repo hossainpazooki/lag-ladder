@@ -286,3 +286,44 @@ registering entry's run re-derives every distance from the dumped checkpoints' m
 **Open before registration:** the sealed prediction for the backbone (the distance at which median
 f*(τ_K) first leaves HOLDS) — R-D4; the rung list and controls for each pair; the conversion step's
 provenance rule. Nothing is registered by this entry; `config/pilot.toml` (0005) stands as run.
+
+### 0008 — 2026-10-09 — Weight-distance ladder registered: the isotropic backbone and six real rungs, statistic (A)
+
+prior-entries-sha256: 7239bd4913c034602a9843993cfcf902b18ce2453315f03180c6e77f341e9d92
+
+**Registers** `config/distance.toml`, now `registered_by = "0008"`. Rule: per rung, median over held-out
+sequences [40, 50) of f*(τ_K = 0.3186) on the K read-out; HOLDS ≤ 0.15, DEGRADES ≥ 0.50, UNRESOLVED between;
+τ ladder {0.3186, 0.10, 0.03} descriptive. The x-axis is the relative L2 distance between writer and reader
+over the whole parameter vector, recomputed from the dumped checkpoints by `tools/weight_distance.py` and tied
+to the dumps' checkpoint manifests by file hash; the K-projection distance is reported beside it (0007,
+R-D1). Forward dtype float32, seed 0.
+
+**Backbone (R-D2).** OLMo-2 RLVR1 `step_200` perturbed by seeded isotropic Gaussian noise at relative norms
+{1e-4, 3e-4, 1e-3, 3e-3, 1e-2, 3e-2, 1e-1} — `tools/perturb_checkpoint.py`: one standard-normal draw per
+element, one global scale so the whole-vector relative norm equals the target, float32 output, provenance with
+the realized norm — each read against the clean checkpoint. Seven rungs; a perturbed checkpoint's weights are
+deleted after its last score, its provenance and manifest stay.
+
+**Real rungs (R-D3).** OLMo-2 1B: SFT → DPO, DPO → RLVR1 `step_200`, SFT → RLVR1 `step_2600`; SFT and DPO
+ship `pytorch_model.bin` and enter as local safetensors checkpoints written by `tools/convert_bin_checkpoint.py`
+from Hub commits 0d85a3d03787 and c4b0485961ab (output sha256 e39d408cae53… and 70a636cfea16…), weights unchanged in their
+stored dtype. Qwen2.5-1.5B: base → Instruct, base → Math, Math → R1-Distill (pairs `qwen2.5-1.5b-to-instruct`,
+`qwen2.5-1.5b-to-math`, `qwen2.5-math-1.5b-to-r1-distill`; Math and R1-Distill carry `rope_theta` 1e4 against
+the base's 1e6 and are compared in content space, as the instrument does). Six rungs. Held-out tokens: OLMo as
+0005 (sha256 `462a7a74…`); Qwen `data/tokens/qwen2.5-1.5b-to-instruct_n50_len1024_seed0.npy` (FineWeb-Edu,
+`prepare_tokens` seed 0, sha256 01bd7698f741…), shared by the three Qwen pairs.
+
+**Instrument.** Re-pinned at kv-transfer-replication 5d4aa4a98b40f5ab37dd83ebb6b2ee802203994a (`main` after the three Qwen pairs merged); the
+four (A) paths are byte-identical to `0d27c68` (0004).
+
+**Controls**, per distinct writer checkpoint, before any rung that uses it; the run halts on failure: identity
+f*(τ_K) ≤ 0.0 on every sequence; scrambled median f*(τ_K) ≥ 0.90. Six writers: the two converted OLMo
+checkpoints, RLVR1 `step_200`, and the three Qwen writers.
+
+**Seal.** `ledger/predictions/weight-distance.json`, sidecar sha256 `94a315dfddd4d8ad8c71215d88ffc3aacd2e9baf708e196241e6308019b642b8`,
+written before any dump (R-D4, ruled 2026-10-09): the backbone's median f*(τ_K) stays within HOLDS through
+1e-3, first exceeds 0.15 at 3e-3, and is DEGRADES by 1e-2; a real direction at matched distance reads a
+higher median f*(τ_K) than the nearest isotropic rung.
+
+**Not registered here.** Statistics (B) and (C); the own run (R8); any hypothesis in the table. The pilot's
+registration (0005) stands as run.

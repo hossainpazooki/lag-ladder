@@ -87,6 +87,6 @@ def test_distance_config_refuses_bad_values(tmp_path, old, new, msg):
 
 def test_repo_distance_config_loads_unregistered():
     cfg = load_distance_config(REPO_ROOT / "config" / "distance.toml", REPO_ROOT)
-    assert cfg.registered_by == "", "the distance config is registered: update this test with the entry number"
+    assert cfg.registered_by == "0008", "the distance config's registering entry changed: update this test"
     assert len(cfg.noise["rel_norms"]) == 7 and sum(r.kind == "noise" for r in cfg.rungs) == 7
     assert {r.pair for r in cfg.rungs} <= set(cfg.pairs)
