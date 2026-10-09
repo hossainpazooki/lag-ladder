@@ -1,0 +1,22 @@
+{
+  "pair": "weight-distance",
+  "prediction": {
+    "predictions": {
+      "backbone_knee": {
+        "degrades_by": "rel_norm 1e-2",
+        "first_rung_with_median_fstar_tau_K_above_0.15": "rel_norm 3e-3",
+        "holds_through": "rel_norm 1e-3"
+      },
+      "real_directions_vs_backbone": "above: a trained direction at matched distance reads a higher median f*(tau_K) than the isotropic rung nearest to it"
+    },
+    "registering_entry": "0008",
+    "rule": {
+      "degrades_min": 0.5,
+      "holds_max": 0.15
+    },
+    "ruled": "2026-10-09",
+    "statistic": "per rung, median over held-out sequences [40, 50) of the oracle selective-recompute fraction f*(tau_K = 0.3186), K read-out; x = relative L2 weight distance over the whole parameter vector"
+  },
+  "prior_artifacts": [],
+  "sealed_pre_fit": true
+}
