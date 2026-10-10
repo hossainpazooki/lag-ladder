@@ -7,7 +7,8 @@ is append-only by numbered entry; entry 0001 carries the chassis provenance, the
 0003 and 0004 the instrument re-pins (checkpoint selection; per-side `ModelRef` with verified provenance),
 entry 0005 the pilot's registration, entry 0006 its outcome (f\* = 0 at every lag to 2400: HOLDS),
 entry 0007 the ruling that weight distance is the axis, entry 0008 the weight-distance ladder's registration,
-entry 0009 its outcome, and entry 0010 the closure of statistic (A) with the statement of record.
+entry 0009 its outcome, entry 0010 the closure of statistic (A) with the statement of record, and entry 0011
+the ruling that the lane continues under statistic (B) as design §13 defines it.
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never
@@ -60,7 +61,8 @@ driver: identity and scrambled controls, then the ladder, by subprocess into the
 and reader refs, Hub revision or local checkpoint; controls per writer; the noise backbone written and pruned
 per rung) · `summarize_distance` (rungs by measured distance, tied to the dumps' manifests). `tools/` —
 `perturb_checkpoint.py`, `convert_bin_checkpoint.py`, `weight_distance.py`: run with the instrument's
-interpreter, import nothing from it. The (B) and (C) scorers do not exist yet (design §9 step 5).
+interpreter, import nothing from it. The (B) scorer is ruled and specified (design §13) and not yet built;
+(C)'s does not exist.
 `config/` — `seal.toml`, `pilot.toml`, `distance.toml`. `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
 `mappers/` — seal artifact roots, gitignored past their placeholders. `docs/` — the design doc.
 
@@ -72,5 +74,7 @@ distance. The weight-distance ladder ran (0008, 0009) on the instrument pinned a
 1e-1 (the sealed knee at 3e-3 falsified); the six real directions tie the backbone at f\* = 0 wherever
 both are measured and scatter around it by two orders of magnitude in whole-cache deviation. **Statistic
 (A) is closed (0010)**: the statement of record is in that entry and the README; linear-ceiling's paper
-cites this repository for it. Nothing is registered beyond 0010. (B), (C) and the own run are not ruled;
-a continuation is a new ruling entry, then a registration with its own seal, on the pattern of 0007/0008.
+cites this repository for it. Nothing is registered beyond 0010. **Statistic (B) is ruled (0011)** as
+design §13 defines it: per-token KL of the reader over the writer's cache against its own, on the 0008 dumps,
+to run on RunPod. Next: the pre-registration float16-floor probe on the pod, the build (§13), then the
+registration entry with its seal committed first. (C) and the own run are not ruled.

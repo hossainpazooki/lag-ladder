@@ -11,7 +11,8 @@ lives there.
 
 **Date:** 2026-09-19 · **Status:** design, PROPOSED, unregistered, unnumbered, nothing run. **Status
 2026-10-10:** statistic (A) complete and closed under the inherited instrument (ledger 0010); §12 carries the
-outcome; (B), (C) and the own run not ruled. **Rulings
+outcome. **Status 2026-10-10, later:** statistic (B) ruled and defined for this repository (ledger 0011,
+§13), unbuilt and unregistered; the run moves to RunPod; (C) and the own run not ruled. **Rulings
 2026-09-22 (§10):** Oct 12 dropped, pilot first; prefix-cache persistence is the primary framing; OLMo is the
 only source until the pilot shows signal; the repo is scaffolded today. Inherits
 `docs/2026-09-02-e-rl-design.md` (the 09-02 design) for the instrument, lag ladders, controls, dumps and
@@ -202,8 +203,9 @@ zero-shot as the contrast.
 **(A) How much of the cache is stale — f*(τ_K), τ ladder {0.3186, 0.10, 0.03}.** Unchanged from 0023 and
 the 09-02 design; τ not recalibrated. Needs dumps, no generation.
 
-**(B) Does the trainer notice — stale-vs-fresh importance ratio, ESS / N.** Unchanged from 09-02 §2(B).
-Bounds remain stated judgment, fixed in the registration entry.
+**(B) Does the trainer notice — stale-vs-fresh importance ratio, ESS / N.** As inherited from 09-02 §2(B).
+**Superseded 2026-10-10 by §13** (ledger 0011): (B) is "does the reader notice", per-token KL as the verdict,
+the importance-weight dispersion descriptive.
 
 **(C) Does the task notice — NEW, verdict-bearing for this paper.** Per (task, lag, arm): final-answer
 exact-match accuracy; the paired difference STALE − FRESH with a seeded paired bootstrap (2,000 reps) —
@@ -381,3 +383,92 @@ OLMo directions carry 78–130× the backbone's K-cache deviation at matched dis
 Math → R1 below. Statistic (A) under the inherited instrument is thereby complete: a step function of
 distance that answers *no* for every pair a training run produces. Entry 0010 states the citable result
 and rules nothing about (B), (C) or the own run.
+
+## 13. Statistic (B), "does the reader notice" (ruled 2026-10-10, ledger 0011)
+
+**Why.** (A) is complete and a step function of distance (§12, 0010). The (A) run surfaced one thing (A)
+cannot read: at matched distance the trained OLMo-2 directions move the K cache by two orders of magnitude
+more than isotropic noise, and Qwen Instruct does not (0009, descriptive). (B) asks what the reader does
+with such a cache. It is continuous where (A) is a step, needs no new instrument, and runs on the dumps 0008
+produced. The 09-02 definition of (B) in §4 (importance ratio and ESS as verdict) is superseded by this
+section; the operator ruled that linear-ceiling's 09-02 promotion does not bind this repository.
+
+**Construction.** A dump at the pin holds K and V for every layer at every position of a 1,024-token
+held-out sequence, from one forward over the whole sequence, stored float16, K with the writer's RoPE
+applied. Attention is causal, so the first 768 positions are exactly the cache of the prefix P; the
+remaining 256 tokens are the continuation. Two arms, both injected into the reader as the instrument's
+`build_cache` / `forward_with_cache` do (re-implemented in `tools/`, importing nothing from `kvt`): FRESH,
+the reader's own dump of P; STALE, the writer's. For the one pair whose RoPE base differs (Qwen base →
+Math) the writer's K is stripped of its rotation and re-rotated for the reader, a borrowed fact from
+`kvt/rope.py` at the pin. Two continuation texts, every statistic computed per text: *corpus*, the
+sequence's own tokens teacher-forced; *on-path*, 256 tokens the reader generates greedily under the STALE
+cache (the trainer's scenario), stored with their hash and then teacher-forced under both arms.
+
+**Statistics.** (B1), verdict-bearing: mean per-token KL(π_fresh ‖ π_stale) over the continuation,
+median over the held-out sequences, per rung and text; the direction follows linear-ceiling 0049. Beside
+it, descriptive: the per-token p90 and maximum (a mean-then-median hides single-token spikes); (B2) the
+per-sequence log importance weight Σ(log π_fresh − log π_stale) and ESS/N over sequences; (B3) the same at
+token level; (B4) argmax agreement. (B2) and (B3) are importance-weight dispersion on text that is a sample
+of neither policy, not a trainer's number.
+
+**Bands.** HOLDS_B: median (B1) ≤ 1e-3 nats/token. DEGRADES_B: ≥ 1e-1. UNRESOLVED between. Ladder {1e-1,
+1e-2, 1e-3} descriptive. Stated judgment; no published per-token-KL threshold was searched for. A
+pre-registration probe measures the float16 floor on one reader on the run machine, is recorded in the
+registering entry, and HOLDS_B is confirmed or lowered from it before the seal is committed.
+
+**Controls, per reader, before its rung; halt on failure.** *Float16 floor* (halting): the reader's live
+float32 cache of P against its own float16 dump of P, both read on the continuation; limits on the maximum
+logit difference and the median KL fixed from the probe; a rung within 2× of the floor is "at the floor".
+*Identity*: the same dump in both arms; a determinism check on a tolerance of 1e-5 in the maximum logit
+difference, not a loader check. *Scrambled*: another sequence's prefix with this sequence's continuation
+must read DEGRADES_B, or the reader's rungs are UNEVALUABLE. *Null*: the isotropic backbone.
+
+**Sources.** The thirteen rungs of 0008 as dumped (six writers, thirteen readers); the noise readers are
+regenerated from their seeds by `tools/perturb_checkpoint.py` and verified against the `out_sha256` in
+their provenance before use, so a changed torch draw halts rather than drifts. Added: one Qwen2.5-1.5B
+isotropic rung at whole-vector 1e-2 (a backbone of the Qwen reader's own model for clause (iv)) and the
+pilot's lag ladder (0005) re-dumped at the current pin.
+
+**Seal (structure here; values in the sealed file, committed before any score).** (i) Backbone (B1) grows
+as the square of whole-vector distance over {1e-3, 3e-3, 1e-2}: least squares on log medians, slope in
+[1.7, 2.3]; the rungs 3e-2 and 1e-1 are reported, not sealed, since at 3e-2 the cache deviation is already
+of order 0.1 and f*(0.03) reads 0.998 (0009). (ii) The backbone leaves HOLDS_B at or below 1e-2. (iii) At
+the nearest backbone rung on whole-vector distance, each OLMo-2 direction reads ≥ 10× the backbone's median
+(B1): KL and 1 − R² are both quadratic in the same cache perturbation to first order, and 0009's deviation
+ratios leave an eightfold margin. (iv) Qwen base → Instruct within 3× of the Qwen rung. (v) On every rung
+whose corpus (B1) is above 2× the floor, on-path median (B1) ≤ corpus median (B1).
+
+**Where it runs.** RunPod, under linear-ceiling's `docs/gpu-experiment-protocol.md` (R1–R12) on the shape
+of its 2026-10-06 RunPod runbook; float32. The dumps and the SFT/DPO conversions travel from the Mac mini
+by a private Hugging Face dataset in the R8 layout and are verified against 0008's manifests on the pod
+before any forward; the Mac keeps its copy until then. The probe runs on the pod. The instrument is a clone
+at `5d4aa4a` with `KVT_CHECKPOINT_ROOT` set before any score.
+
+**Build (what 0012 calls).** `tools/score_continuation.py` (reader spec, fresh and stale dump dirs, token
+file and index, `--prefix-len`, RoPE specs, `--live`, `--text corpus|on-path`, `--generate-under`; writes
+`report.json` with every input's sha256); `src/lag_ladder/reader.py` (plan / check / run / probe on
+`config/reader.toml`, the distance driver's gate order, controls per reader, resumable `run.json`);
+`src/lag_ladder/summarize_reader.py` (recomputes everything from the reports, refuses on mismatch, withholds
+a rung whose reader's controls failed, ties rungs to the dumps' manifests); fake-instrument tests;
+`tests/test_imports.py` widened to `tools/`.
+
+**Rulings (2026-10-10, all as recommended).**
+
+| ruling | ruled |
+|---|---|
+| R-B1 | noise rungs keep (A)'s direction: reader = the perturbed checkpoint, regenerated and sha-verified |
+| R-B2 | HOLDS_B ≤ 1e-3, DEGRADES_B ≥ 1e-1 nats/token; HOLDS_B confirmed or lowered from the floor probe at registration |
+| R-B3 | Qwen base → Math included, re-rotated, labelled |
+| R-B4 | the pilot's lag ladder re-dumped at the current pin for a (B) reading |
+| R-B5 | seal clauses (i)–(v) as above; matched distance = nearest backbone rung on whole-vector distance |
+| R-B6 | prefix 768 / continuation 256 |
+| R-B7 | both texts, corpus and on-path, in this registration ("greedy variant is worth the compute at this stage of experimentation") |
+| R-B7a | on-path text generated under the STALE cache |
+| R-B8 | one Qwen2.5-1.5B isotropic rung at whole-vector 1e-2 |
+| R-B9 | pre-registration float16-floor probe on `step_200`, on the run machine, recorded in the registering entry |
+| R-B10 | float16 floor is the halting control, limits from the probe; identity on a tolerance, not "any nonzero" |
+| R-B11 | dumps transferred to the pod (private dataset, sha-verified), not re-dumped; the run moves to RunPod |
+
+**What (B) cannot say.** Nothing about task accuracy ((C), unbuilt); nothing about a cache older than
+1,024 tokens or a prefix shared across prompts; nothing beyond 1.5B-scale models; nothing a trainer would
+compute. A (B1) at the float16 floor is "at the floor", not zero.

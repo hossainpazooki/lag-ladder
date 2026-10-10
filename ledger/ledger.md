@@ -428,3 +428,52 @@ and 0008 stand as run; the instrument pin stays `5d4aa4a` (0008).
 **Citing.** Cite this repository at the commit that carries this entry; name entries 0006 and 0009 for the
 numbers and 0001 for the statistic's provenance. The score records, per-token files and distance records
 behind both summaries are retained off-repository with the hashes the entries state.
+
+### 0011 — 2026-10-10 — Ruling: the lane continues under statistic (B), "does the reader notice", defined for this repository; the run moves to a rented GPU
+
+prior-entries-sha256: 77428a8fe762180f8fc2bb2b098cf9293581acaab6ca4dc073dfee87d69a0cb8
+
+**Ruled 2026-10-10, after 0010** (operator; the 09-02 promotion of (B) in linear-ceiling is not binding
+here). (A) is a step function of distance (0010). What it cannot read is what the reader does with a cache
+that a trained direction has moved a hundredfold more than isotropic noise of the same size (0009). (B)
+asks that directly, on the dumps 0008 produced, with no new instrument: the scorer is built here, as 0002
+ruled. The full design, with every ruling, is design §13.
+
+**Definition.** For a held-out sequence the first 768 positions are the prefix P and the remaining 256 the
+continuation. The reader is run on the continuation twice: over its own cache of P (FRESH) and over the
+writer's (STALE), both taken from the float16 dumps of 0008 and injected as the instrument injects them.
+Two continuation texts: the corpus text itself, and the reader's own greedy continuation generated under
+the STALE cache, the trainer's scenario. Verdict statistic (B1): mean per-token KL(fresh ‖ stale) over the
+continuation, median over the held-out sequences, per rung and per text. Descriptive beside it: the
+per-token p90 and maximum, the importance-weight dispersion (fresh over stale; ESS over sequences and over
+tokens, on text that is a sample of neither policy), and argmax agreement. Bands: HOLDS_B ≤ 1e-3 nats per
+token, DEGRADES_B ≥ 1e-1, UNRESOLVED between; ladder {1e-1, 1e-2, 1e-3} descriptive. HOLDS_B is confirmed
+or lowered at registration from a float16-floor probe on one reader, run on the run machine and recorded
+in the registering entry.
+
+**Controls, per reader, before its rung; the run halts on failure.** The float16 floor (the reader's live
+cache against its own float16 dump, both read on the continuation) is the halting control, its limits fixed
+from the probe. Identity (the same dump in both arms) is a determinism check against a stated tolerance on
+the maximum logit difference. Scrambled (another sequence's prefix) must read DEGRADES_B, or no rung of
+that reader is read.
+
+**Sources.** The thirteen rungs of 0008 exactly as dumped, the noise readers regenerated from their seeds
+and verified against the recorded checkpoint hashes; Qwen base → Math with the writer's cache re-rotated
+to the reader's RoPE base (the one pair whose bases differ; Math → R1-Distill shares its base and injects
+as is); one Qwen2.5-1.5B isotropic rung at 1e-2, so the Qwen comparison has a backbone of its own model;
+and the pilot's lag ladder (0005) re-dumped at the current pin.
+
+**Seal, in structure; values fixed when the seal is committed, before any score.** (i) On the backbone,
+(B1) grows as the square of whole-vector distance over the rungs 1e-3 to 1e-2. (ii) The backbone leaves
+HOLDS_B at or below 1e-2. (iii) At the nearest backbone rung on whole-vector distance, each OLMo-2 direction
+reads at least 10× the backbone. (iv) Qwen base → Instruct reads within 3× of the Qwen rung. (v) On every
+rung above the floor, the on-path reading is at or below the corpus reading.
+
+**Where it runs.** On a rented GPU (RunPod) under linear-ceiling's GPU protocol, float32 as the dumps were
+made. The dumps and the converted checkpoints travel from the machine that ran 0008 by a sha-verified
+private dataset, and every file is checked against 0008's manifests before any forward. The instrument
+stays pinned at `5d4aa4a`.
+
+**Not registered by this entry.** The build (`tools/score_continuation.py`, `src/lag_ladder/reader.py`,
+`src/lag_ladder/summarize_reader.py`, `config/reader.toml`), the probe, the seal's values and the
+registration belong to the next entry. The configurations of 0005 and 0008 stand as run.
