@@ -6,8 +6,8 @@ is append-only by numbered entry; entry 0001 carries the chassis provenance, the
 τ_K) and the first rulings, entry 0002 the ruling that the instrument serves statistic (A) only, entries
 0003 and 0004 the instrument re-pins (checkpoint selection; per-side `ModelRef` with verified provenance),
 entry 0005 the pilot's registration, entry 0006 its outcome (f\* = 0 at every lag to 2400: HOLDS),
-entry 0007 the ruling that weight distance is the axis, entry 0008 the weight-distance ladder's registration
-and entry 0009 its outcome.
+entry 0007 the ruling that weight distance is the axis, entry 0008 the weight-distance ladder's registration,
+entry 0009 its outcome, and entry 0010 the closure of statistic (A) with the statement of record.
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never
@@ -70,6 +70,7 @@ both anchors, every τ; the sealed DEGRADES at lag 2400 was falsified. Ruled (00
 distance. The weight-distance ladder ran (0008, 0009) on the instrument pinned at kv-transfer-replication
 `5d4aa4a`: the isotropic backbone on OLMo-2 1B HOLDS through a relative distance of 3e-2 and DEGRADES at
 1e-1 (the sealed knee at 3e-3 falsified); the six real directions tie the backbone at f\* = 0 wherever
-both are measured and scatter around it by two orders of magnitude in whole-cache deviation. Nothing is
-registered beyond 0009; the next step is the operator's ruling on what the ladder measures next (a finer
-backbone between 3e-2 and 1e-1, the (B)/(C) statistics, or the own run R8).
+both are measured and scatter around it by two orders of magnitude in whole-cache deviation. **Statistic
+(A) is closed (0010)**: the statement of record is in that entry and the README; linear-ceiling's paper
+cites this repository for it. Nothing is registered beyond 0010. (B), (C) and the own run are not ruled;
+a continuation is a new ruling entry, then a registration with its own seal, on the pattern of 0007/0008.

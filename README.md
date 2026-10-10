@@ -36,7 +36,8 @@ block stays cached across every sync unless something clears it, so its age is u
 
 τ is inherited from [linear-ceiling](https://github.com/hossainpazooki/linear-ceiling), where the same
 statistic was calibrated on a cache carried across a change of *context* (the paper *Carryover*). Here
-the context is held fixed and only the weights move.
+the context is held fixed and only the weights move. Only (A) has been built and run; (B) and (C) are
+designed and unbuilt (ledger 0010).
 
 ## How a rung is measured
 
@@ -54,33 +55,38 @@ cache.
 Statistic (A) needs no generation. It is read from cache dumps alone by the pinned instrument,
 `kv-transfer-replication`, which this repository invokes and never imports.
 
-## Where the ladder runs
+## Where the ladder ran
 
-- **OLMo-2-0425-1B-RLVR1**: thirteen published checkpoints, 200 updates apart, out to 2,400. This is
-  the long end and the pilot: statistic (A) alone, dumps only, decides whether the rest is run.
-- **An own RL run**, one checkpoint per optimizer step, for the short end. Deferred until the pilot
-  shows signal.
+- **OLMo-2-0425-1B-RLVR1**, thirteen published checkpoints 200 updates apart, out to 2,400: the lag
+  ladder (ledger 0005, 0006).
+- **Weight distance directly** (ledger 0007, 0008, 0009), after the lag ladder showed that optimizer lag
+  on a published run puts almost no weight distance on the axis: an isotropic-noise backbone on the same
+  model at seven relative norms from 1e-4 to 1e-1, and six real training directions as labelled points
+  (OLMo-2 1B SFT → DPO → RLVR; Qwen2.5-1.5B base → Instruct, base → Math, Math → R1-Distill).
+- **An own RL run** for the short end: not run.
 
-## Status
+## Result and status
 
-The pilot has run: on a published RL ladder of thirteen checkpoints 200 updates apart, the K cache written
-by the first checkpoint and read by any later one needs no token recomputed at any tolerance on the ladder,
-because 2,400 updates of that run move the weights by a few hundredths of a percent. The ledger records the
-ruling that followed: the axis is the distance between the writer's and the reader's weights, and the
-optimizer lag is one way of producing it. The second ladder, over weight distance, has run: an
-isotropic-noise backbone of seven rungs on OLMo-2 1B and six real training directions (OLMo-2 SFT, DPO and
-RLVR; Qwen2.5-1.5B base, Instruct, Math and R1-Distill). The backbone holds through a relative distance of
-3e-2 and degrades at 1e-1, so the sealed knee at 3e-3 was falsified; by the rule's statistic the real
-directions tie the backbone wherever both are measured, and by whole-cache deviation they scatter around it
-by two orders of magnitude either way. Direction, not distance alone, sets what the cache costs.
-No hypothesis is registered. The ledger holds the founding record (chassis
-provenance, inherited definitions, the first rulings), the ruling that the instrument serves
-statistic (A) only, and two re-pins of the instrument as it gained checkpoint selection and verified
-checkpoint provenance. The pilot's driver and summarizer exist: two controls (the anchor read by itself,
-and one sequence's cache read against another's) run before any rung, and every number is recomputed
-from disk. Both configurations are registered by numbered entries; a driver refuses to run on an
-unregistered one. `ledger/ledger.md` is the record of what has been registered and ruled, and it says what
-has not.
+**Statistic (A) is complete (ledger 0010).** On OLMo-2 1B, the median f\*(τ_K) on the K cache is 0 for
+every writer–reader pair whose whole-vector relative weight distance is at most 3e-2: every published RLVR
+step from 200 to 2,400 updates apart, every post-training direction measured on the chain (SFT → DPO,
+DPO → RLVR, SFT → RLVR, all below 1e-3), Qwen2.5-1.5B base → Instruct at 1e-2, and isotropic noise up to
+3e-2. It is 0.999 at isotropic noise of 1e-1. A cache written under one checkpoint of a training run and
+read under another needs no token recomputed at this tolerance; the sealed prediction that the backbone
+would degrade by 1e-2 was falsified (entry 0009), as was the pilot's sealed prediction that the cache
+degrades 2,400 updates out (entry 0006). The statistic is a step function of distance here: it does not
+resolve the hundredfold difference in whole-cache deviation between a trained direction and isotropic
+noise of the same size, which the entries record descriptively.
+
+Nothing further is registered. Statistics (B) and (C) and the own run are not ruled on. The ledger holds
+the founding record (chassis provenance, inherited definitions, the first rulings), the ruling that the
+instrument serves statistic (A) only, two re-pins of the instrument, the two registrations with their
+sealed predictions, the two outcomes, and the closure. Every number in it was recomputed from `results/`
+by a summarizer that refuses on any mismatch, and the score records behind both outcomes are retained
+off-repository with the hashes the entries state.
+
+**Citing.** Cite this repository at the commit that carries ledger entry 0010; name entries 0006 and 0009
+for the numbers and 0001 for the statistic's provenance.
 
 ## How the record stays auditable
 

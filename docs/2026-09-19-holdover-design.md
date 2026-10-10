@@ -9,7 +9,9 @@ Update to Thousands*. **Repo:** `hossainpazooki/lag-ladder`, package `lag_ladder
 the title to the repo. Both locked 2026-09-20; the repo was scaffolded 2026-09-22 (§11) and this document
 lives there.
 
-**Date:** 2026-09-19 · **Status:** design, PROPOSED, unregistered, unnumbered, nothing run. **Rulings
+**Date:** 2026-09-19 · **Status:** design, PROPOSED, unregistered, unnumbered, nothing run. **Status
+2026-10-10:** statistic (A) complete and closed under the inherited instrument (ledger 0010); §12 carries the
+outcome; (B), (C) and the own run not ruled. **Rulings
 2026-09-22 (§10):** Oct 12 dropped, pilot first; prefix-cache persistence is the primary framing; OLMo is the
 only source until the pilot shows signal; the repo is scaffolded today. Inherits
 `docs/2026-09-02-e-rl-design.md` (the 09-02 design) for the instrument, lag ladders, controls, dumps and
@@ -294,6 +296,7 @@ no scorer exists for teacher-forced log-probs or generation under a supplied cac
 | 1 | prior-art search under the prefix-persistence framing (§1) + the Q6 framework list the 09-20 search missed — **done 2026-10-09**: §2 survives; §1 premise holds for named defaults, bounded by version salts elsewhere | web | whether §2 survives the reframe |
 | 2 | upstream `Pair` gains `revision` / local-path; pinned by ledger entry — **done** (0003; G3 per-side `ModelRef` at 0004) | kv-transfer-replication commit | first dump |
 | 3 | **pilot:** (A) alone — f*(τ_K), τ ladder — on the 13 OLMo revisions, anchors step_200 and step_1200; dumps only, no generation. Driver + summarizer built 2026-10-09 (`lag_ladder.pilot`, `summarize_pilot`); registered by ledger 0005; **RAN 2026-10-09 (ledger 0006): f*(τ_K) = 0 at every lag to 2400 on both anchors, HOLDS throughout; 1 − R²(K) ≤ 7e-4 median, ≤ 1.2e-2 worst sequence** | one GPU-day at most; A100 class for 1B fp32 dumps | if f* ≈ 0 out to lag 2400: short note, lane closed. If f* crosses τ_K in the tail: there is a paper, and (iv) has something to predict |
+| 3b | **weight-distance ladder** (§12; ledger 0007–0009): isotropic backbone 1e-4..1e-1 + six real directions — **RAN 2026-10-09 (ledger 0009): f*(τ_K) = 0 through 3e-2, 0.999 at 1e-1; sealed knee 3e-3 falsified.** Step 3's rule fired; **statistic (A) closed, ledger 0010 (2026-10-10)** | the Mac mini, ~1 h | the statement of record for (A) |
 | 4 | registration entry: statistics, bounds (R2), tasks (R1), lags, seeds, SCRAMBLED positive control | pilot result | — |
 | 5 | swap scorer for (C) upstream; k = 0 identity on the run GPU; (B) + (C) on OLMo | GPU | the verdict cells |
 | 6 | own-run producer chosen (§6); own-run grid | funding | the short end of the ladder |
@@ -368,3 +371,13 @@ the axis (descriptive, re-derived under the next registration). Consequences, by
 Build order from here: the perturbation and conversion tools (run with the instrument's interpreter; no
 `kvt` import), a rung-based config and driver generalised from the pilot's (writer ref → reader ref, revision
 or local path), the Qwen pairs upstream, then registration, seal, run.
+
+**Outcome (ledger 0009, 2026-10-09) and closure (ledger 0010, 2026-10-10).** The ladder ran as registered: the
+backbone reads median f*(τ_K) = 0 through 3e-2 and 0.999 at 1e-1 (knee bracketed, not located; at τ = 0.03 it
+lies in (1e-2, 3e-2]); every real direction with whole-vector distance ≤ 1e-2 reads 0; Qwen Math → R1-Distill
+(1.2e-1) and base → Math (1.1, not a small update of the base at this measure) read 0.993 and 1.000. The
+sealed knee at 3e-3 was falsified, as was "real above backbone" under the rule's statistic; descriptively the
+OLMo directions carry 78–130× the backbone's K-cache deviation at matched distance, Qwen Instruct sits on it,
+Math → R1 below. Statistic (A) under the inherited instrument is thereby complete: a step function of
+distance that answers *no* for every pair a training run produces. Entry 0010 states the citable result
+and rules nothing about (B), (C) or the own run.

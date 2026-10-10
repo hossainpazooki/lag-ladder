@@ -391,3 +391,40 @@ checkpoints live) fixed in `632f914`; the run on record is the second launch.
 
 **Not measured.** Statistics (B) and (C); the V read-out as a verdict; any own run (R8); any hypothesis in
 the table. Status: [BASELINE] — ran, numbers here, not refuted.
+
+### 0010 — 2026-10-10 — Ruling: statistic (A) is complete under the inherited instrument; the statement of record, and how to cite it
+
+prior-entries-sha256: da6b6b2a7c8813b693380a5ac13efc0002655e3707339e765e113b59dc1399cd
+
+**Ruled 2026-10-10, after 0009.** The instrument this repository inherited from linear-ceiling (entry 0023:
+f*(τ), τ_K = 0.3186, the K read-out, HOLDS ≤ 0.15 / DEGRADES ≥ 0.50; see 0001) has now been run on both
+ladders this repository was built for — the lag ladder (0005, 0006) and the weight-distance ladder (0008,
+0009) — on the same model, held-out set and dtype, with the same controls. Design §9 step 3's rule ("if f* ≈
+0 out to lag 2400: short note, lane closed") has fired, and the distance ladder has located the regime in
+which it would not have. No further run of statistic (A) is registered. The linear-ceiling ledger is frozen;
+this repository is the record that paper cites for the behaviour of its statistic under a weight change.
+
+**Statement of record** (every number from 0006 and 0009; `summary.json` hashes named there). On OLMo-2
+1B, the median over held-out sequences of f*(τ_K) on the K cache is **0 for every writer–reader pair whose
+whole-vector relative L2 weight distance is at most 3e-2**: the seven isotropic rungs from 1e-4 to 3e-2;
+every published RLVR step from 200 to 2400 apart, from two anchors; every post-training direction measured
+on the chain (SFT → DPO at 8.5e-4, DPO → RLVR at 8.6e-5, SFT → RLVR at 9.4e-4); and Qwen2.5-1.5B base →
+Instruct at 1.0e-2. It is 0.999 at the isotropic rung 1e-1, and the two Qwen pairs beyond that distance
+(Math → R1-Distill at 1.2e-1, base → Math at 1.1) read 0.993 and 1.000. The same holds at τ = 0.10; at
+τ = 0.03 the isotropic rung 3e-2 reads 0.998 and everything below it 0. Controls held on every writer:
+identity 0, scrambled 0.999.
+
+**What the statistic can and cannot say here.** f*(τ_K) is a step function of distance on this model: it
+reads 0 until the whole-cache deviation 1 − R²(K) is of order one and 0.999 one rung later. It therefore
+answers "does a cache written under one checkpoint need recomputation under another?" with *no* for every
+pair a training run produces, and it does not resolve differences inside that regime — the 78–130-fold
+excess deviation of the OLMo directions over isotropic noise at matched distance (0009) is visible in
+1 − R² and invisible to f*. Any claim about what the reader *does* with such a cache is outside (A).
+
+**Not ruled here.** Whether the lane continues under statistic (B) or (C) (design §4; never built), or
+the own run (R8); the sources and bounds any such continuation would register. The configurations of 0005
+and 0008 stand as run; the instrument pin stays `5d4aa4a` (0008).
+
+**Citing.** Cite this repository at the commit that carries this entry; name entries 0006 and 0009 for the
+numbers and 0001 for the statistic's provenance. The score records, per-token files and distance records
+behind both summaries are retained off-repository with the hashes the entries state.
