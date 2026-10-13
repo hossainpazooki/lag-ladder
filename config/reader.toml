@@ -1,0 +1,154 @@
+# Statistic (B), "does the reader notice" (design §13, ruled 2026-10-10, ledger 0011): inject a stale
+# (writer's) vs fresh (reader's own) float16 KV cache of the 768-token prefix into the reader and score the
+# 256-token continuation. Cells reuse the 0008 dumps under results/distance/ as-is (R-B11); nothing is
+# re-dumped. UNREGISTERED: registered_by is empty and the floor limits are unset until the pre-registration
+# float16-floor probe (R-B9); the registering entry (0012) fixes both, and `run` refuses until then.
+# The R-B4 (lag-ladder re-dump) and R-B8 (Qwen isotropic) rungs are added by the registering entry once
+# their dumps exist; this file ships with the thirteen rungs of 0008.
+[reader]
+results_dir = "results/reader"
+upstream_path = "../kv-transfer-replication"
+upstream_sha = "5d4aa4a98b40f5ab37dd83ebb6b2ee802203994a"
+heldout = [40, 50]
+prefix_len = 768
+dtype = "float32"
+seed = 0
+registered_by = ""
+
+[reader.rule]
+statistic = "median over held-out sequences of the mean per-token KL(pi_fresh || pi_stale) over the 256-token continuation, per rung and text"
+holds_max = 1e-3
+degrades_min = 1e-1
+texts = ["corpus", "on-path"]
+# R-B7a: the on-path continuation is generated under the STALE cache (the trainer's scenario).
+generate_under = "stale"
+
+[reader.controls]
+# Identity: a determinism check on the maximum logit difference, not "any nonzero" (R-B10).
+identity_max_logit_diff = 1e-5
+# Scrambled: the next held-out sequence's prefix, corpus text; median mean-KL must reach this or the
+# reader's rungs are UNEVALUABLE.
+scrambled_min = 1e-1
+# Float16 floor (the halting control, R-B10): limits fixed by 0012 from the probe. Unset until then;
+# `run` refuses while they are missing, `probe` does not need them.
+# floor_max_logit_diff = <from the probe>
+# floor_max_median_kl = <from the probe>
+
+# Token files: identical to the distance registration (0008); P = tokens[:768], C = tokens[768:1024].
+[[reader.pairs]]
+name = "olmo2-1b-rlvr1"
+tokens = "data/tokens/olmo2-1b-rlvr1_n50_len1024_seed0.npy"
+tokens_sha256 = "462a7a743326085462a8fdf0f7a63d79045167e71b596230117066e7ac2eeeeb"
+
+[[reader.pairs]]
+name = "qwen2.5-1.5b-to-instruct"
+tokens = "data/tokens/qwen2.5-1.5b-to-instruct_n50_len1024_seed0.npy"
+tokens_sha256 = "01bd7698f7413ab9a3b6958991487bbba626f5a8cc4f24142cd22091d96af747"
+
+[[reader.pairs]]
+name = "qwen2.5-1.5b-to-math"
+tokens = "data/tokens/qwen2.5-1.5b-to-instruct_n50_len1024_seed0.npy"
+tokens_sha256 = "01bd7698f7413ab9a3b6958991487bbba626f5a8cc4f24142cd22091d96af747"
+
+[[reader.pairs]]
+name = "qwen2.5-math-1.5b-to-r1-distill"
+tokens = "data/tokens/qwen2.5-1.5b-to-instruct_n50_len1024_seed0.npy"
+tokens_sha256 = "01bd7698f7413ab9a3b6958991487bbba626f5a8cc4f24142cd22091d96af747"
+
+# Each cell names the stale (writer's) and fresh (reader's own) dump by its key under
+# results/distance/pairs/<pair>/dumps/, and the reader model as the scorer resolves it
+# (model_id[@revision], or local:<name> under KVT_CHECKPOINT_ROOT = results/distance/checkpoints).
+# Model ids below are taken from the 0008 dumps' checkpoint blocks and are fixed by the registering entry.
+[[reader.rungs]]
+label = "olmo-dpo-to-rlvr1-step_200"
+pair = "olmo2-1b-rlvr1"
+reader = "allenai/OLMo-2-0425-1B-RLVR1@step_200"
+writer_dump = "source@local-olmo2-1b-dpo"
+reader_dump = "target@step_200"
+
+[[reader.rungs]]
+label = "olmo-sft-to-dpo"
+pair = "olmo2-1b-rlvr1"
+reader = "local:olmo2-1b-dpo"
+writer_dump = "source@local-olmo2-1b-sft"
+reader_dump = "target@local-olmo2-1b-dpo"
+
+[[reader.rungs]]
+label = "olmo-sft-to-rlvr1-step_2600"
+pair = "olmo2-1b-rlvr1"
+reader = "allenai/OLMo-2-0425-1B-RLVR1@step_2600"
+writer_dump = "source@local-olmo2-1b-sft"
+reader_dump = "target@step_2600"
+
+[[reader.rungs]]
+label = "qwen-base-to-instruct"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "Qwen/Qwen2.5-1.5B-Instruct"
+writer_dump = "source@default"
+reader_dump = "target@default"
+
+# R-B3: the one pair whose RoPE base differs (1e6 vs 1e4); the scorer re-rotates the stale K, labelled.
+[[reader.rungs]]
+label = "qwen-base-to-math"
+pair = "qwen2.5-1.5b-to-math"
+reader = "Qwen/Qwen2.5-Math-1.5B"
+writer_dump = "source@default"
+reader_dump = "target@default"
+
+[[reader.rungs]]
+label = "qwen-math-to-r1-distill"
+pair = "qwen2.5-math-1.5b-to-r1-distill"
+reader = "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
+writer_dump = "source@default"
+reader_dump = "target@default"
+
+# The isotropic backbone (R-B1: (A)'s direction kept; the perturbed checkpoint is the reader, regenerated
+# from its seed and sha-verified against its provenance before use).
+[[reader.rungs]]
+label = "noise-0.0001"
+pair = "olmo2-1b-rlvr1"
+reader = "local:noise-0.0001"
+writer_dump = "source@step_200"
+reader_dump = "source@local-noise-0.0001"
+
+[[reader.rungs]]
+label = "noise-0.0003"
+pair = "olmo2-1b-rlvr1"
+reader = "local:noise-0.0003"
+writer_dump = "source@step_200"
+reader_dump = "source@local-noise-0.0003"
+
+[[reader.rungs]]
+label = "noise-0.001"
+pair = "olmo2-1b-rlvr1"
+reader = "local:noise-0.001"
+writer_dump = "source@step_200"
+reader_dump = "source@local-noise-0.001"
+
+[[reader.rungs]]
+label = "noise-0.003"
+pair = "olmo2-1b-rlvr1"
+reader = "local:noise-0.003"
+writer_dump = "source@step_200"
+reader_dump = "source@local-noise-0.003"
+
+[[reader.rungs]]
+label = "noise-0.01"
+pair = "olmo2-1b-rlvr1"
+reader = "local:noise-0.01"
+writer_dump = "source@step_200"
+reader_dump = "source@local-noise-0.01"
+
+[[reader.rungs]]
+label = "noise-0.03"
+pair = "olmo2-1b-rlvr1"
+reader = "local:noise-0.03"
+writer_dump = "source@step_200"
+reader_dump = "source@local-noise-0.03"
+
+[[reader.rungs]]
+label = "noise-0.1"
+pair = "olmo2-1b-rlvr1"
+reader = "local:noise-0.1"
+writer_dump = "source@step_200"
+reader_dump = "source@local-noise-0.1"

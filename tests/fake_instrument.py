@@ -20,6 +20,14 @@ Default rules: two different sequences of the same checkpoint deviate by 2.0; th
 otherwise the deviation is 20 x the distance, where the distance is the noise rung's target norm, 0.02 for any
 other local checkpoint pair, lag / 20000 for two step_N revisions of one model (so the deviation is lag / 1000,
 as the pilot tests expect), 0.0005 for two other revisions of one model, and 0.05 between two Hub sides of a pair.
+
+For the (B) build it also stands in for `tools/score_continuation.py`, invoked the same subprocess way
+(`[python, <tools>/score_continuation.py, --fresh ... --stale ...]`). It writes a `report.json` with exactly
+the reader-report-v1 keys, whose `kl_per_token` is a KNOWN function of the stand-in distance
+(`kl(fresh_meta, stale_meta, fresh_seq, stale_seq, live) -> (mean_kl, max_abs_logit_diff)`, default
+`default_kl`): 1e-6 in --live (the float16 floor), 0 on identity, 2.0 on a scrambled (cross-sequence) cell,
+and (20 x distance)^2 otherwise, so bands, slope-fit inputs and matched-rung lookup are all exercised.
+`continuation_sha(tokens)` is the one place the stand-in's continuation hash recipe lives.
 """
 import hashlib
 import json
@@ -65,10 +73,33 @@ def default_deviation(src_meta: dict, tgt_meta: dict, src_seq: int, tgt_seq: int
     return min(1.5, 20.0 * default_distance(_meta_spec(src_meta), _meta_spec(tgt_meta)))
 
 
+FLOOR_KL = 1e-6   # the stand-in's float16 floor: what a --live cell reads
+
+
+def default_kl(fresh_meta: dict, stale_meta: dict, fresh_seq: int, stale_seq: int, live: bool) -> tuple[float, float]:
+    """(mean per-token KL in nats, max abs logit diff) of a (B) cell: a known function of the stand-in distance,
+    quadratic where the deviation rule is linear, so a log-log slope fit over the backbone reads 2."""
+    if live:
+        return FLOOR_KL, FLOOR_KL
+    if fresh_meta["dir"] == stale_meta["dir"] and fresh_seq == stale_seq:
+        return 0.0, 0.0
+    if fresh_seq != stale_seq:
+        return 2.0, 1.0
+    d = default_distance(_meta_spec(fresh_meta), _meta_spec(stale_meta))
+    return (20.0 * d) ** 2, 20.0 * d
+
+
+def continuation_sha(tokens) -> str:
+    """The scorer's continuation hash recipe, in one place: sha256 over the token ids as little-endian int64
+    bytes (tools/score_continuation.py). The summarizer's recompute must agree with this."""
+    return hashlib.sha256(np.asarray(tokens, dtype="<i8").tobytes()).hexdigest()
+
+
 class FakeInstrument:
-    def __init__(self, deviation=default_deviation, distance=default_distance):
+    def __init__(self, deviation=default_deviation, distance=default_distance, kl=default_kl):
         self.deviation = deviation
         self.distance = distance
+        self.kl = kl
         self.calls = []
         self.envs = []
 
@@ -93,6 +124,8 @@ class FakeInstrument:
             return self._perturb(cmd, args)
         if module == "weight_distance.py":
             return self._distance(cmd, args)
+        if module == "score_continuation.py":
+            return self._score_continuation(cmd, args)
         return subprocess.CompletedProcess(cmd, 2, b"", b"fake instrument: unknown command")
 
     def _dump(self, cmd, args):
@@ -162,6 +195,47 @@ class FakeInstrument:
         (out / "config.json").write_text(json.dumps({"torch_dtype": "float32"}))
         (out / "provenance.json").write_text(json.dumps({"tool": "fake perturb", "seed": int(args["--seed"]), "target_rel_norm": target,
                                                          "realized_rel_norm": target, "out_sha256": hashlib.sha256((out / "model.safetensors").read_bytes()).hexdigest()}))
+        return subprocess.CompletedProcess(cmd, 0, b"", b"")
+
+    def _score_continuation(self, cmd, args):
+        out = Path(args["--out"])
+        if "--probe" in args and "results" in out.resolve().parts:
+            return subprocess.CompletedProcess(cmd, 2, b"", f"probe REFUSED: --out {out} is under results/".encode())
+        live = "--live" in args
+        if live == ("--fresh" in args):
+            return subprocess.CompletedProcess(cmd, 2, b"", b"--live replaces --fresh; exactly one is required")
+        stale_dir = Path(args["--stale"])
+        fresh_dir = Path(args["--fresh"]) if "--fresh" in args else stale_dir
+        fm = json.loads((fresh_dir / "meta.json").read_text(encoding="utf-8"))
+        sm = json.loads((stale_dir / "meta.json").read_text(encoding="utf-8"))
+        text, prefix, seq = args["--text"], int(args["--prefix-len"]), int(args["--seq"])
+        tokens_file = Path(args["--tokens"])
+        row = np.load(tokens_file)[seq]
+        n_cont = int(row.shape[0]) - prefix
+        if n_cont <= 0:
+            return subprocess.CompletedProcess(cmd, 2, b"", b"prefix-len leaves no continuation")
+        mean_kl, mld = self.kl(fm, sm, _seq(fresh_dir), _seq(stale_dir), live)
+        if text == "corpus":
+            cont, gen_under, gen_seconds = [int(t) for t in row[prefix:]], None, None
+        else:
+            cont, gen_under, gen_seconds = [int((seq * 31 + i) % 97) for i in range(n_cont)], args["--generate-under"], 0.01
+        agree = mean_kl <= 1e-3
+        reader_meta = sm if live else fm
+        inputs = {p.resolve().as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+                  for p in (tokens_file, fresh_dir / "meta.json", stale_dir / "meta.json")}
+        rep = {"schema": "reader-report-v1", "reader": args.get("--reader", ""),
+               "fresh_dump": fresh_dir.resolve().as_posix(), "stale_dump": stale_dir.resolve().as_posix(),
+               "tokens_file": tokens_file.resolve().as_posix(), "seq": seq, "prefix_len": prefix,
+               "text": text, "generate_under": gen_under, "live": live,
+               "continuation_tokens": cont, "continuation_sha256": continuation_sha(cont),
+               "logprob_fresh": [-1.0] * n_cont, "logprob_stale": [-1.0 - mean_kl] * n_cont,
+               "kl_per_token": [mean_kl] * n_cont,
+               "argmax_fresh": list(range(n_cont)), "argmax_stale": list(range(n_cont)) if agree else [i + 1 for i in range(n_cont)],
+               "max_abs_logit_diff": mld, "inputs_sha256": inputs,
+               "reader_checkpoint": {"manifest_digest": reader_meta["checkpoint"]["manifest_digest"]} if reader_meta.get("checkpoint") else None,
+               "device": "cpu", "torch_version": "0.0-fake", "peak_cuda_mem_bytes": None, "gen_seconds": gen_seconds}
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "report.json").write_text(json.dumps(rep), encoding="utf-8")
         return subprocess.CompletedProcess(cmd, 0, b"", b"")
 
     def _distance(self, cmd, args):

@@ -232,6 +232,141 @@ def _check_rule(rule: dict, where: str) -> dict:
     return rule
 
 
+_SCORE_TEXTS = ("corpus", "on-path")
+_GENERATE_ARMS = ("stale", "fresh")
+_READER_RULE_KEYS = ("statistic", "holds_max", "degrades_min", "texts", "generate_under")
+_READER_CONTROL_KEYS = ("identity_max_logit_diff", "scrambled_min")
+_READER_FLOOR_KEYS = ("floor_max_logit_diff", "floor_max_median_kl")
+
+
+@dataclass(frozen=True)
+class ReaderRung:
+    """One statistic (B) cell (design §13): the reader model scores one continuation under the writer's
+    dump (stale) against its own (fresh). Dumps are named by their key under
+    results/distance/pairs/<pair>/dumps/ as the distance run wrote them; nothing is re-dumped."""
+    label: str
+    pair: str
+    reader: str        # scorer spec: model_id[@revision] or local:<name> under KVT_CHECKPOINT_ROOT
+    writer_dump: str   # dump key of the stale arm, e.g. "source@local-olmo2-1b-dpo"
+    reader_dump: str   # dump key of the fresh arm (and of every control), e.g. "target@step_200"
+
+
+@dataclass(frozen=True)
+class ReaderConfig:
+    results_dir: Path
+    upstream_path: Path
+    upstream_sha: str
+    heldout: tuple[int, int]
+    prefix_len: int
+    dtype: str
+    seed: int
+    rule: dict                # statistic, holds_max, degrades_min, texts, generate_under
+    controls: dict            # identity_max_logit_diff, scrambled_min, floor_max_logit_diff|None, floor_max_median_kl|None
+    pairs: dict               # name -> PairTokens
+    rungs: tuple[ReaderRung, ...]
+    registered_by: str
+    config_path: Path
+
+
+def _dump_key(s, where: str) -> str:
+    if (not isinstance(s, str) or "@" not in s or "/" in s or "\\" in s or ".." in s
+            or not all(part.strip() for part in s.split("@", 1))):
+        raise ValueError(f"{where} must be a dump key <side>@<pin> (no path separators)")
+    return s
+
+
+def load_reader_config(path: Path, repo_root: Path) -> ReaderConfig:
+    path = Path(path)
+    c = _read(path)["reader"]
+    for key in ("results_dir", "upstream_path", "upstream_sha", "heldout", "prefix_len", "dtype", "seed",
+                "rule", "controls", "pairs", "rungs"):
+        if key not in c:
+            raise ValueError(f"{path.name} [reader] is missing {key}")
+    missing = [k for k in _READER_RULE_KEYS if k not in c["rule"]]
+    if missing:
+        raise ValueError(f"{path.name} [reader.rule] is missing {missing}")
+    missing = [k for k in _READER_CONTROL_KEYS if k not in c["controls"]]
+    if missing:
+        raise ValueError(f"{path.name} [reader.controls] is missing {missing}")
+    rule = dict(c["rule"])
+    if not (0 < float(rule["holds_max"]) < float(rule["degrades_min"])):
+        raise ValueError(f"{path.name} [reader.rule] needs 0 < holds_max < degrades_min")
+    texts = rule["texts"]
+    if (not isinstance(texts, list) or not texts or len(set(texts)) != len(texts)
+            or any(t not in _SCORE_TEXTS for t in texts)):
+        raise ValueError(f"{path.name} [reader.rule] texts must be distinct entries from {_SCORE_TEXTS}")
+    if rule["generate_under"] not in _GENERATE_ARMS:
+        raise ValueError(f"{path.name} [reader.rule] generate_under must be one of {_GENERATE_ARMS}")
+    controls = dict(c["controls"])
+    if not (0 < float(controls["identity_max_logit_diff"]) < 1):
+        raise ValueError(f"{path.name} [reader.controls] identity_max_logit_diff must be in (0, 1)")
+    if not (0 < float(controls["scrambled_min"])):
+        raise ValueError(f"{path.name} [reader.controls] scrambled_min must be positive")
+    for k in _READER_FLOOR_KEYS:
+        # Empty-able: 0012 fixes them from the floor probe; `run` refuses while they are unset.
+        if k not in controls:
+            controls[k] = None
+        elif not (float(controls[k]) > 0):
+            raise ValueError(f"{path.name} [reader.controls] {k} must be a positive float when set")
+    ho = c["heldout"]
+    if (not isinstance(ho, list) or len(ho) != 2 or any(isinstance(x, bool) or not isinstance(x, int) for x in ho)
+            or ho[0] < 0 or ho[1] <= ho[0] + 1):
+        raise ValueError(f"{path.name} [reader] heldout must be [lo, hi) with at least two sequences")
+    pl = c["prefix_len"]
+    if isinstance(pl, bool) or not isinstance(pl, int) or pl <= 0:
+        raise ValueError(f"{path.name} [reader] prefix_len must be a positive int")
+    if c["dtype"] not in _DTYPES:
+        raise ValueError(f"{path.name} [reader] dtype must be one of {_DTYPES}")
+    if isinstance(c["seed"], bool) or not isinstance(c["seed"], int):
+        raise ValueError(f"{path.name} [reader] seed must be an int")
+    root = Path(repo_root)
+    upstream = (root / c["upstream_path"]).resolve()
+    pairs = {}
+    for i, pr in enumerate(c["pairs"]):
+        where = f"{path.name} [[reader.pairs]] #{i}"
+        for k in ("name", "tokens", "tokens_sha256"):
+            if k not in pr:
+                raise ValueError(f"{where} is missing {k}")
+        name = _plain_name(pr["name"], where + " name")
+        if name in pairs:
+            raise ValueError(f"{where}: pair {name} listed twice")
+        tok = pr["tokens"]
+        if (not isinstance(tok, str) or not tok.strip() or PurePosixPath(tok).is_absolute()
+                or PureWindowsPath(tok).is_absolute()):
+            raise ValueError(f"{where}: tokens must be a relative path under upstream_path")
+        pairs[name] = PairTokens(name, upstream / tok, _hex_or_pending(pr["tokens_sha256"], where + " tokens_sha256"))
+    if not pairs:
+        raise ValueError(f"{path.name} [reader] lists no pairs")
+    rungs, labels = [], set()
+    for i, r in enumerate(c["rungs"]):
+        where = f"{path.name} [[reader.rungs]] #{i}"
+        for k in ("label", "pair", "reader", "writer_dump", "reader_dump"):
+            if k not in r:
+                raise ValueError(f"{where} is missing {k}")
+        label = _plain_name(r["label"], where + " label")
+        if label in labels:
+            raise ValueError(f"{where}: label {label!r} must be unique")
+        if r["pair"] not in pairs:
+            raise ValueError(f"{where}: pair {r['pair']!r} is not in [[reader.pairs]]")
+        if not isinstance(r["reader"], str) or not r["reader"].strip():
+            raise ValueError(f"{where}: reader must be a scorer spec (model_id[@revision] or local:<name>)")
+        w = _dump_key(r["writer_dump"], where + " writer_dump")
+        rd = _dump_key(r["reader_dump"], where + " reader_dump")
+        if w == rd:
+            raise ValueError(f"{where}: writer_dump and reader_dump are the same dump; identity is a control, not a rung")
+        labels.add(label)
+        rungs.append(ReaderRung(label, r["pair"], str(r["reader"]), w, rd))
+    if not rungs:
+        raise ValueError(f"{path.name} [reader] lists no rungs")
+    reg = str(c.get("registered_by", ""))
+    if reg and not (len(reg) == 4 and reg.isdigit()):
+        raise ValueError(f"{path.name} [reader] registered_by must be a four-digit ledger entry or empty")
+    return ReaderConfig(results_dir=root / c["results_dir"], upstream_path=upstream,
+                        upstream_sha=str(c["upstream_sha"]), heldout=(int(ho[0]), int(ho[1])),
+                        prefix_len=int(pl), dtype=str(c["dtype"]), seed=int(c["seed"]), rule=rule,
+                        controls=controls, pairs=pairs, rungs=tuple(rungs), registered_by=reg, config_path=path)
+
+
 def load_distance_config(path: Path, repo_root: Path) -> DistanceConfig:
     path = Path(path)
     c = _read(path)["distance"]

@@ -18,8 +18,11 @@ def test_every_pin_in_upstream_md_is_declared_and_vice_versa():
 
 
 def test_no_source_file_imports_the_instrument():
-    for p in (lag_ladder.REPO_ROOT / "src").rglob("*.py"):
-        assert not re.search(r"^\s*(from|import)\s+kvt\b", p.read_text(encoding="utf-8"), re.M), p.name
+    """Nothing under src/ or tools/ may import kvt: tools/ run with the instrument's interpreter but
+    re-implement the recipes they need (design section 13)."""
+    for root in ("src", "tools"):
+        for p in (lag_ladder.REPO_ROOT / root).rglob("*.py"):
+            assert not re.search(r"^\s*(from|import)\s+kvt\b", p.read_text(encoding="utf-8"), re.M), f"{root}/{p.name}"
 
 
 def test_verbatim_docs_present():
