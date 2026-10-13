@@ -1,0 +1,63 @@
+{
+  "pair": "reader",
+  "prediction": {
+    "floor_probe": {
+      "evidence_sha256": "08733090f7354c9fbcb18cfcf3287734007b12d8ae920d84dc39175c3a266041",
+      "max_abs_logit_diff": 0.013097,
+      "median_mean_kl": {
+        "corpus": 3.878e-08,
+        "on-path": 2.627e-08
+      },
+      "reader": "allenai/OLMo-2-0425-1B-RLVR1@step_200",
+      "run_machine": "torch 2.14.1+cu130"
+    },
+    "predictions": {
+      "i_backbone_quadratic": {
+        "fit": "least squares of log median (B1) on log rel_norm, per text",
+        "reported_not_sealed": [
+          "noise-0.03",
+          "noise-0.1"
+        ],
+        "rungs": [
+          "noise-0.001",
+          "noise-0.003",
+          "noise-0.01"
+        ],
+        "slope_in": [
+          1.7,
+          2.3
+        ]
+      },
+      "ii_backbone_holds_through": "rel_norm 1e-2: median (B1) <= 1e-3 on both texts at noise-0.01",
+      "iii_olmo_directions_above_backbone": {
+        "rungs": [
+          "olmo-sft-to-dpo",
+          "olmo-dpo-to-rlvr1-step_200",
+          "olmo-sft-to-rlvr1-step_2600"
+        ],
+        "statement": "at the nearest backbone rung on whole-vector distance, each reads median (B1) >= 10x the backbone's, both texts"
+      },
+      "iv_qwen_instruct_near_backbone": {
+        "rung": "qwen-base-to-instruct",
+        "statement": "median (B1) within 3x (either side) of the Qwen isotropic rung qwen-noise-0.01 (R-B8), both texts"
+      },
+      "v_on_path_at_or_below_corpus": "on every rung whose corpus median (B1) is above 2x the float16 floor, on-path median (B1) <= corpus median (B1)"
+    },
+    "registering_entry": "0012",
+    "rule": {
+      "at_floor_factor": 2.0,
+      "degrades_min": 0.1,
+      "floor_max_logit_diff": 0.022,
+      "floor_max_median_kl": 7e-08,
+      "holds_max": 0.001
+    },
+    "ruled": "2026-10-10",
+    "statistic": "per rung and text, median over held-out sequences [40, 50) of the mean per-token KL(pi_fresh || pi_stale) over the 256-token continuation after a 768-token prefix (B1), nats/token; x = relative L2 weight distance over the whole parameter vector, as 0008 recomputed it",
+    "texts": [
+      "corpus",
+      "on-path"
+    ]
+  },
+  "prior_artifacts": [],
+  "sealed_pre_fit": true
+}
