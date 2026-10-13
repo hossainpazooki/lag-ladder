@@ -69,7 +69,7 @@ writer_dump = "source@step_200"
 reader_dump = "source@local-noise-0.1"
 '''
 FLOOR_LINES = "floor_max_median_kl = 1e-4"
-LEDGER_0013 = "\n### 0013 — 2026-10-13 — Reader registered\n\nregisters config/reader.toml.\n"
+LEDGER_0014 = "\n### 0014 — 2026-10-13 — Reader registered\n\nregisters config/reader.toml.\n"
 
 # the fake's known cells: mean KL = (20 x stand-in distance)^2 per text, 2.0 scrambled, 1e-6 at the floor
 EXPECTED_KL = {"olmo-sft-to-dpo": 0.16, "qwen-base-to-instruct": 1.0, "backbone-1e-3": 4e-4, "backbone-1e-1": 4.0}
@@ -95,7 +95,7 @@ def _upstream_full(root: Path) -> None:
     git(up, "commit", "-q", "-m", "pin")
 
 
-def _setup_reader(repo, seal_cfg, *, registered="0013", floor=True, seal=True):
+def _setup_reader(repo, seal_cfg, *, registered="0014", floor=True, seal=True):
     """Distance setup + run (so the dumps exist, noise weights kept), then the reader registration."""
     _upstream_full(repo.parent)
     dcfg, tools = _setup_distance(repo, seal_cfg)
@@ -108,7 +108,7 @@ def _setup_reader(repo, seal_cfg, *, registered="0013", floor=True, seal=True):
     cpath.write_text(READER_CONFIG.format(sha=sha, reg=registered, osha=shas["olmo"], qsha=shas["qwen"],
                                           floor=FLOOR_LINES if floor else ""), encoding="utf-8")
     lpath = repo / "ledger" / "ledger.md"
-    lpath.write_text(lpath.read_text(encoding="utf-8") + LEDGER_0013, encoding="utf-8")
+    lpath.write_text(lpath.read_text(encoding="utf-8") + LEDGER_0014, encoding="utf-8")
     if seal:
         write_prediction(reader.SEAL_NAME, {"floor_median_kl_probe": 1e-6}, seal_cfg)
     if git(repo, "status", "--porcelain").strip():

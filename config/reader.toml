@@ -3,7 +3,7 @@
 # 256-token continuation. Cells reuse the 0008 dumps under results/distance/ as-is (R-B11); nothing is
 # re-dumped, except the isotropic rungs: 0008's noise checkpoints do not regenerate byte-identically on the run
 # machine, so each is regenerated and dumped there before its rung under the same keys (0012). Registered by
-# 0012; R-B4 (the lag-ladder re-dump) is deferred to a later entry. Fourteen rungs: thirteen of 0008 plus R-B8.
+# 0012, amended by 0013 and 0014. Nineteen rungs: thirteen of 0008, R-B8, and the five R-B4 lags (0014).
 [reader]
 results_dir = "results/reader"
 upstream_path = "../kv-transfer-replication"
@@ -12,7 +12,7 @@ heldout = [40, 50]
 prefix_len = 768
 dtype = "float32"
 seed = 0
-registered_by = "0013"
+registered_by = "0014"
 
 [reader.rule]
 statistic = "median over held-out sequences of the mean per-token KL(pi_fresh || pi_stale) over the 256-token continuation, per rung and text"
@@ -28,11 +28,10 @@ identity_max_logit_diff = 1e-5
 # Scrambled: the next held-out sequence's prefix, corpus text; median mean-KL must reach this or the
 # reader's rungs are UNEVALUABLE.
 scrambled_min = 1e-1
-# Float16 floor (the halting control, R-B10): the limit on median mean-KL fixed by 0012 from the probe on the
-# run machine (1.7x the observed 3.9e-8). 0013: the maximum absolute logit difference is recorded per reader,
-# not a halting limit (a single float16 rounding extreme is heavy-tailed across readers; the DPO reader read 5.2e-2
-# on one sequence at a floor KL of 1.6e-8).
-floor_max_median_kl = 7e-8
+# Float16 floor (the halting control, R-B10): a reader's median mean-KL floor must sit an order of magnitude under
+# HOLDS_B (0014: band-relative; 0012's 7e-8 was 1.7x one reader's probe, and the R1-Distill reader's floor is 3.6e-5).
+# The maximum absolute logit difference is recorded per reader, not a limit (0013).
+floor_max_median_kl = 1e-4
 
 # Token files: identical to the distance registration (0008); P = tokens[:768], C = tokens[768:1024].
 [[reader.pairs]]
@@ -161,3 +160,42 @@ pair = "qwen2.5-1.5b-to-instruct"
 reader = "local:qwen-noise-0.01"
 writer_dump = "source@default"
 reader_dump = "source@local-qwen-noise-0.01"
+
+# R-B4 (0011; registered 0014): the RL phase itself. Writer cache at step_200, reader at a later RLVR1 step; lags
+# 200..2400 optimizer steps. Descriptive against the bands; not in the seal. The Hub's stride is 200 steps, so the
+# smallest lag here is ~25x a pipelined trainer's operating lag: a bound, not a measurement at the operating point.
+# Reader dumps target@step_400..step_1600 are made on the run machine from the Hub checkpoints; target@step_2600 is 0008's.
+[[reader.rungs]]
+label = "olmo-rlvr1-lag-200"
+pair = "olmo2-1b-rlvr1"
+reader = "allenai/OLMo-2-0425-1B-RLVR1@5bea2c2241d4e9b1b1821ee89d4c54ac9099fc1a"
+writer_dump = "source@step_200"
+reader_dump = "target@step_400"
+
+[[reader.rungs]]
+label = "olmo-rlvr1-lag-600"
+pair = "olmo2-1b-rlvr1"
+reader = "allenai/OLMo-2-0425-1B-RLVR1@a116fb45c7685e1ada3320463dd42e965d8659f4"
+writer_dump = "source@step_200"
+reader_dump = "target@step_800"
+
+[[reader.rungs]]
+label = "olmo-rlvr1-lag-1000"
+pair = "olmo2-1b-rlvr1"
+reader = "allenai/OLMo-2-0425-1B-RLVR1@9f0904d82d97214fded1d537dd7a4aeadb976461"
+writer_dump = "source@step_200"
+reader_dump = "target@step_1200"
+
+[[reader.rungs]]
+label = "olmo-rlvr1-lag-1400"
+pair = "olmo2-1b-rlvr1"
+reader = "allenai/OLMo-2-0425-1B-RLVR1@ea10dfcadb6175f0b81f4067110b83bb063487f2"
+writer_dump = "source@step_200"
+reader_dump = "target@step_1600"
+
+[[reader.rungs]]
+label = "olmo-rlvr1-lag-2400"
+pair = "olmo2-1b-rlvr1"
+reader = "allenai/OLMo-2-0425-1B-RLVR1@bf37756016867cfaf3d54319ba613aedc9b56f3c"
+writer_dump = "source@step_200"
+reader_dump = "target@step_2600"

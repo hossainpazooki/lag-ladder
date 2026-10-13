@@ -556,3 +556,31 @@ torch build, not by the machine.
 **Consequences in this commit set:** `config/reader.toml` (`registered_by`, the floor limit block);
 `src/lag_ladder/reader.py`, `src/lag_ladder/summarize_reader.py`, `src/lag_ladder/config.py` (the amended
 control); `tests/test_reader.py`.
+
+### 0014 — 2026-10-13 — Amendment: the float16-floor limit is band-relative, 1e-4 nats/token; the R-B4 lag rungs registered
+
+prior-entries-sha256: 411ea1d87168993a049ede834cd30710266aa8c42dac82543b42715aeb476b22
+
+**Amends 0013** (R-B10). `config/reader.toml` is now `registered_by = "0014"`; the seal (`ba6e3cdc…`, 6bbd9bf) is
+unchanged. The run restarted under 0013 halted at its 310th job in the DeepSeek-R1-Distill-Qwen-1.5B reader's
+float16-floor control: median mean-KL 3.6e-5 against the limit 7e-8, with the five readers before it at 1e-8 to
+6e-8. The floor is the reader's — its logits are sharper, and float16 rounding of the same cache moves them a
+thousandfold more — and a limit set at 1.7× one reader's probe measures that reader, not the band.
+
+**Ruled.** `floor_max_median_kl = 1e-4`, one order of magnitude under HOLDS_B: a reader whose float16 floor reaches
+a tenth of the HOLDS band is not read. Per-reader floors are reported; a rung within 2× of its reader's floor is "at
+the floor" (§13). The run restarts from its first job under this entry; the 310 jobs under 0013 are discarded.
+Descriptively, they read on-path (B1) ≤ corpus (B1) on all five rungs scored, and the Qwen base → Math cell above
+the Math reader's scrambled control — the restart's reports are read against that.
+
+**Also registered (R-B4, deferred by 0012).** Five rungs on the RL phase: writer cache at RLVR1 `step_200`, reader
+at `step_400`, `step_800`, `step_1200`, `step_1600`, `step_2600` (lags 200–2400 optimizer steps), Hub readers pinned
+by commit, reader dumps made on the run machine from the Hub checkpoints. Read against the bands, descriptively; not
+in the seal. The Hub's checkpoint stride, 200 steps, is far above a pipelined trainer's operating lag of a few steps,
+so a reading here bounds that regime rather than measuring it; the own run (R8), approved in principle 2026-10-13,
+is designed and registered by later entries.
+
+**Not registered here.** The own run; statistic (C). 0012's rule, sources, seal and bands stand.
+
+**Consequences in this commit set:** `config/reader.toml` (`registered_by`, the floor limit, five rungs);
+`tests/test_reader.py`.
