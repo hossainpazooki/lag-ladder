@@ -477,3 +477,50 @@ stays pinned at `5d4aa4a`.
 **Not registered by this entry.** The build (`tools/score_continuation.py`, `src/lag_ladder/reader.py`,
 `src/lag_ladder/summarize_reader.py`, `config/reader.toml`), the probe, the seal's values and the
 registration belong to the next entry. The configurations of 0005 and 0008 stand as run.
+
+### 0012 — 2026-10-13 — Statistic (B) registered: float16 floor probed, HOLDS_B confirmed at 1e-3; the noise backbone is re-dumped on the run machine
+
+prior-entries-sha256: bd75c57af252f2873490023b1659b3c2f5894ecadaf8ff6c1407dad14b36ac42
+
+**Registers** `config/reader.toml`, now `registered_by = "0012"`, as 0011 and design §13 define statistic (B).
+Rule: per rung and text, median over held-out sequences [40, 50) of the mean per-token KL(π_fresh ‖ π_stale) over
+the 256-token continuation after a 768-token prefix; HOLDS_B ≤ 1e-3, DEGRADES_B ≥ 1e-1 nats/token, UNRESOLVED
+between; ladder {1e-1, 1e-2, 1e-3} descriptive. Two texts: corpus, and on-path generated greedily under the STALE
+cache. Forward dtype float32, seed 0. Instrument `5d4aa4a` (0008); the scorer runs under its interpreter and
+imports nothing from it. The reader is handed cache rows 0..766 and fed the token at 767 ahead of the continuation,
+so all 256 continuation tokens are scored.
+
+**Float16 floor (R-B9, R-B10)**, probed on the run machine (torch 2.14.1+cu130) on reader `step_200`, live float32
+cache against its own float16 dump, ten sequences, both texts: median mean-KL 3.9e-8 (corpus), 2.6e-8 (on-path);
+maximum per-token KL 1.6e-6; maximum absolute logit difference 1.31e-2. HOLDS_B stays at 1e-3. Halting limits at
+1.7× the observed maxima: `floor_max_logit_diff = 2.2e-2`, `floor_max_median_kl = 7e-8`; within 2× of the floor is
+"at the floor". Identity tolerance 1e-5 on the maximum logit difference; scrambled must read ≥ 1e-1 or the reader's
+rungs are UNEVALUABLE.
+
+**Sources.** The thirteen rungs of 0008, dumps as transferred (dataset revision `59feb035`, manifest sha256
+`716585c346ddea40…`, every file verified against it before any forward). Regenerating `noise-0.01` on the run
+machine from the same anchor (`model.safetensors` `3dc71849…`), seed and target reproduced the realized norm to
+4e-10 but not the bytes (`out_sha256` `6acca7d5…` against 0008's `c711d73f…`; `torch.randn` differs between
+arm64 torch 2.14.1 and x86_64 torch 2.14.1+cu130), so 0008's noise dumps cannot be loaded there. The seven noise
+rungs are therefore regenerated and dumped on the run machine before their rungs, under the same keys, each tied
+to 0008's rung by `realized_rel_norm`; R-B1's hash check is against the run machine's provenance. Added (R-B8):
+one isotropic rung of `Qwen/Qwen2.5-1.5B` at whole-vector 1e-2, made the same way. Deferred: R-B4, the pilot's lag
+ladder re-dumped at the current pin, to a later entry. Hub readers are pinned at the commits the 0008 dumps
+resolved. Qwen base → Math re-rotates the writer's K (θ 1e6 → 1e4) with the instrument's convention.
+
+**Seal.** `ledger/predictions/reader.json`, sidecar sha256 `ba6e3cdce1f0f9cd7d8244e6a42ae5095e50228cfb634af2ed64ccce1b2690e8`,
+committed before any score (6bbd9bf): (i) on the backbone over {1e-3, 3e-3, 1e-2} the slope of log median (B1)
+on log distance lies in [1.7, 2.3]; (ii) the backbone's median (B1) is ≤ 1e-3 at 1e-2; (iii) at the nearest
+backbone rung each OLMo-2 direction reads ≥ 10× the backbone; (iv) Qwen base → Instruct reads within 3× of the
+Qwen isotropic rung; (v) on every rung whose corpus (B1) is above 2× the floor, on-path median (B1) ≤ corpus
+median (B1).
+
+The summarizer recomputes every statistic from the per-token arrays and refuses on mismatch; its integrity check
+bottoms at the driver's run record, as 0009's does. The full-vocabulary KL is recorded at the forward, not
+recomputable at home.
+
+**Not registered here.** Statistic (C); the own run (R8); R-B4; any hypothesis in the table. 0005 and 0008 stand as
+run.
+
+**Consequences in this commit set:** `config/reader.toml` (`registered_by`, floor limits, pinned readers, the R-B8
+rung); the sealed prediction and sidecar (6bbd9bf).

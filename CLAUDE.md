@@ -65,7 +65,7 @@ instrument; refuses while `reader.toml` is unregistered) · `summarize_reader` (
 reports, withholds failed-control rungs). `tools/` — `perturb_checkpoint.py`, `convert_bin_checkpoint.py`,
 `weight_distance.py`, `score_continuation.py` (the (B) scorer: injects a stale vs fresh cache, scores the
 continuation): run with the instrument's interpreter, import nothing from it. (C)'s scorer does not exist.
-`config/` — `seal.toml`, `pilot.toml`, `distance.toml`, `reader.toml` (unregistered until 0012). `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
+`config/` — `seal.toml`, `pilot.toml`, `distance.toml`, `reader.toml`. `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
 `mappers/` — seal artifact roots, gitignored past their placeholders. `docs/` — the design doc.
 
 ## State
@@ -78,7 +78,7 @@ both are measured and scatter around it by two orders of magnitude in whole-cach
 (A) is closed (0010)**: the statement of record is in that entry and the README; linear-ceiling's paper
 cites this repository for it. Nothing is registered beyond 0010. **Statistic (B) is ruled (0011)** as
 design §13 defines it: per-token KL of the reader over the writer's cache against its own, on the 0008 dumps,
-to run on RunPod. **The (B) code is built (b48436a)** and refuses to run until registered. Next: the
-pre-registration float16-floor probe on the pod, then the registration entry (0012) with its seal committed
-first — it fixes the floor limits, the Hub model ids, the scoring-index convention (the scorer injects
-prefix rows 0..766 so all 256 continuation tokens are scored) and states the summarizer's trust limit. (C) and the own run are not ruled.
+to run on RunPod. **Statistic (B) is registered (0012)**: the float16 floor was probed on the run machine
+(median mean-KL 3.9e-8, HOLDS_B confirmed at 1e-3), the seal is committed, `config/reader.toml` is pinned, and
+the noise backbone is re-dumped on the run machine because 0008's noise checkpoints do not regenerate
+byte-identically there. Next: the (B) run on the pod, then its outcome entry. R-B4 is deferred. (C) and the own run are not ruled.

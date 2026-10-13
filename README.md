@@ -36,9 +36,9 @@ block stays cached across every sync unless something clears it, so its age is u
 
 τ is inherited from [linear-ceiling](https://github.com/hossainpazooki/linear-ceiling), where the same
 statistic was calibrated on a cache carried across a change of *context* (the paper *Carryover*). Here
-the context is held fixed and only the weights move. Only (A) has been built and run. (B) is ruled and
-defined for this repository (ledger 0011; design §13) and not yet built or registered; (C) is designed and
-unbuilt.
+the context is held fixed and only the weights move. Only (A) has been run. (B) is defined for this
+repository (ledger 0011; design §13), built, and registered with its seal committed (ledger 0012); its run is
+next. (C) is designed and unbuilt.
 
 ## How a rung is measured
 
@@ -79,10 +79,10 @@ degrades 2,400 updates out (entry 0006). The statistic is a step function of dis
 resolve the hundredfold difference in whole-cache deviation between a trained direction and isotropic
 noise of the same size, which the entries record descriptively.
 
-Nothing further is registered. Statistic (B) is ruled and defined (entry 0011): the reader's per-token KL
-over the writer's cache against its own, on the dumps the distance ladder produced, to run on a rented GPU
-after a float16-floor probe; its registration and seal are the next entry. (C) and the own run are not
-ruled on. The ledger holds the founding record (chassis provenance, inherited definitions, the first
+Statistic (B) is registered (entry 0012, sealed before any score): the reader's per-token KL over the
+writer's cache against its own, on the dumps the distance ladder produced, with the float16 floor probed on
+the run machine and HOLDS_B confirmed at 1e-3; its run and outcome are the next entry. (C) and the own run
+are not ruled on. The ledger holds the founding record (chassis provenance, inherited definitions, the first
 rulings), the ruling that the instrument serves statistic (A) only, two re-pins of the instrument, the two
 registrations with their sealed predictions, the two outcomes, the closure, and the (B) ruling. Every
 number in it was recomputed from `results/` by a summarizer that refuses on any mismatch, and the score
