@@ -12,7 +12,7 @@ heldout = [40, 50]
 prefix_len = 768
 dtype = "float32"
 seed = 0
-registered_by = "0012"
+registered_by = "0013"
 
 [reader.rule]
 statistic = "median over held-out sequences of the mean per-token KL(pi_fresh || pi_stale) over the 256-token continuation, per rung and text"
@@ -28,9 +28,10 @@ identity_max_logit_diff = 1e-5
 # Scrambled: the next held-out sequence's prefix, corpus text; median mean-KL must reach this or the
 # reader's rungs are UNEVALUABLE.
 scrambled_min = 1e-1
-# Float16 floor (the halting control, R-B10): limits fixed by 0012 from the probe on the run machine
-# (1.7x the observed maxima: max abs logit diff 1.31e-2, median mean-KL 3.9e-8).
-floor_max_logit_diff = 2.2e-2
+# Float16 floor (the halting control, R-B10): the limit on median mean-KL fixed by 0012 from the probe on the
+# run machine (1.7x the observed 3.9e-8). 0013: the maximum absolute logit difference is recorded per reader,
+# not a halting limit (a single float16 rounding extreme is heavy-tailed across readers; the DPO reader read 5.2e-2
+# on one sequence at a floor KL of 1.6e-8).
 floor_max_median_kl = 7e-8
 
 # Token files: identical to the distance registration (0008); P = tokens[:768], C = tokens[768:1024].

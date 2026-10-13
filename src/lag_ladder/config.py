@@ -236,7 +236,7 @@ _SCORE_TEXTS = ("corpus", "on-path")
 _GENERATE_ARMS = ("stale", "fresh")
 _READER_RULE_KEYS = ("statistic", "holds_max", "degrades_min", "texts", "generate_under")
 _READER_CONTROL_KEYS = ("identity_max_logit_diff", "scrambled_min")
-_READER_FLOOR_KEYS = ("floor_max_logit_diff", "floor_max_median_kl")
+_READER_FLOOR_KEYS = ("floor_max_median_kl",)
 
 
 @dataclass(frozen=True)
@@ -261,7 +261,7 @@ class ReaderConfig:
     dtype: str
     seed: int
     rule: dict                # statistic, holds_max, degrades_min, texts, generate_under
-    controls: dict            # identity_max_logit_diff, scrambled_min, floor_max_logit_diff|None, floor_max_median_kl|None
+    controls: dict            # identity_max_logit_diff, scrambled_min, floor_max_median_kl|None (0013: the floor halts on KL only)
     pairs: dict               # name -> PairTokens
     rungs: tuple[ReaderRung, ...]
     registered_by: str

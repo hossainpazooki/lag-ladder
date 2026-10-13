@@ -81,4 +81,5 @@ design §13 defines it: per-token KL of the reader over the writer's cache again
 to run on RunPod. **Statistic (B) is registered (0012)**: the float16 floor was probed on the run machine
 (median mean-KL 3.9e-8, HOLDS_B confirmed at 1e-3), the seal is committed, `config/reader.toml` is pinned, and
 the noise backbone is re-dumped on the run machine because 0008's noise checkpoints do not regenerate
-byte-identically there. Next: the (B) run on the pod, then its outcome entry. R-B4 is deferred. (C) and the own run are not ruled.
+byte-identically there. 0013 amended the float16-floor control to halt on median KL only after the first run
+halted on a second reader's logit extreme. Next: the (B) run, then its outcome entry. R-B4 is deferred. (C) and the own run are not ruled.

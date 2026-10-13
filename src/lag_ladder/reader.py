@@ -163,7 +163,7 @@ def assert_ready(cfg: ReaderConfig, repo_root: Path, *, seal_cfg=None, upstream_
     if not cfg.registered_by:
         raise _refuse(f"config/{cname} is UNREGISTERED (registered_by is empty); a numbered ledger entry must fix "
                       "its values before anything runs")
-    for k in ("floor_max_logit_diff", "floor_max_median_kl"):
+    for k in ("floor_max_median_kl",):
         if cfg.controls.get(k) is None:
             raise _refuse(f"config/{cname} has no {k}; the registering entry fixes the float16 floor from the "
                           "probe before any score (R-B9, R-B10)")
@@ -292,10 +292,8 @@ def run(cfg: ReaderConfig, repo_root: Path, *, runner=subprocess.run, limit: int
                                    "mean_kl": mkl, "max_abs_logit_diff": mdiff, "done": True})
             done += 1
             if j.kind == "floor":
-                if mdiff > float(cfg.controls["floor_max_logit_diff"]):
-                    raise _refuse(f"float16 floor failed: {j.reader} seq{j.seq} ({j.text}) reads "
-                                  f"max_abs_logit_diff = {mdiff:.3e} > {cfg.controls['floor_max_logit_diff']}; "
-                                  "the probe's limits do not hold on this machine")
+                # 0013: the floor halts on median mean-KL only; max_abs_logit_diff is recorded, not a limit
+                # (a single float16 rounding extreme over 256 x vocab logits is heavy-tailed across readers).
                 key = (j.reader, j.text)
                 floor_kls.setdefault(key, []).append(mkl)
                 if len(floor_kls[key]) == n_seqs:

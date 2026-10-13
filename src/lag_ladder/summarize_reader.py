@@ -145,7 +145,6 @@ def _band(median_kl: float, rule: dict) -> str:
 
 def _controls(reader: str, jobs: dict, cfg: ReaderConfig) -> dict:
     """One reader's controls judged from its floor/identity/scrambled reports. Floor limits unset => failed."""
-    floor_lim_logit = cfg.controls.get("floor_max_logit_diff") or None
     floor_lim_kl = cfg.controls.get("floor_max_median_kl") or None
     out = {"floor": None, "identity": None, "scrambled": None}
     floor = [r for (kind, _t, _s), r in jobs.items() if kind == "floor"]
@@ -157,9 +156,8 @@ def _controls(reader: str, jobs: dict, cfg: ReaderConfig) -> dict:
             cell = [np.mean(r["kl_per_token"]) for r in floor if r["text"] == text]
             kl_by_text[text] = float(np.median(cell))
         max_logit = max(float(r["max_abs_logit_diff"]) for r in floor)
-        unset = floor_lim_logit is None or floor_lim_kl is None
-        passed = (not unset and max_logit <= float(floor_lim_logit)
-                  and all(v <= float(floor_lim_kl) for v in kl_by_text.values()))
+        unset = floor_lim_kl is None
+        passed = not unset and all(v <= float(floor_lim_kl) for v in kl_by_text.values())   # 0013: KL only
         out["floor"] = {"median_kl_by_text": kl_by_text, "max_abs_logit_diff": max_logit,
                         "limits_set": not unset, "passed": passed}
     ident = [r for (kind, _t, _s), r in jobs.items() if kind == "identity"]

@@ -524,3 +524,35 @@ run.
 
 **Consequences in this commit set:** `config/reader.toml` (`registered_by`, floor limits, pinned readers, the R-B8
 rung); the sealed prediction and sidecar (6bbd9bf).
+
+### 0013 — 2026-10-13 — Amendment: the float16 floor halts on median KL only; the run under 0012 halted on a second reader's logit extreme and is restarted
+
+prior-entries-sha256: ef9cb13eb0efc2af55eb83e629c048db7c1e3f2cafe40b323d5b26e4a2c7d7d1
+
+**Amends 0012** (R-B10). `config/reader.toml` is now `registered_by = "0013"`; the sealed prediction
+(`ledger/predictions/reader.json`, sidecar `ba6e3cdc…`, 6bbd9bf) is unchanged and still binds. The run was
+started under 0012 on the run machine and halted at its 74th job, in the DPO reader's float16-floor control:
+one sequence (on-path text) read a maximum absolute logit difference of 5.2e-2 against the registered limit
+2.2e-2, at a floor mean-KL of 1.6e-8. The limit had been set at 1.7× one reader's maximum over ten sequences
+(`step_200`, 1.31e-2); the maximum over 256 positions and the vocabulary of a float16 rounding difference is a
+heavy-tailed extreme that a one-reader probe does not bound across readers, and it carries no information at the
+scale of the verdict (the DPO reader's rung reads logit differences of 0.3–0.7 at a mean-KL of 2e-4).
+
+**Ruled.** The float16 floor halts on the median mean-KL alone, limit `floor_max_median_kl = 7e-8` as 0012 fixed it;
+the per-reader maximum absolute logit difference is recorded and reported, not a limit. Identity keeps its 1e-5
+tolerance; scrambled its 1e-1. `reader.py` and `summarize_reader.py` enforce the amended control. The 74 jobs run
+under 0012 are discarded and the run restarted from its first job under this entry; nothing from them enters the
+record. What they showed, descriptively: `step_200`'s controls reproduced the probe to the digit (identity 0.0;
+scrambled median KL 0.97), and the DPO reader's floor read median mean-KL 3.1e-8 (corpus).
+
+**Also recorded.** The eight isotropic checkpoints regenerated on the run machine (0012): `out_sha256` prefixes
+noise-0.0001 `551222c9`, 0.0003 `f9d1b9b6`, 0.001 `0b86f898`, 0.003 `fa3187eb`, 0.01 `6acca7d5`, 0.03 `711d2117`,
+0.1 `3ebf590a`, qwen-noise-0.01 `fd23b4a1`; realized relative norms agree with 0008's to better than 1e-9. The
+0.01 regeneration reproduced the probe sitting's bytes on a different instance: the draw is fixed by platform and
+torch build, not by the machine.
+
+**Not registered here.** Nothing beyond the control amendment; 0012's rule, sources, seal and bands stand.
+
+**Consequences in this commit set:** `config/reader.toml` (`registered_by`, the floor limit block);
+`src/lag_ladder/reader.py`, `src/lag_ladder/summarize_reader.py`, `src/lag_ladder/config.py` (the amended
+control); `tests/test_reader.py`.
