@@ -59,11 +59,13 @@ The upstream gate, as every driver will call it:
 driver: identity and scrambled controls, then the ladder, by subprocess into the pinned instrument) ·
 `summarize_pilot` (recomputes the ladder from disk) · `distance` (the weight-distance driver: rungs of writer
 and reader refs, Hub revision or local checkpoint; controls per writer; the noise backbone written and pruned
-per rung) · `summarize_distance` (rungs by measured distance, tied to the dumps' manifests). `tools/` —
-`perturb_checkpoint.py`, `convert_bin_checkpoint.py`, `weight_distance.py`: run with the instrument's
-interpreter, import nothing from it. The (B) scorer is ruled and specified (design §13) and not yet built;
-(C)'s does not exist.
-`config/` — `seal.toml`, `pilot.toml`, `distance.toml`. `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
+per rung) · `summarize_distance` (rungs by measured distance, tied to the dumps' manifests) · `reader` (the
+(B) driver: plan|check|run|probe; controls per reader, then the rungs, by subprocess into the pinned
+instrument; refuses while `reader.toml` is unregistered) · `summarize_reader` (recomputes B1–B4 from the
+reports, withholds failed-control rungs). `tools/` — `perturb_checkpoint.py`, `convert_bin_checkpoint.py`,
+`weight_distance.py`, `score_continuation.py` (the (B) scorer: injects a stale vs fresh cache, scores the
+continuation): run with the instrument's interpreter, import nothing from it. (C)'s scorer does not exist.
+`config/` — `seal.toml`, `pilot.toml`, `distance.toml`, `reader.toml` (unregistered until 0012). `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
 `mappers/` — seal artifact roots, gitignored past their placeholders. `docs/` — the design doc.
 
 ## State
@@ -76,5 +78,7 @@ both are measured and scatter around it by two orders of magnitude in whole-cach
 (A) is closed (0010)**: the statement of record is in that entry and the README; linear-ceiling's paper
 cites this repository for it. Nothing is registered beyond 0010. **Statistic (B) is ruled (0011)** as
 design §13 defines it: per-token KL of the reader over the writer's cache against its own, on the 0008 dumps,
-to run on RunPod. Next: the pre-registration float16-floor probe on the pod, the build (§13), then the
-registration entry with its seal committed first. (C) and the own run are not ruled.
+to run on RunPod. **The (B) code is built (b48436a)** and refuses to run until registered. Next: the
+pre-registration float16-floor probe on the pod, then the registration entry (0012) with its seal committed
+first — it fixes the floor limits, the Hub model ids, the scoring-index convention (the scorer injects
+prefix rows 0..766 so all 256 continuation tokens are scored) and states the summarizer's trust limit. (C) and the own run are not ruled.
