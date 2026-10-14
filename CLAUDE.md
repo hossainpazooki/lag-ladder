@@ -1,7 +1,7 @@
 # lag-ladder — repo brief
 
 Read `README.md` for what this is. `docs/2026-09-19-holdover-design.md` is the authority on scope and
-carries the rulings (§10), the build order (§9) and the re-aim (§12). `ledger/ledger.md` is the record and
+carries the rulings (§10), the build order (§9), the re-aim (§12), statistic (B) (§13) and the own run (§14). `ledger/ledger.md` is the record and
 is append-only by numbered entry; entry 0001 carries the chassis provenance, the inherited definitions (f\*,
 τ_K) and the first rulings, entry 0002 the ruling that the instrument serves statistic (A) only, entries
 0003 and 0004 the instrument re-pins (checkpoint selection; per-side `ModelRef` with verified provenance),
@@ -45,6 +45,8 @@ registration and amendments, entry 0015 its outcome, and entry 0016 its closure 
 .venv/Scripts/python.exe -m lag_ladder.summarize_pilot   # recomputes every f* from disk; refuses on mismatch
 .venv/Scripts/python.exe -m lag_ladder.distance plan|check|run   # the weight-distance ladder (config/distance.toml)
 .venv/Scripts/python.exe -m lag_ladder.summarize_distance        # rungs by measured distance; refuses on mismatch
+.venv/Scripts/python.exe -m lag_ladder.reader plan|check|run|probe [--config config/ownrun.toml]   # statistic (B)
+.venv/Scripts/python.exe -m lag_ladder.summarize_reader [--config config/ownrun.toml]
 ```
 On macOS/Linux the interpreter is `.venv/bin/python`. The project pins Python 3.12.
 
@@ -64,10 +66,12 @@ per rung) · `summarize_distance` (rungs by measured distance, tied to the dumps
 (B) driver: plan|check|run|probe; controls per reader, then the rungs, by subprocess into the pinned
 instrument; refuses while `reader.toml` is unregistered) · `summarize_reader` (recomputes B1–B4 from the
 reports, withholds failed-control rungs, places rungs by the distance ladder's `distance.json`, reads the sealed
-clauses out). `tools/` — `perturb_checkpoint.py`, `convert_bin_checkpoint.py`,
-`weight_distance.py`, `score_continuation.py` (the (B) scorer: injects a stale vs fresh cache, scores the
-continuation): run with the instrument's interpreter, import nothing from it. (C)'s scorer does not exist.
-`config/` — `seal.toml`, `pilot.toml`, `distance.toml`, `reader.toml`. `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
+clauses out; per-rung texts and ragged continuations for §14). `tools/` — `perturb_checkpoint.py`,
+`convert_bin_checkpoint.py`, `weight_distance.py`, `score_continuation.py` (the (B) scorer: injects a stale vs fresh
+cache, scores the continuation; `--text rollout` teacher-forces a stored continuation cut at `--length`): run with
+the instrument's interpreter, import nothing from it. `own_run.py` (§14: the GRPO trajectory with its save hook;
+run with the trainer's interpreter, imports nothing from here or the instrument). (C)'s scorer does not exist.
+`config/` — `seal.toml`, `pilot.toml`, `distance.toml`, `reader.toml`, `ownrun.toml` (UNREGISTERED). `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
 `mappers/` — seal artifact roots, gitignored past their placeholders. `docs/` — the design doc.
 
 ## State
@@ -88,5 +92,7 @@ floors (KL only; limit band-relative at 1e-4); 0014 also registers the five R-B4
 (0015)**: all controls passed; (B1) grows as x² on the backbone (slope 2.0) and leaves HOLDS_B between 3e-3 and 1e-2;
 OLMo directions read 355–875× the backbone at matched distance, Qwen Instruct 11×; RL-phase lags 200–2400 all HOLDS_B;
 seal clauses (i), (iii) HELD, (ii), (iv), (v) FALSIFIED. **(B) on the ladder is closed (0016)**, statement of record in
-that entry and the README; the scorer stays the registered instrument for later rungs. Next: the own run (R8) at lags
-1–32, approved in principle, to be designed as §14, registered and sealed. (C) is not ruled.
+that entry and the README; the scorer stays the registered instrument for later rungs. **The own run (§14) is designed
+and built, UNREGISTERED**: `tools/own_run.py`, the reader's per-pair heldout/spans and the `rollout` text,
+`config/ownrun.toml` with `ROLLOUT_*_PENDING` pins. Next: sample the rollouts on the run machine (hashes), the registration
+entry 0017 with the seal, the sitting, the outcome entry. (C) is not ruled.

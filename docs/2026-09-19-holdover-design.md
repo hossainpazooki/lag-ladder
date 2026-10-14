@@ -482,4 +482,100 @@ and 18 readers with every control passed. Median (B1) grows as x² on the backbo
 text, HOLDS_B throughout. Seal: (i) and (iii) HELD; (ii), (iv), (v) FALSIFIED — the backbone leaves HOLDS_B before
 1e-2, Qwen's instruct tuning is an order of magnitude above noise, and on-path exceeds corpus on the destroyed
 reader at 1e-1. 0016 closes (B) on the weight-distance ladder with the statement of record and leaves the scorer
-as the registered instrument for the own run (§14, to be written); it rules nothing about (C).
+as the registered instrument for the own run (§14); it rules nothing about (C).
+
+## 14. The own run: statistic (B) at lags 1–32 (approved in principle 2026-10-13; ruled all-as-recommended 2026-10-14; registration pending)
+
+**Why.** 0015/0016 measured (B) on the published RLVR1 chain at lags 200–2400 optimizer steps: HOLDS_B at every
+lag, 8.4e-5 to 8.1e-4 on corpus text, one to two orders of magnitude above isotropic noise at matched distance.
+The lag a pipelined trainer runs at is 1 to 32 optimizer steps (PipelineRL §5.1, Fig. 7, `max_lag`), below the
+Hub's stride by a factor of 6 to 200; 0015 bounds that regime from above and does not measure it. The only way to
+put the operating lag on the axis is a trajectory of our own with a checkpoint every optimizer step. Steps are not
+comparable across runs — an RLVR1 step moved the weights by ≈ 6e-7 relative (`olmo-rlvr1-lag-200`), an Adam step
+at learning rate 1e-6 on Qwen2.5-1.5B is expected near 2.4e-5 (lr over the weights' RMS 4.2e-2) — so the reading
+is made on the distance axis, as 0007 ruled, with the step count beside it; the published chain's lag rungs are
+the long end of the same curve.
+
+**Construction.** One short RL trajectory: GRPO on Qwen2.5-1.5B, full-weight, 32 optimizer steps from the
+released checkpoint (step 0), one seed. After every optimizer step the just-saved checkpoint dumps the ten
+held-out sequences and the ten rollout sequences through the pinned instrument (`dump_kv --local-path`, float32
+forward, float16 dumps, as every dump here), its whole-vector distance to step 0 is written with
+`tools/weight_distance.py` under the rung labels, and its weights are deleted unless the step is in the keep set
+{0, 1, 2, 4, 8, 16, 32}. Kept weights are the readers and give the distance axis directly. Cells, §13's: writer
+cache at step 0, reader at step g ∈ {1, 2, 4, 8, 16, 32} — six lag rungs, log-spaced, PipelineRL's axis — with
+§13's controls per reader (run once, on the held-out pair) and both of §13's texts. A third text, *rollout*, is
+the trainer's own scenario, which §13 could only imitate: for each of ten GSM8K training prompts (seeded, excluded
+from the run's batches) the step-0 policy samples one completion at the trainer's temperature; prompt+completion
+is one row of a padded token file with a per-sequence `prefix_len`/`length` sidecar (spans); the reader at step g
+teacher-forces the completion under its own cache of the prompt and under step 0's. Rollouts are sampled before
+registration, written to the two paths `config/ownrun.toml` names under the instrument checkout's gitignored
+`data/tokens/` (where every held-out token file lives; the checkout's code stays untouched), and their hashes
+pinned by the registering entry, like the floor probe of 0012. A sliding variant
+(writer at t, reader at t+g) is not registered; the dumps exist at every step, so it can be scored later from the
+same sitting's artefacts if an entry calls for it.
+
+**Statistics, bands, controls.** §13's, unchanged: (B1) verdict-bearing, (B2)–(B4) descriptive; HOLDS_B ≤ 1e-3,
+DEGRADES_B ≥ 1e-1; float16 floor (median KL, limit 1e-4 as 0014 set it), identity, scrambled, per reader, halting
+as before. On *rollout* text (B2) is, for the first time, the dispersion of a quantity with the trainer's shape —
+the log importance weight of a sampled completion between the fresh and the stale cache — though still not the
+trainer's number (one sample per prompt, no advantage, no clipping); the entry says so. A rollout continuation
+has its own length per sequence; token-level statistics pool the tokens, sequence-level ones take each row.
+
+**Trajectory (R-C1, R-C2, R-C3).** TRL `GRPOTrainer`, pinned by commit at registration; transformers and torch
+as the (B) sitting had them. Policy Qwen2.5-1.5B (base; `8faed761…`, 0012's pin). Task: GSM8K train, reward exact
+match on the final number plus a 0.2 format term; prompts in the chat template with one fixed system line. Per
+optimizer step 16 prompts × 8 completions, max 256 completion tokens, temperature 1.0, learning rate 1e-6, no
+reference-KL term (β = 0: the movement is the policy gradient's alone and the distance axis is not shaped by a
+pull back to step 0), fp32 master weights, seed 0. Expected distance at g = 32: 1.4e-4 if steps are uncorrelated,
+up to 7.7e-4 if aligned — the band where the published chain read 8.4e-5 to 8.1e-4 and the backbone 5e-6 to
+5e-5. The prediction below is a prediction.
+
+**Seal (R-C5; structure here, values in `ledger/predictions/ownrun.json`, committed before any score).** (i)
+HOLDS_B at the operating lag: median (B1) at g = 32 ≤ 1e-3 on corpus and greedy on-path text. (ii) Growth: the
+slope of log median (B1) on log distance over the six rungs lies in [1.5, 2.5] on both texts. (iii) The RL
+direction's excess reproduces: at every rung whose distance falls inside the backbone's measured range, (B1) ≥
+10× the backbone's at the nearest rung (0015 read 66× to 875× for every trained direction). (iv) Rollout ≤ greedy
+on-path ≤ corpus at every rung above 2× floor. Descriptive, not sealed: (B1) at g = 1 and whether it is at the
+floor.
+
+**Where it runs (R-C7).** One RunPod sitting, secure A100-SXM4-80GB, under the GPU protocol and the Part-C
+runbook: training ≈ 1 h (no vLLM), 330 dumps ≈ 30 min, distances ≈ 10 min, the reader run ≈ 2 h (6 readers × 40
+control jobs + 12 rungs × 10 sequence-texts ≈ 420 jobs). Budget ≈ $7, watchdog with both ceilings set. Artefacts:
+the results tar, the dumps' manifests, seven kept checkpoints with provenance (sha256 of the safetensors), 32
+distance files; dumps and kept weights go to the private dataset as 0008's did. Nothing from the trainer's logs
+enters the ledger except the per-step reward mean, descriptively, so a reader can see the policy moved.
+
+**Build (what the registration calls; built 2026-10-14).** `tools/own_run.py` (`sample-rollouts`, `train` with
+the save hook: dump → distance to step 0 for every step under `results/distance/ownrun/`, copied to each rung label
+the config gives that step → delete; the labels are read from `config/ownrun.toml`'s `local:step_<g>` readers; run
+with the trainer's interpreter, imports nothing from `lag_ladder` or `kvt`); the loader refuses a reader whose first
+rung is a rollout rung, so controls always run on the held-out pair; `lag_ladder.reader`: a pair's own `heldout`, a `spans` sidecar giving `--prefix-len`/`--length` per
+sequence, a per-rung `texts`; `tools/score_continuation.py`: `--text rollout` (teacher-forced like corpus) and
+`--length`; `summarize_reader`: rollout verified against the token file like corpus, per-rung texts, ragged
+continuations; `config/ownrun.toml`, UNREGISTERED, with `ROLLOUT_*_PENDING` pins until the rollouts are sampled.
+The seal file is written at registration.
+
+**What §14 cannot say.** Nothing about in-flight updates as an engine performs them: the trainer is synchronous
+and the stale cache is modelled, as in §13, by dumping the writer's cache and reading it under the reader. Nothing
+beyond one seed, one 1.5B model, one task, 32 steps; a result at the floor means "a 1.5B GRPO step moves the
+weights too little for the reader to notice at 1e-3", not "lag is harmless". Nothing a trainer would compute.
+
+**Decision rules.** If (i) holds and g = 32 is within 2× the floor, a second registered sitting extends the
+trajectory to 128 steps at a larger learning rate (an amendment, not a new design). If (i) falls, the paper's
+sentence is the distance at which HOLDS_B is left, and the sliding variant is scored from the same dumps to show
+it is not a step-0 artefact. If (iii) falls, the RL direction's excess over noise is a property of the long-trained
+chain, not of a step.
+
+**Rulings (2026-10-14, all as recommended).**
+
+| | ruling |
+|---|---|
+| R-C1 | model: Qwen2.5-1.5B base (`8faed761…`, 0012's pin); not binding |
+| R-C2 | trainer: TRL GRPO; lr 1e-6, β = 0, 16 × 8 per step, T = 1.0, fp32 master, seed 0 |
+| R-C3 | 32 steps; keep {0, 1, 2, 4, 8, 16, 32}; dump every step |
+| R-C4 | texts: corpus + greedy on-path (§13) + rollout; rollout registered, not deferred |
+| R-C5 | seal clauses (i)–(iv); (B1) at g = 1 descriptive |
+| R-C6 | rollout prompts: ten GSM8K train prompts excluded from the batches, seeded; one sample each at T = 1.0, ≥ 64 tokens or resampled |
+| R-C7 | dumps and kept weights to the private dataset; reports tar and summary off-repository with hashes |
+| R-C8 | the PipelineRL Fig. 7 comparison is stated descriptively on the lag axis; no claim about their run |
+
