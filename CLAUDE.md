@@ -9,7 +9,7 @@ entry 0005 the pilot's registration, entry 0006 its outcome (f\* = 0 at every la
 entry 0007 the ruling that weight distance is the axis, entry 0008 the weight-distance ladder's registration,
 entry 0009 its outcome, entry 0010 the closure of statistic (A) with the statement of record, entry 0011
 the ruling that the lane continues under statistic (B) as design §13 defines it, entries 0012–0014 (B)'s
-registration and amendments, and entry 0015 its outcome.
+registration and amendments, entry 0015 its outcome, and entry 0016 its closure on the ladder with the statement of record.
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never
@@ -87,5 +87,6 @@ byte-identically there. 0013 and 0014 amended the float16-floor control after th
 floors (KL only; limit band-relative at 1e-4); 0014 also registers the five R-B4 lag rungs. **The (B) run completed
 (0015)**: all controls passed; (B1) grows as x² on the backbone (slope 2.0) and leaves HOLDS_B between 3e-3 and 1e-2;
 OLMo directions read 355–875× the backbone at matched distance, Qwen Instruct 11×; RL-phase lags 200–2400 all HOLDS_B;
-seal clauses (i), (iii) HELD, (ii), (iv), (v) FALSIFIED. Next: the (B) closure entry (the analogue of 0010); then the
-own run (R8) at lags 1–32, approved in principle, to be designed and registered. (C) is not ruled.
+seal clauses (i), (iii) HELD, (ii), (iv), (v) FALSIFIED. **(B) on the ladder is closed (0016)**, statement of record in
+that entry and the README; the scorer stays the registered instrument for later rungs. Next: the own run (R8) at lags
+1–32, approved in principle, to be designed as §14, registered and sealed. (C) is not ruled.

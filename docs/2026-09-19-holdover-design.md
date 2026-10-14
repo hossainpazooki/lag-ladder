@@ -472,3 +472,14 @@ a rung whose reader's controls failed, ties rungs to the dumps' manifests); fake
 **What (B) cannot say.** Nothing about task accuracy ((C), unbuilt); nothing about a cache older than
 1,024 tokens or a prefix shared across prompts; nothing beyond 1.5B-scale models; nothing a trainer would
 compute. A (B1) at the float16 floor is "at the floor", not zero.
+
+**Outcome (ledger 0015, 2026-10-14) and closure (ledger 0016, 2026-10-14).** Registered by 0012 (floor probed,
+HOLDS_B confirmed at 1e-3, noise rungs re-dumped on the run machine), amended by 0013 and 0014 (floor halts on
+median KL only, limit band-relative at 1e-4; five R-B4 lag rungs), the ladder ran as registered on 19 rungs
+and 18 readers with every control passed. Median (B1) grows as x² on the backbone (slope 2.02 / 2.00 over
+1e-3..1e-2), HOLDS_B through 3e-3, UNRESOLVED at 1e-2 and 3e-2, DEGRADES_B at 1e-1; the OLMo directions read
+355–875× the backbone at matched distance, Qwen Instruct 11×; the RL lags 200–2400 read 8.4e-5–8.1e-4 on corpus
+text, HOLDS_B throughout. Seal: (i) and (iii) HELD; (ii), (iv), (v) FALSIFIED — the backbone leaves HOLDS_B before
+1e-2, Qwen's instruct tuning is an order of magnitude above noise, and on-path exceeds corpus on the destroyed
+reader at 1e-1. 0016 closes (B) on the weight-distance ladder with the statement of record and leaves the scorer
+as the registered instrument for the own run (§14, to be written); it rules nothing about (C).

@@ -641,3 +641,51 @@ enforced, and reads the sealed clauses out itself.
 
 **Consequences in this commit set:** `src/lag_ladder/summarize_reader.py`, `tests/test_summarize_reader.py`,
 `README.md`, `CLAUDE.md`.
+
+### 0016 — 2026-10-14 — Ruling: statistic (B) on the weight-distance ladder is complete; the statement of record, and how to cite it
+
+prior-entries-sha256: ad6d936b07b8ee3c7e58520598352b03643e8c9c03e76e67d95b25f2e4dadf35
+
+**Ruled 2026-10-14, after 0015.** Statistic (B), defined by 0011 and design §13 and registered by 0012–0014, has run
+on every rung the registration named — the thirteen rungs of 0008, the Qwen2.5-1.5B isotropic rung, five lags of the
+published RLVR1 chain — with the controls on all eighteen readers passed and the seal of 6bbd9bf read out (0015). No
+further run of (B) on published checkpoints is registered. The scorer and driver built here remain the registered
+instrument for any later rung of the same statistic; the pin stays `5d4aa4a`.
+
+**Statement of record** (every number from 0015; `summary.json` `5d761594…`, reports `828a545b…`). On OLMo-2 1B, the
+median over held-out sequences of the mean per-token KL between the reader's next-token distribution over its own
+cache and over the writer's (B1), in nats per token, **grows as the square of whole-vector relative weight distance
+on the isotropic backbone** — slope 2.02 on corpus text and 2.00 on the reader's own greedy continuation over the
+rungs 1e-3 to 1e-2 — from 6.0e-7 at distance 1e-4 to 5.3e-5 at 1e-3, 5.6e-3 at 1e-2 and 4.1 at 1e-1. It is
+**HOLDS_B (≤ 1e-3) through 3e-3 and DEGRADES_B (≥ 1e-1) at 1e-1**, the edge of HOLDS_B between 3e-3 and 1e-2, one
+decade inside statistic (A)'s (3e-2 to 1e-1, entry 0010). **Trained directions are not isotropic to the reader**: at
+matched whole-vector distance the OLMo-2 post-training steps read 355× to 875× the backbone over both texts (on corpus
+text SFT → DPO 4.1e-2 at 8.5e-4; SFT → RLVR 3.8e-2 at 9.4e-4; DPO → RLVR 2.1e-4 at 8.6e-5) and Qwen2.5-1.5B base →
+Instruct 11× (3.5e-3 against 3.3e-4 at 1e-2). **On the published RL chain** a cache written at step_200 and read 200
+to 2400 optimizer steps later reads 8.4e-5 to 8.1e-4 on corpus text and 7.4e-5 to 7.0e-4 on the reader's own
+continuation, HOLDS_B at every lag; it rises with distance on the reader's own continuation, while on corpus text lag
+1400 reads below lag 1000 (0015's "rising with distance" holds on the former only). The two Qwen pairs beyond distance
+1e-1 read 2.6e-1 (Math → R1-Distill) and 1.26 (base → Math, the cache re-rotated across RoPE bases), the latter above
+the reader's scrambled control. On eighteen of nineteen rungs the reader's own greedy continuation reads below the
+corpus text, by 5–76%; the exception is the isotropic rung at 1e-1, a reader whose argmax agrees with its own cache
+on 13% of tokens. Controls on all eighteen readers: float16 floors 1.3e-8 to 1.4e-7, identity 0, scrambled 0.47 to
+1.9.
+
+**What the statistic can and cannot say here.** (B) is graded where (A) was a step: it resolves the regime (A) read
+as uniformly HOLDS, orders the trained directions above the isotropic backbone, and places the distance past which a
+stale cache moves a reader's next-token distribution by more than 1e-3 nats. It is a reader's number, not a trainer's:
+the on-path text is a greedy continuation under the stale cache, a sample of neither policy, so (B2) and (B3) are
+dispersion diagnostics, not the importance weights a pipelined trainer would see. The smallest lag measured is 200
+optimizer steps at distance 1.3e-4; the operating lag of a pipelined trainer, a few steps, lies below the Hub's stride
+and is unmeasured here. Two of the five sealed clauses held; the three that fell — the backbone's HOLDS_B reach, Qwen
+Instruct within 3× of noise, on-path ≤ corpus without exception — fell toward a more sensitive statistic than sealed.
+
+**Not ruled here.** The own run (R8): a short RL run with the cache dumped every step, lags 1 to 32, on-path text from
+the trainer's own rollouts — approved in principle 2026-10-13, to be designed as §14 and registered with its own seal.
+Statistic (C). The configurations of 0012–0014 stand as run.
+
+**Citing.** Cite this repository at the commit that carries this entry (tag `statistic-b-closed`); name entry 0015 for
+the numbers, 0011 and design §13 for the statistic, and 0010 for statistic (A) beside it. The reports and summary
+behind 0015 are retained off-repository with the hashes 0015 states.
+
+**Consequences in this commit set:** `README.md`, `docs/2026-09-19-holdover-design.md` §13, `CLAUDE.md`; the tag.
