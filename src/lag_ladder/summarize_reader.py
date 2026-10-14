@@ -103,7 +103,7 @@ def _load_report(d: Path, named_sha: str, root: Path, upstream: Path) -> dict:
             raise _refuse(f"{f}: {key} has {len(rep[key])} entries for a {n}-token continuation")
     if continuation_sha256(toks) != rep["continuation_sha256"]:
         raise _refuse(f"{f}: continuation_sha256 does not match the stored tokens")
-    if rep["text"] == "corpus":
+    if rep["text"] in ("corpus", "rollout"):   # a stored continuation: it must be the token file's own
         tf = _resolve(rep["tokens_file"], root, upstream)
         if not tf.exists():
             raise _refuse(f"{f}: token file {tf} is missing")
@@ -158,20 +158,24 @@ def _digest(rep: dict, side: str, root: Path, upstream: Path) -> str | None:
 
 def _stats(reports: list[dict]) -> dict:
     """(B1)-(B4) recomputed from one rung-text cell's reports, one report per sequence."""
-    kl = np.array([r["kl_per_token"] for r in reports], dtype=np.float64)        # [n_seq, n_tok]
-    logw = np.array([np.asarray(r["logprob_fresh"], dtype=np.float64)
-                     - np.asarray(r["logprob_stale"], dtype=np.float64) for r in reports])
+    # Continuations may differ in length across sequences (a stored rollout, design §14), so per-sequence
+    # arrays are kept ragged: sequence-level statistics per row, token-level ones over the pooled tokens.
+    kl = [np.asarray(r["kl_per_token"], dtype=np.float64) for r in reports]
+    logw = [np.asarray(r["logprob_fresh"], dtype=np.float64) - np.asarray(r["logprob_stale"], dtype=np.float64)
+            for r in reports]
     agree = np.array([np.mean(np.asarray(r["argmax_fresh"]) == np.asarray(r["argmax_stale"]))
                       for r in reports], dtype=np.float64)
-    per_seq_mean_kl = kl.mean(axis=1)
-    return {"n_seqs": len(reports), "n_tokens": int(kl.size), "seqs": [int(r["seq"]) for r in reports],
+    per_seq_mean_kl = np.array([k.mean() for k in kl])
+    pooled_kl, pooled_logw = np.concatenate(kl), np.concatenate(logw)
+    per_seq_logw = np.array([w.sum() for w in logw])
+    return {"n_seqs": len(reports), "n_tokens": int(pooled_kl.size), "seqs": [int(r["seq"]) for r in reports],
             "b1": {"per_seq_mean_kl": per_seq_mean_kl.tolist(),
                    "median_kl": float(np.median(per_seq_mean_kl)),
-                   "p90_token_kl": float(np.percentile(kl, 90)),
-                   "max_token_kl": float(kl.max())},
-            "b2": {"label": B2_LABEL, "per_seq_log_weight": logw.sum(axis=1).tolist(),
-                   "ess_over_n": _ess_over_n(logw.sum(axis=1))},
-            "b3": {"label": B2_LABEL, "ess_over_n": _ess_over_n(logw.ravel())},
+                   "p90_token_kl": float(np.percentile(pooled_kl, 90)),
+                   "max_token_kl": float(pooled_kl.max())},
+            "b2": {"label": B2_LABEL, "per_seq_log_weight": per_seq_logw.tolist(),
+                   "ess_over_n": _ess_over_n(per_seq_logw)},
+            "b3": {"label": B2_LABEL, "ess_over_n": _ess_over_n(pooled_logw)},
             "b4": {"per_seq_agreement": agree.tolist(), "agreement_rate": float(agree.mean())}}
 
 
@@ -234,6 +238,7 @@ def summarize(cfg: ReaderConfig, root: Path | None = None, out: Path | None = No
     if run_rec.get("registered_by") != cfg.registered_by or run_rec.get("upstream_sha") != cfg.upstream_sha:
         raise _refuse("the run record was written under another registration or pin than the config names")
     texts = [str(t) for t in cfg.rule["texts"]]
+    texts_of = {r.label: [str(t) for t in (r.texts or texts)] for r in cfg.rungs}   # §14: per-rung texts
     # jobs: (reader, kind, label, text, seq) -> report; controls carry label None.
     by_reader: dict[str, dict] = {}
     rungs: dict[str, dict] = {}
@@ -285,7 +290,7 @@ def summarize(cfg: ReaderConfig, root: Path | None = None, out: Path | None = No
                  "rel_norm": meta["rel_norm"], "rel_delta_all": meta["rel_delta_all"], "distance_source": meta["distance_source"],
                  "manifest_digest": {s: (next(iter(d)) if d else None) for s, d in digests.items()},
                  "controls_passed": ctl["passed"], "withheld": withheld, "texts": {}}
-        for text in texts:
+        for text in texts_of.get(label, texts):
             trs = sorted((r for (_k, t, _s), r in cell["reports"].items() if t == text), key=lambda r: int(r["seq"]))
             if not trs:
                 raise _refuse(f"rung {label}: no reports for text {text!r}")
@@ -308,7 +313,7 @@ def summarize(cfg: ReaderConfig, root: Path | None = None, out: Path | None = No
 
     def _points(es, text):
         return sorted((float(e["rel_norm"]), e["texts"][text]["b1"]["median_kl"]) for e in es
-                      if e["texts"][text]["b1"]["median_kl"] and e["texts"][text]["b1"]["median_kl"] > 0)
+                      if text in e["texts"] and e["texts"][text]["b1"]["median_kl"] and e["texts"][text]["b1"]["median_kl"] > 0)
 
     for text in texts:
         pts = _points(fit_rungs, text)
@@ -399,7 +404,7 @@ def seal_readout(summary: dict, repo: Path) -> dict | None:
     if v and {"corpus", "on-path"} <= set(texts):
         rows, checks = {}, []
         for e in summary["rungs"]:
-            if e["withheld"]:
+            if e["withheld"] or "corpus" not in e["texts"] or "on-path" not in e["texts"]:
                 continue
             c, o = e["texts"]["corpus"], e["texts"]["on-path"]
             fl = c.get("floor_kl")

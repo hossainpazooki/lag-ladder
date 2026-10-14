@@ -173,6 +173,9 @@ class PairTokens:
     name: str
     tokens: Path
     tokens_sha256: str
+    heldout: tuple[int, int] | None = None     # §14: a pair's own held-out range (default: the config's)
+    spans: Path | None = None                 # §14: per-sequence {"prefix_len": [...], "length": [...]} for stored continuations
+    spans_sha256: str | None = None
 
 
 @dataclass(frozen=True)
@@ -232,7 +235,8 @@ def _check_rule(rule: dict, where: str) -> dict:
     return rule
 
 
-_SCORE_TEXTS = ("corpus", "on-path")
+_SCORE_TEXTS = ("corpus", "on-path", "rollout")   # rollout (§14): a stored continuation, per-rung only
+_RULE_TEXTS = ("corpus", "on-path")
 _GENERATE_ARMS = ("stale", "fresh")
 _READER_RULE_KEYS = ("statistic", "holds_max", "degrades_min", "texts", "generate_under")
 _READER_CONTROL_KEYS = ("identity_max_logit_diff", "scrambled_min")
@@ -249,6 +253,7 @@ class ReaderRung:
     reader: str        # scorer spec: model_id[@revision] or local:<name> under KVT_CHECKPOINT_ROOT
     writer_dump: str   # dump key of the stale arm, e.g. "source@local-olmo2-1b-dpo"
     reader_dump: str   # dump key of the fresh arm (and of every control), e.g. "target@step_200"
+    texts: tuple[str, ...] | None = None   # §14: this rung's texts when not the rule's (e.g. ("rollout",))
 
 
 @dataclass(frozen=True)
@@ -293,8 +298,9 @@ def load_reader_config(path: Path, repo_root: Path) -> ReaderConfig:
         raise ValueError(f"{path.name} [reader.rule] needs 0 < holds_max < degrades_min")
     texts = rule["texts"]
     if (not isinstance(texts, list) or not texts or len(set(texts)) != len(texts)
-            or any(t not in _SCORE_TEXTS for t in texts)):
-        raise ValueError(f"{path.name} [reader.rule] texts must be distinct entries from {_SCORE_TEXTS}")
+            or any(t not in _RULE_TEXTS for t in texts)):
+        raise ValueError(f"{path.name} [reader.rule] texts must be distinct entries from {_RULE_TEXTS}; "
+                         "rollout is a per-rung text")
     if rule["generate_under"] not in _GENERATE_ARMS:
         raise ValueError(f"{path.name} [reader.rule] generate_under must be one of {_GENERATE_ARMS}")
     controls = dict(c["controls"])
@@ -308,10 +314,13 @@ def load_reader_config(path: Path, repo_root: Path) -> ReaderConfig:
             controls[k] = None
         elif not (float(controls[k]) > 0):
             raise ValueError(f"{path.name} [reader.controls] {k} must be a positive float when set")
-    ho = c["heldout"]
-    if (not isinstance(ho, list) or len(ho) != 2 or any(isinstance(x, bool) or not isinstance(x, int) for x in ho)
-            or ho[0] < 0 or ho[1] <= ho[0] + 1):
-        raise ValueError(f"{path.name} [reader] heldout must be [lo, hi) with at least two sequences")
+    def _heldout(ho, where):
+        if (not isinstance(ho, list) or len(ho) != 2 or any(isinstance(x, bool) or not isinstance(x, int) for x in ho)
+                or ho[0] < 0 or ho[1] <= ho[0] + 1):
+            raise ValueError(f"{where} heldout must be [lo, hi) with at least two sequences")
+        return (int(ho[0]), int(ho[1]))
+
+    ho = _heldout(c["heldout"], f"{path.name} [reader]")
     pl = c["prefix_len"]
     if isinstance(pl, bool) or not isinstance(pl, int) or pl <= 0:
         raise ValueError(f"{path.name} [reader] prefix_len must be a positive int")
@@ -334,7 +343,16 @@ def load_reader_config(path: Path, repo_root: Path) -> ReaderConfig:
         if (not isinstance(tok, str) or not tok.strip() or PurePosixPath(tok).is_absolute()
                 or PureWindowsPath(tok).is_absolute()):
             raise ValueError(f"{where}: tokens must be a relative path under upstream_path")
-        pairs[name] = PairTokens(name, upstream / tok, _hex_or_pending(pr["tokens_sha256"], where + " tokens_sha256"))
+        pho = _heldout(pr["heldout"], where) if "heldout" in pr else None
+        spans = spans_sha = None
+        if "spans" in pr or "spans_sha256" in pr:
+            sp = pr.get("spans")
+            if (not isinstance(sp, str) or not sp.strip() or PurePosixPath(sp).is_absolute()
+                    or PureWindowsPath(sp).is_absolute() or "spans_sha256" not in pr):
+                raise ValueError(f"{where}: spans must be a relative path under upstream_path, with spans_sha256")
+            spans, spans_sha = upstream / sp, _hex_or_pending(pr["spans_sha256"], where + " spans_sha256")
+        pairs[name] = PairTokens(name, upstream / tok, _hex_or_pending(pr["tokens_sha256"], where + " tokens_sha256"),
+                                 pho, spans, spans_sha)
     if not pairs:
         raise ValueError(f"{path.name} [reader] lists no pairs")
     rungs, labels = [], set()
@@ -354,10 +372,25 @@ def load_reader_config(path: Path, repo_root: Path) -> ReaderConfig:
         rd = _dump_key(r["reader_dump"], where + " reader_dump")
         if w == rd:
             raise ValueError(f"{where}: writer_dump and reader_dump are the same dump; identity is a control, not a rung")
+        rtexts = None
+        if "texts" in r:
+            rt = r["texts"]
+            if (not isinstance(rt, list) or not rt or len(set(rt)) != len(rt) or any(t not in _SCORE_TEXTS for t in rt)):
+                raise ValueError(f"{where}: texts must be distinct entries from {_SCORE_TEXTS}")
+            if "rollout" in rt and pairs[r["pair"]].spans is None:
+                raise ValueError(f"{where}: a rollout text needs a pair with spans (per-sequence prefix_len and length)")
+            rtexts = tuple(str(t) for t in rt)
         labels.add(label)
-        rungs.append(ReaderRung(label, r["pair"], str(r["reader"]), w, rd))
+        rungs.append(ReaderRung(label, r["pair"], str(r["reader"]), w, rd, rtexts))
     if not rungs:
         raise ValueError(f"{path.name} [reader] lists no rungs")
+    first = {}
+    for r in rungs:
+        first.setdefault(r.reader, r)
+    for r in first.values():
+        if r.texts is not None and "rollout" in r.texts:
+            raise ValueError(f"{path.name}: reader {r.reader}'s first rung ({r.label}) is a rollout rung; its controls "
+                             "run on the first rung's pair, so a corpus rung must come first")
     reg = str(c.get("registered_by", ""))
     if reg and not (len(reg) == 4 and reg.isdigit()):
         raise ValueError(f"{path.name} [reader] registered_by must be a four-digit ledger entry or empty")

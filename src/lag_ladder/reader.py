@@ -82,8 +82,11 @@ def plan(cfg: ReaderConfig) -> Plan:
     """Per distinct reader spec in order of first use: floor (every text), identity, then scrambled (corpus
     only); then every rung of that reader in config order, every text. Sequences in held-out order inside
     each block, so a halt leaves nothing of that reader's rungs behind it."""
-    seqs = list(range(*cfg.heldout))
     texts = list(cfg.rule["texts"])
+
+    def seqs_of(pair: str) -> list[int]:
+        return list(range(*(cfg.pairs[pair].heldout or cfg.heldout)))
+
     readers: list[str] = []
     own: dict[str, ReaderRung] = {}          # reader spec -> a rung naming its own dump
     for r in cfg.rungs:
@@ -94,6 +97,7 @@ def plan(cfg: ReaderConfig) -> Plan:
     for spec in readers:
         o = own[spec]
         slug = reader_slug(spec)
+        seqs = seqs_of(o.pair)
         for t in texts:
             for i in seqs:
                 jobs.append(Job("floor", spec, slug, o.pair, i, t, o.reader_dump, o.reader_dump, i, live=True))
@@ -105,8 +109,8 @@ def plan(cfg: ReaderConfig) -> Plan:
         for r in cfg.rungs:
             if r.reader != spec:
                 continue
-            for t in texts:
-                for i in seqs:
+            for t in (r.texts or texts):
+                for i in seqs_of(r.pair):
                     jobs.append(Job("rung", spec, r.label, r.pair, i, t, r.reader_dump, r.writer_dump, i, rung=r))
     return Plan(tuple(readers), tuple(jobs))
 
@@ -170,6 +174,8 @@ def assert_ready(cfg: ReaderConfig, repo_root: Path, *, seal_cfg=None, upstream_
     for name in used_pairs(cfg):
         if cfg.pairs[name].tokens_sha256.endswith("_PENDING"):
             raise _refuse(f"config/{cname} still carries the tokens_sha256 placeholder for pair {name}")
+        if (cfg.pairs[name].spans_sha256 or "").endswith("_PENDING"):
+            raise _refuse(f"config/{cname} still carries the spans_sha256 placeholder for pair {name}")
     for rel in ("ledger/ledger.md", cfg.config_path):
         p = repo_root / rel if isinstance(rel, str) else rel
         if not _committed_as_is(p, repo_root):
@@ -192,6 +198,12 @@ def assert_ready(cfg: ReaderConfig, repo_root: Path, *, seal_cfg=None, upstream_
         got = sha256_file_bytes(pt.tokens)
         if got != pt.tokens_sha256:
             raise _refuse(f"token file for pair {name} hashes to {got[:12]}, not the registered {pt.tokens_sha256[:12]}")
+        if pt.spans is not None:
+            if not pt.spans.exists():
+                raise _refuse(f"spans file {pt.spans} for pair {name} does not exist")
+            got = sha256_file_bytes(pt.spans)
+            if got != pt.spans_sha256:
+                raise _refuse(f"spans file for pair {name} hashes to {got[:12]}, not the registered {pt.spans_sha256[:12]}")
     if not (Path(tools_dir) / SCORER).exists():
         raise _refuse(f"tool {SCORER} is missing under {tools_dir}")
     if seal_cfg is None:
@@ -208,6 +220,29 @@ def assert_ready(cfg: ReaderConfig, repo_root: Path, *, seal_cfg=None, upstream_
 CHECKPOINT_ROOT_ENV = "KVT_CHECKPOINT_ROOT"   # the scorer resolves local:<name> readers and dump checkpoints under it
 
 
+def spans_of(cfg: ReaderConfig, pair: str) -> dict | None:
+    """A pair's per-sequence prefix_len and length (§14), read from its spans file; None without one."""
+    pt = cfg.pairs[pair]
+    if pt.spans is None:
+        return None
+    sp = json.loads(pt.spans.read_text(encoding="utf-8"))
+    for k in ("prefix_len", "length"):
+        if not isinstance(sp.get(k), list):
+            raise _refuse(f"spans file {pt.spans} for pair {pair} has no list {k!r}")
+    return sp
+
+
+def span_args(cfg: ReaderConfig, j: Job) -> list[str]:
+    """`--prefix-len` (and `--length`) for one job: the config's prefix_len, or the pair's spans at this sequence."""
+    sp = spans_of(cfg, j.pair)
+    if sp is None:
+        return ["--prefix-len", str(cfg.prefix_len)]
+    try:
+        return ["--prefix-len", str(int(sp["prefix_len"][j.seq])), "--length", str(int(sp["length"][j.seq]))]
+    except (IndexError, TypeError, ValueError) as e:
+        raise _refuse(f"spans for pair {j.pair} have no entry for seq {j.seq}: {e}") from e
+
+
 def score(cfg: ReaderConfig, repo_root: Path, j: Job, out: Path, *, probe: bool = False,
           runner=subprocess.run, tools_dir: Path = TOOLS) -> Path:
     report = out / REPORT
@@ -217,7 +252,7 @@ def score(cfg: ReaderConfig, repo_root: Path, j: Job, out: Path, *, probe: bool 
             "--reader", j.reader,
             "--stale", str(dump_dir(repo_root, j.pair, j.stale_key, j.stale_seq).resolve()),
             "--tokens", str(cfg.pairs[j.pair].tokens.resolve()), "--seq", str(j.seq),
-            "--prefix-len", str(cfg.prefix_len), "--text", j.text,
+            *span_args(cfg, j), "--text", j.text,
             "--out", str(out.resolve()), "--device", "auto", "--dtype", cfg.dtype]
     if j.text == "on-path":
         args += ["--generate-under", str(cfg.rule["generate_under"])]
@@ -256,13 +291,15 @@ def run(cfg: ReaderConfig, repo_root: Path, *, runner=subprocess.run, limit: int
     assert_ready(cfg, repo_root, seal_cfg=seal_cfg, upstream_check=upstream_check, tools_dir=tools_dir)
     p = plan(cfg)
     lo, hi = cfg.heldout
-    n_seqs = hi - lo
+    n_of = {name: (lambda h: h[1] - h[0])(cfg.pairs[name].heldout or cfg.heldout) for name in cfg.pairs}
     cfg.results_dir.mkdir(parents=True, exist_ok=True)
     rec_path = cfg.results_dir / RUN_RECORD
     record = {"registered_by": cfg.registered_by, "upstream_sha": cfg.upstream_sha, "dtype": cfg.dtype,
               "heldout": [lo, hi], "prefix_len": cfg.prefix_len, "seed": cfg.seed,
               "config_sha256": sha256_file_bytes(cfg.config_path),
               "tokens_sha256": {name: cfg.pairs[name].tokens_sha256 for name in used_pairs(cfg)},
+              "spans_sha256": {name: cfg.pairs[name].spans_sha256 for name in used_pairs(cfg)
+                               if cfg.pairs[name].spans is not None},
               "started": datetime.now(timezone.utc).isoformat(timespec="seconds"), "finished": None,
               "halted": None, "unevaluable_readers": {}, "jobs": []}
 
@@ -296,7 +333,7 @@ def run(cfg: ReaderConfig, repo_root: Path, *, runner=subprocess.run, limit: int
                 # (a single float16 rounding extreme over 256 x vocab logits is heavy-tailed across readers).
                 key = (j.reader, j.text)
                 floor_kls.setdefault(key, []).append(mkl)
-                if len(floor_kls[key]) == n_seqs:
+                if len(floor_kls[key]) == n_of[j.pair]:
                     med = float(np.median(floor_kls[key]))
                     if med > float(cfg.controls["floor_max_median_kl"]):
                         raise _refuse(f"float16 floor failed: {j.reader} ({j.text}) median mean-KL = {med:.3e} > "
@@ -308,7 +345,7 @@ def run(cfg: ReaderConfig, repo_root: Path, *, runner=subprocess.run, limit: int
                                   "reproduce its own forward")
             elif j.kind == "scrambled":
                 scrambled_kls.setdefault(j.reader, []).append(mkl)
-                if len(scrambled_kls[j.reader]) == n_seqs:
+                if len(scrambled_kls[j.reader]) == n_of[j.pair]:
                     med = float(np.median(scrambled_kls[j.reader]))
                     if med < float(cfg.controls["scrambled_min"]):
                         # Not a halt: the reader's rungs are UNEVALUABLE (design §13) and are skipped.

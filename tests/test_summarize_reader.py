@@ -177,3 +177,23 @@ def _rename_reports_in_run_record(cfg):
         if f.exists():
             j["report_sha256"] = sha256_file_bytes(f)
     rec_path.write_text(json.dumps(run_rec), encoding="utf-8")
+
+
+def test_summary_reads_a_rollout_rung_on_its_own_text_and_verifies_the_stored_continuation(repo, seal_cfg):
+    from tests.test_reader import _setup_rollout
+    cfg, tools = _setup_rollout(repo, seal_cfg)
+    reader.run(cfg, repo, runner=FakeInstrument(), seal_cfg=seal_cfg, tools_dir=tools)
+    s = summarize(cfg)
+    e = {x["label"]: x for x in s["rungs"]}["rollout-1e-3"]
+    assert set(e["texts"]) == {"rollout"} and e["texts"]["rollout"]["n_seqs"] == 4
+    assert e["texts"]["rollout"]["band"] in BANDS
+    # a rollout report whose stored continuation is not the token file's own is refused like a corpus one
+    rep = cfg.results_dir / "rungs" / "rollout-1e-3" / "rollout" / "seq0" / "report.json"
+    rec = json.loads(rep.read_text(encoding="utf-8"))
+    rec["continuation_tokens"] = [t + 1 for t in rec["continuation_tokens"]]
+    from lag_ladder.summarize_reader import continuation_sha256
+    rec["continuation_sha256"] = continuation_sha256(rec["continuation_tokens"])
+    rep.write_text(json.dumps(rec), encoding="utf-8")
+    _rename_reports_in_run_record(cfg)
+    with pytest.raises((ValueError, RuntimeError), match="not tokens"):
+        summarize(cfg)

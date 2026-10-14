@@ -272,3 +272,99 @@ def test_probe_refuses_an_out_under_results(repo, seal_cfg):
     with pytest.raises(reader.Refusal, match="results"):
         reader.probe(cfg, repo, out=repo / "results" / "reader" / "probe", runner=FakeInstrument(), tools_dir=tools)
     assert not (repo / "results" / "reader" / "probe").exists()
+
+
+# --- design S14: per-pair heldout, spans (per-sequence prefix_len/length) and the stored-continuation text ----
+
+ROLLOUT_PAIR = '''
+[[reader.pairs]]
+name = "ownrun-rollout"
+tokens = "data/tokens/qwen.npy"
+tokens_sha256 = "{qsha}"
+spans = "data/tokens/qwen.spans.json"
+spans_sha256 = "{ssha}"
+heldout = [0, 4]
+'''
+ROLLOUT_RUNG = '''
+[[reader.rungs]]
+label = "rollout-1e-3"
+pair = "ownrun-rollout"
+reader = "local:noise-0.001"
+writer_dump = "source@step_200"
+reader_dump = "source@local-noise-0.001"
+texts = ["rollout"]
+'''
+SPANS = {"prefix_len": [2, 3, 2, 3], "length": [8, 8, 7, 6]}
+
+
+def _setup_rollout(repo, seal_cfg):
+    """The reader fixture plus a rollout pair (qwen tokens, spans sidecar, its own held-out range) and one rollout
+    rung on an existing reader; its dumps are copies of the noise rung's dumps under the rollout pair's layout."""
+    import shutil, hashlib
+    cfg, tools = _setup_reader(repo, seal_cfg)
+    up = repo.parent / "upstream"
+    spans_path = up / "data" / "tokens" / "qwen.spans.json"
+    spans_path.write_text(json.dumps(SPANS), encoding="utf-8")
+    ssha = hashlib.sha256(spans_path.read_bytes()).hexdigest()
+    shas = _token_shas(up)
+    cpath = repo / "config" / "reader.toml"
+    text = cpath.read_text(encoding="utf-8")
+    text = text.replace("[[reader.rungs]]", ROLLOUT_PAIR.format(qsha=shas["qwen"], ssha=ssha) + "[[reader.rungs]]", 1)
+    cpath.write_text(text + ROLLOUT_RUNG, encoding="utf-8")
+    src = repo / "results" / "distance" / "pairs" / "olmo2-1b-rlvr1" / "dumps"
+    dst = repo / "results" / "distance" / "pairs" / "ownrun-rollout" / "dumps"
+    for key in ("source@step_200", "source@local-noise-0.001"):
+        for i in range(4):
+            shutil.copytree(src / key / f"seq{max(i, 1)}", dst / key / f"seq{i}")
+    commit_all(repo, "add rollout pair")
+    return load_reader_config(cpath, repo), tools
+
+
+def test_rollout_rung_scores_stored_continuations_with_per_sequence_spans(repo, seal_cfg):
+    cfg, tools = _setup_rollout(repo, seal_cfg)
+    assert cfg.pairs["ownrun-rollout"].heldout == (0, 4) and cfg.pairs["ownrun-rollout"].spans is not None
+    p = reader.plan(cfg)
+    roll = [j for j in p.jobs if j.label == "rollout-1e-3"]
+    assert [j.seq for j in roll] == [0, 1, 2, 3] and {j.text for j in roll} == {"rollout"}
+    # controls for that reader stay on its first rung's pair and the config's held-out range
+    ctl = [j for j in p.jobs if j.reader == "local:noise-0.001" and j.kind != "rung"]
+    assert {j.pair for j in ctl} == {"olmo2-1b-rlvr1"} and {j.seq for j in ctl} == {1, 2, 3}
+    fake = FakeInstrument()
+    reader.run(cfg, repo, runner=fake, seal_cfg=seal_cfg, tools_dir=tools)
+    calls = [_parse(c[2:]) for c in fake.calls if len(c) > 1 and c[1].endswith("score_continuation.py")]
+    rc = [a for a in calls if a.get("--text") == "rollout"]
+    assert len(rc) == 4
+    by_seq = {int(a["--seq"]): a for a in rc}
+    assert [int(by_seq[i]["--prefix-len"]) for i in range(4)] == SPANS["prefix_len"]
+    assert [int(by_seq[i]["--length"]) for i in range(4)] == SPANS["length"]
+    assert all("--generate-under" not in a for a in rc)
+    corpus = [a for a in calls if a.get("--text") == "corpus"]
+    assert corpus and all("--length" not in a and a["--prefix-len"] == "6" for a in corpus)
+    rep = json.loads((cfg.results_dir / "rungs" / "rollout-1e-3" / "rollout" / "seq3" / "report.json").read_text())
+    row = np.load(repo.parent / "upstream" / "data" / "tokens" / "qwen.npy")[3]
+    assert rep["continuation_tokens"] == [int(t) for t in row[3:6]]
+    rec = json.loads((cfg.results_dir / "run.json").read_text(encoding="utf-8"))
+    assert rec["spans_sha256"] == {"ownrun-rollout": cfg.pairs["ownrun-rollout"].spans_sha256}
+
+
+def test_rollout_text_needs_spans_and_is_not_a_rule_text(repo, seal_cfg):
+    cfg, _ = _setup_reader(repo, seal_cfg)
+    cpath = repo / "config" / "reader.toml"
+    base = cpath.read_text(encoding="utf-8")
+    cpath.write_text(base + ROLLOUT_RUNG.replace('pair = "ownrun-rollout"', 'pair = "qwen2.5-1.5b-to-instruct"'), encoding="utf-8")
+    with pytest.raises(ValueError, match="spans"):
+        load_reader_config(cpath, repo)
+    cpath.write_text(base.replace('texts = ["corpus", "on-path"]', 'texts = ["corpus", "rollout"]'), encoding="utf-8")
+    with pytest.raises(ValueError, match="per-rung"):
+        load_reader_config(cpath, repo)
+
+
+def test_a_readers_first_rung_may_not_be_a_rollout_rung(repo, seal_cfg):
+    cfg, _ = _setup_rollout(repo, seal_cfg)
+    cpath = repo / "config" / "reader.toml"
+    text = cpath.read_text(encoding="utf-8")
+    # move the rollout rung ahead of every other rung of its reader
+    head, roll = text.split("\n[[reader.rungs]]\nlabel = \"rollout-1e-3\"", 1)
+    cpath.write_text(head.replace("[[reader.rungs]]", "[[reader.rungs]]\nlabel = \"rollout-1e-3\"" + roll + "\n[[reader.rungs]]", 1), encoding="utf-8")
+    with pytest.raises(ValueError, match="first rung"):
+        load_reader_config(cpath, repo)

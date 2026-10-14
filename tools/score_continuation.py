@@ -216,7 +216,11 @@ def main(argv=None) -> int:
     ap.add_argument("--tokens", required=True)
     ap.add_argument("--seq", type=int, required=True)
     ap.add_argument("--prefix-len", type=int, default=768)
-    ap.add_argument("--text", choices=("corpus", "on-path"), required=True)
+    ap.add_argument("--length", type=int, default=None,
+                    help="end of the stored continuation (exclusive); default: the row's length. Rows padded past a "
+                         "sampled completion (design §14 rollout text) are cut here")
+    ap.add_argument("--text", choices=("corpus", "on-path", "rollout"), required=True,
+                    help="corpus and rollout teacher-force the stored tokens after the prefix; on-path generates them")
     ap.add_argument("--generate-under", choices=("stale", "fresh"), default=None)
     ap.add_argument("--live", action="store_true",
                     help="floor arm: fresh = the reader's own live float32 cache of P")
@@ -231,8 +235,8 @@ def main(argv=None) -> int:
         raise SystemExit(f"probe mode refuses to write under results/: {out}")
     if a.text == "on-path" and a.generate_under is None:
         raise SystemExit("--text on-path requires --generate-under stale|fresh")
-    if a.text == "corpus" and a.generate_under is not None:
-        raise SystemExit("--generate-under is meaningless on corpus text")
+    if a.text in ("corpus", "rollout") and a.generate_under is not None:
+        raise SystemExit(f"--generate-under is meaningless on {a.text} text")
     if a.live and a.fresh:
         raise SystemExit("--live replaces the fresh arm; do not also pass --fresh")
     if not a.live and not a.fresh:
@@ -249,11 +253,14 @@ def main(argv=None) -> int:
     if all_tokens.ndim != 2 or not (0 <= a.seq < all_tokens.shape[0]):
         raise SystemExit(f"{tokens_path}: shape {all_tokens.shape} has no sequence {a.seq}")
     seq = all_tokens[a.seq].astype(np.int64)
-    if a.prefix_len + 1 >= seq.shape[0]:
-        raise SystemExit(f"prefix_len {a.prefix_len} leaves no continuation in T={seq.shape[0]}")
+    end = seq.shape[0] if a.length is None else a.length
+    if not (0 < end <= seq.shape[0]):
+        raise SystemExit(f"--length {a.length} is outside the row (T={seq.shape[0]})")
+    if a.prefix_len + 1 >= end:
+        raise SystemExit(f"prefix_len {a.prefix_len} leaves no continuation before {end}")
     rows = a.prefix_len - 1                      # injected cache rows 0..prefix_len-2 (see docstring)
-    n_cont = seq.shape[0] - a.prefix_len
-    corpus = seq[a.prefix_len:]
+    n_cont = end - a.prefix_len
+    corpus = seq[a.prefix_len:end]
 
     model = load_reader(a.reader, torch.float32, device)
 

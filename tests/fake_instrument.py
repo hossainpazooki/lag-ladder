@@ -211,12 +211,13 @@ class FakeInstrument:
         text, prefix, seq = args["--text"], int(args["--prefix-len"]), int(args["--seq"])
         tokens_file = Path(args["--tokens"])
         row = np.load(tokens_file)[seq]
-        n_cont = int(row.shape[0]) - prefix
-        if n_cont <= 0:
-            return subprocess.CompletedProcess(cmd, 2, b"", b"prefix-len leaves no continuation")
+        end = int(args["--length"]) if "--length" in args else int(row.shape[0])
+        n_cont = end - prefix
+        if n_cont <= 0 or end > int(row.shape[0]):
+            return subprocess.CompletedProcess(cmd, 2, b"", b"prefix-len/length leave no continuation")
         mean_kl, mld = self.kl(fm, sm, _seq(fresh_dir), _seq(stale_dir), live)
-        if text == "corpus":
-            cont, gen_under, gen_seconds = [int(t) for t in row[prefix:]], None, None
+        if text in ("corpus", "rollout"):
+            cont, gen_under, gen_seconds = [int(t) for t in row[prefix:end]], None, None
         else:
             cont, gen_under, gen_seconds = [int((seq * 31 + i) % 97) for i in range(n_cont)], args["--generate-under"], 0.01
         agree = mean_kl <= 1e-3
