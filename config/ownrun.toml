@@ -1,0 +1,142 @@
+# Statistic (B) at the operating lag — the own run (design §14). UNREGISTERED until a numbered entry fixes every
+# value below; `reader run` refuses while registered_by is empty or any *_PENDING pin remains.
+#
+# One GRPO trajectory on Qwen2.5-1.5B (tools/own_run.py): writer cache at step 0, readers at steps 1..32 kept as
+# local checkpoints under results/distance/checkpoints/step_<g>. Dumps are made on the run machine after every
+# saved step (R-C3). Two pairs: the held-out corpus sequences of 0008's Qwen pair (texts corpus + on-path, as §13),
+# and the rollout sequences — ten GSM8K prompts with one completion each sampled from the step-0 policy, padded to
+# 1024 with per-sequence prefix_len/length in the spans sidecar (text rollout, teacher-forced, R-C4/R-C6).
+# The rollout token and spans files are made by `own_run.py sample-rollouts` BEFORE registration, written straight
+# to the two paths below (the instrument checkout's gitignored data/tokens/, where every held-out token file lives);
+# the registering entry pins their hashes. Distances per rung are written by the trainer's save hook to
+# results/distance/rungs/<label>/distance.json (0015's layout); the summarizer reads them from there.
+
+[reader]
+results_dir = "results/ownrun"
+upstream_path = "../kv-transfer-replication"
+upstream_sha = "5d4aa4a98b40f5ab37dd83ebb6b2ee802203994a"
+heldout = [40, 50]
+prefix_len = 768
+dtype = "float32"
+seed = 0
+registered_by = ""
+
+[reader.rule]
+statistic = "median over held-out sequences of the mean per-token KL(pi_fresh || pi_stale) over the continuation, per rung and text (design S13, ledger 0011)"
+holds_max = 1e-3
+degrades_min = 1e-1
+texts = ["corpus", "on-path"]
+generate_under = "stale"
+
+[reader.controls]
+identity_max_logit_diff = 1e-5
+scrambled_min = 1e-1
+floor_max_median_kl = 1e-4
+
+# The held-out corpus sequences: 0008's Qwen token file (0012's pin), sequences 40..49.
+[[reader.pairs]]
+name = "qwen2.5-1.5b-to-instruct"
+tokens = "data/tokens/qwen2.5-1.5b-to-instruct_n50_len1024_seed0.npy"
+tokens_sha256 = "01bd7698f7413ab9a3b6958991487bbba626f5a8cc4f24142cd22091d96af747"
+
+# The rollout sequences (R-C6): rows 0..9, prompt = prefix, sampled completion = continuation; hashes pinned at 0017.
+[[reader.pairs]]
+name = "qwen2.5-1.5b-ownrun-rollout"
+tokens = "data/tokens/qwen2.5-1.5b-ownrun_rollout_n10_seed0.npy"
+tokens_sha256 = "ROLLOUT_TOKENS_PENDING"
+spans = "data/tokens/qwen2.5-1.5b-ownrun_rollout_n10_seed0.spans.json"
+spans_sha256 = "ROLLOUT_SPANS_PENDING"
+heldout = [0, 10]
+
+# Lag rungs on the held-out corpus: writer step 0, reader step g (R-C3). Labels fix the distance-file names.
+[[reader.rungs]]
+label = "ownrun-lag-1"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:step_1"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_1"
+
+[[reader.rungs]]
+label = "ownrun-lag-2"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:step_2"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_2"
+
+[[reader.rungs]]
+label = "ownrun-lag-4"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:step_4"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_4"
+
+[[reader.rungs]]
+label = "ownrun-lag-8"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:step_8"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_8"
+
+[[reader.rungs]]
+label = "ownrun-lag-16"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:step_16"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_16"
+
+[[reader.rungs]]
+label = "ownrun-lag-32"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:step_32"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_32"
+
+# The same lags on the rollout text (R-C4): the reader scores the step-0 sample under its own prompt cache and
+# under step 0's. Controls for each reader run once, on the held-out pair (its first rung above).
+[[reader.rungs]]
+label = "ownrun-rollout-lag-1"
+pair = "qwen2.5-1.5b-ownrun-rollout"
+reader = "local:step_1"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_1"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-rollout-lag-2"
+pair = "qwen2.5-1.5b-ownrun-rollout"
+reader = "local:step_2"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_2"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-rollout-lag-4"
+pair = "qwen2.5-1.5b-ownrun-rollout"
+reader = "local:step_4"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_4"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-rollout-lag-8"
+pair = "qwen2.5-1.5b-ownrun-rollout"
+reader = "local:step_8"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_8"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-rollout-lag-16"
+pair = "qwen2.5-1.5b-ownrun-rollout"
+reader = "local:step_16"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_16"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-rollout-lag-32"
+pair = "qwen2.5-1.5b-ownrun-rollout"
+reader = "local:step_32"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_32"
+texts = ["rollout"]
