@@ -6,6 +6,7 @@ import json
 import pytest
 
 from lag_ladder import reader
+from lag_ladder.hashing import sha256_file_bytes
 from lag_ladder.summarize_reader import summarize
 from tests.fake_instrument import FakeInstrument, default_kl
 from tests.test_reader import EXPECTED_KL, _setup_reader
@@ -63,6 +64,26 @@ def test_summary_bands_per_text_and_recomputes_b1_to_b4(repo, seal_cfg):
             # (B4): the fake's argmaxes agree exactly when mean KL <= 1e-3
             assert _carries(e, 1.0 if kl <= 1e-3 else 0.0), f"{label}/{text} does not carry argmax agreement"
     assert (cfg.results_dir / "summary.json").exists()
+
+
+def test_summary_places_rungs_on_the_distance_axis(repo, seal_cfg):
+    """Each rung's position comes from the distance ladder's distance.json (never from run.json); the slope is
+    fit over the backbone, every real rung names its nearest backbone rung of the same pair, and the sealed
+    clauses are read out (none here: the test seal names no clauses)."""
+    cfg = _ran(repo, seal_cfg)
+    s = summarize(cfg)
+    by = {e["label"]: e for e in s["rungs"]}
+    noise = [e for e in s["rungs"] if e["kind"] == "noise"]
+    assert noise and all(e["rel_norm"] is not None and e["distance_source"] is not None for e in noise)
+    for text in ("corpus", "on-path"):
+        fit = s["slope_fit"][text]
+        assert fit["slope"] is not None and len(fit["points"]) == len(noise) and fit["sealed_rungs"] is False
+    real = [e for e in s["rungs"] if e["kind"] == "real" and e["rel_delta_all"]]
+    assert real and all(e["distance_source"].endswith("distance.json") for e in real)
+    matched = [e for e in real if e["matched_backbone"]]
+    assert matched and all(by[e["matched_backbone"]]["pair"] == e["pair"] for e in matched)
+    assert all(e["matched_backbone"] is None for e in real if not any(n["pair"] == e["pair"] for n in noise))
+    assert s["seal_readout"] is not None and s["seal_readout"]["clauses"] == {}
 
 
 def test_summary_refuses_a_tampered_kl_array(repo, seal_cfg):
@@ -124,3 +145,35 @@ def test_summary_marks_a_rung_at_the_floor(repo, seal_cfg):
         assert any("floor" in k and v is True for k, v in e.items()), f"backbone-1e-3/{text} is not marked at the floor"
         far = by[("olmo-sft-to-dpo", text)]
         assert not any("floor" in k and v is True for k, v in far.items()), "a rung far above the floor was marked"
+
+
+def test_summary_resolves_a_run_machine_token_path_by_its_tail(repo, seal_cfg):
+    """Reports pulled from a pod name the token file by that machine's absolute path; the summarizer finds
+    the file here by its trailing components and still holds it to the recorded sha256."""
+    cfg = _ran(repo, seal_cfg)
+    corpus = [p for p in sorted(cfg.results_dir.rglob("report.json"))
+              if json.loads(p.read_text(encoding="utf-8"))["text"] == "corpus"]
+    assert corpus
+    for report in corpus:
+        rec = json.loads(report.read_text(encoding="utf-8"))
+        rec["tokens_file"] = "/workspace/elsewhere/" + "/".join(rec["tokens_file"].split("/")[-3:])
+        report.write_text(json.dumps(rec), encoding="utf-8")
+    _rename_reports_in_run_record(cfg)
+    summarize(cfg)
+    rec = json.loads(corpus[0].read_text(encoding="utf-8"))
+    rec["inputs_sha256"] = {k: ("0" * 64 if k.endswith(".npy") else v) for k, v in rec["inputs_sha256"].items()}
+    corpus[0].write_text(json.dumps(rec), encoding="utf-8")
+    _rename_reports_in_run_record(cfg)
+    with pytest.raises((ValueError, RuntimeError)):
+        summarize(cfg)
+
+
+def _rename_reports_in_run_record(cfg):
+    """Re-point run.json at the rewritten report files (the test edits the path a report names, not its data)."""
+    rec_path = cfg.results_dir / "run.json"
+    run_rec = json.loads(rec_path.read_text(encoding="utf-8"))
+    for j in run_rec["jobs"]:
+        f = cfg.results_dir / j["dir"] / "report.json"
+        if f.exists():
+            j["report_sha256"] = sha256_file_bytes(f)
+    rec_path.write_text(json.dumps(run_rec), encoding="utf-8")
