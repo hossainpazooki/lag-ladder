@@ -377,7 +377,11 @@ def seal_readout(summary: dict, repo: Path, seal: str = "reader") -> dict | None
     i = P.get("i_backbone_quadratic")
     if i:
         lo, hi = (float(v) for v in i["slope_in"])
-        slopes = {t: summary["slope_fit"].get(t, {}).get("slope") for t in texts}
+        # Only the texts the sealed rungs carry: a seal whose text list includes a rollout text (§14) still
+        # fits its slope over corpus lag rungs, which have no rollout column, and that absence is not UNREAD.
+        carried = {t for e in summary["rungs"] if e["label"] in set(i["rungs"]) for t in e.get("texts", {})}
+        fit_texts = [t for t in texts if t in carried] or texts
+        slopes = {t: summary["slope_fit"].get(t, {}).get("slope") for t in fit_texts}
         out["clauses"]["i"] = {"slope_in": [lo, hi], "slope": slopes, "rungs": list(i["rungs"]),
                                "verdict": verdict([None if v is None else lo <= v <= hi for v in slopes.values()])}
     ii = P.get("ii_backbone_holds_through")

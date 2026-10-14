@@ -197,3 +197,25 @@ def test_summary_reads_a_rollout_rung_on_its_own_text_and_verifies_the_stored_co
     _rename_reports_in_run_record(cfg)
     with pytest.raises((ValueError, RuntimeError), match="not tokens"):
         summarize(cfg)
+
+
+def test_seal_readout_fits_the_slope_only_over_texts_the_sealed_rungs_carry(tmp_path):
+    """A §14-style seal lists corpus, on-path and rollout texts but seals its slope over corpus lag rungs, which
+    carry no rollout column. The missing rollout slope is not a withheld input: the clause reads HELD/FALSIFIED
+    from the texts those rungs carry (the own-run summary of 2026-10-14 printed UNREAD here)."""
+    from lag_ladder.summarize_reader import PREDICTIONS, seal_readout
+    (tmp_path / PREDICTIONS).mkdir(parents=True)
+    (tmp_path / PREDICTIONS / "x.json").write_text(json.dumps({"prediction": {
+        "texts": ["corpus", "on-path", "rollout"],
+        "predictions": {"i_backbone_quadratic": {"rungs": ["lag-1", "lag-2"], "slope_in": [1.5, 2.5]}}}}), encoding="utf-8")
+    summary = {"rule": {"texts": ["corpus", "on-path", "rollout"], "holds_max": 1e-3},
+               "rungs": [{"label": "lag-1", "texts": {"corpus": {}, "on-path": {}}},
+                         {"label": "lag-2", "texts": {"corpus": {}, "on-path": {}}},
+                         {"label": "rollout-lag-1", "texts": {"rollout": {}}}],
+               "slope_fit": {"corpus": {"slope": 2.26}, "on-path": {"slope": 2.19}, "rollout": {"slope": None}}}
+    c = seal_readout(summary, tmp_path, "x")["clauses"]["i"]
+    assert c["verdict"] == "HELD" and set(c["slope"]) == {"corpus", "on-path"}
+    summary["slope_fit"]["on-path"]["slope"] = 1.2
+    assert seal_readout(summary, tmp_path, "x")["clauses"]["i"]["verdict"] == "FALSIFIED"
+    summary["slope_fit"]["on-path"]["slope"] = None
+    assert seal_readout(summary, tmp_path, "x")["clauses"]["i"]["verdict"] == "UNREAD"
