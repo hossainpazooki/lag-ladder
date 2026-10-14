@@ -359,6 +359,18 @@ def test_rollout_text_needs_spans_and_is_not_a_rule_text(repo, seal_cfg):
         load_reader_config(cpath, repo)
 
 
+def test_the_gate_requires_the_seal_the_config_names(repo, seal_cfg):
+    cfg, tools = _setup_reader(repo, seal_cfg)
+    cpath = repo / "config" / "reader.toml"
+    cpath.write_text(cpath.read_text(encoding="utf-8").replace('registered_by = "0014"', 'registered_by = "0014"\nseal = "ownrun"'),
+                     encoding="utf-8")
+    commit_all(repo, "name another seal")
+    cfg = load_reader_config(cpath, repo)
+    assert cfg.seal == "ownrun"
+    with pytest.raises(reader.Refusal, match="ownrun"):
+        reader.run(cfg, repo, runner=FakeInstrument(), seal_cfg=seal_cfg, tools_dir=tools)
+
+
 def test_a_readers_first_rung_may_not_be_a_rollout_rung(repo, seal_cfg):
     cfg, _ = _setup_rollout(repo, seal_cfg)
     cpath = repo / "config" / "reader.toml"

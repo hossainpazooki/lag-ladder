@@ -271,6 +271,7 @@ class ReaderConfig:
     rungs: tuple[ReaderRung, ...]
     registered_by: str
     config_path: Path
+    seal: str = "reader"      # the sealed prediction this config runs against (ledger/predictions/<seal>.json)
 
 
 def _dump_key(s, where: str) -> str:
@@ -397,7 +398,8 @@ def load_reader_config(path: Path, repo_root: Path) -> ReaderConfig:
     return ReaderConfig(results_dir=root / c["results_dir"], upstream_path=upstream,
                         upstream_sha=str(c["upstream_sha"]), heldout=(int(ho[0]), int(ho[1])),
                         prefix_len=int(pl), dtype=str(c["dtype"]), seed=int(c["seed"]), rule=rule,
-                        controls=controls, pairs=pairs, rungs=tuple(rungs), registered_by=reg, config_path=path)
+                        controls=controls, pairs=pairs, rungs=tuple(rungs), registered_by=reg, config_path=path,
+                        seal=_plain_name(c.get("seal", "reader"), f"{path.name} [reader] seal"))
 
 
 def load_distance_config(path: Path, repo_root: Path) -> DistanceConfig:

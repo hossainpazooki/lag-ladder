@@ -209,9 +209,9 @@ def assert_ready(cfg: ReaderConfig, repo_root: Path, *, seal_cfg=None, upstream_
     if seal_cfg is None:
         seal_cfg = load_seal_config(repo_root / "config" / "seal.toml", repo_root)
     try:
-        require_sealed(SEAL_NAME, seal_cfg, repo_root=repo_root)
+        require_sealed(cfg.seal, seal_cfg, repo_root=repo_root)
     except RuntimeError as e:
-        raise _refuse(f"no committed seal for {SEAL_NAME}: {e}") from e
+        raise _refuse(f"no committed seal for {cfg.seal}: {e}") from e
     upstream_python(cfg.upstream_path)
 
 

@@ -28,7 +28,7 @@ from lag_ladder.hashing import sha256_file_bytes
 
 RUN_RECORD = "run.json"
 DISTANCE_RESULTS = Path("results") / "distance"   # the distance ladder's record: rungs/<label>/distance.json, checkpoints/<name>/provenance.json
-PREDICTION = Path("ledger") / "predictions" / "reader.json"
+PREDICTIONS = Path("ledger") / "predictions"      # <cfg.seal>.json: the sealed clauses this config runs against
 REPORT = "report.json"
 SUMMARY = "summary.json"
 SCHEMA = "reader-report-v1"
@@ -136,9 +136,9 @@ def _rung_distance(label: str, reader: str, repo: Path) -> dict:
     return {"kind": kind, "rel_delta_all": None, "rel_norm": None, "distance_source": None}
 
 
-def _sealed_backbone_rungs(repo: Path) -> list[str] | None:
+def _sealed_backbone_rungs(repo: Path, seal: str) -> list[str] | None:
     """The backbone rungs the sealed prediction fits its slope over, when the seal names them."""
-    f = repo / PREDICTION
+    f = repo / PREDICTIONS / f"{seal}.json"
     if not f.exists():
         return None
     try:
@@ -271,7 +271,7 @@ def summarize(cfg: ReaderConfig, root: Path | None = None, out: Path | None = No
            "controls": controls, "rungs": [], "slope_fit": {}}
     repo = root.parent.parent
     pair_of = {r.label: r.pair for r in cfg.rungs}
-    sealed = _sealed_backbone_rungs(repo)
+    sealed = _sealed_backbone_rungs(repo, cfg.seal)
     for label, cell in sorted(rungs.items()):
         reader = cell["reader"]
         ctl = controls.get(reader)
@@ -309,10 +309,19 @@ def summarize(cfg: ReaderConfig, root: Path | None = None, out: Path | None = No
     # when the seal names none), every backbone point beside it per pair, and the nearest backbone rung of
     # the same pair per real rung (by log distance).
     noise = [e for e in summary["rungs"] if e["kind"] == "noise" and not e["withheld"] and e["rel_norm"] is not None]
-    fit_rungs = [e for e in noise if sealed is None or e["label"] in sealed]
+    # The fit runs over the rungs the seal names, whatever their kind (§14 seals a slope over real lag rungs), each
+    # placed by its whole-vector distance; without a seal, over the backbone.
+    if sealed is None:
+        fit_rungs = noise
+    else:
+        fit_rungs = [e for e in summary["rungs"] if e["label"] in sealed and not e["withheld"]
+                     and (e["rel_norm"] or e["rel_delta_all"]) is not None]
+
+    def _x(e):
+        return float(e["rel_norm"] if e["rel_norm"] is not None else e["rel_delta_all"])
 
     def _points(es, text):
-        return sorted((float(e["rel_norm"]), e["texts"][text]["b1"]["median_kl"]) for e in es
+        return sorted((_x(e), e["texts"][text]["b1"]["median_kl"]) for e in es
                       if text in e["texts"] and e["texts"][text]["b1"]["median_kl"] and e["texts"][text]["b1"]["median_kl"] > 0)
 
     for text in texts:
@@ -333,7 +342,7 @@ def summarize(cfg: ReaderConfig, root: Path | None = None, out: Path | None = No
             if cands:
                 e["matched_backbone"] = min(cands)[1]
     summary["rungs"].sort(key=lambda e: (e["kind"], float(e["rel_delta_all"] or e["rel_norm"] or 0.0), e["label"]))
-    summary["seal_readout"] = seal_readout(summary, repo)
+    summary["seal_readout"] = seal_readout(summary, repo, cfg.seal)
     target = Path(out) if out is not None else root / SUMMARY
     target.write_text(json.dumps(summary, indent=1), encoding="utf-8")
     return summary
@@ -346,18 +355,18 @@ def _b1(summary: dict, label: str, text: str):
     return None
 
 
-def seal_readout(summary: dict, repo: Path) -> dict | None:
+def seal_readout(summary: dict, repo: Path, seal: str = "reader") -> dict | None:
     """Each sealed clause of ledger/predictions/reader.json read against the recomputed statistics: the values
     it compares and HELD / FALSIFIED / UNREAD (an input withheld or missing). Nothing here is a number the
     summary does not already carry; this only applies the clause's comparison to them."""
-    f = repo / PREDICTION
+    f = repo / PREDICTIONS / f"{seal}.json"
     if not f.exists():
         return None
     pred = json.loads(f.read_text(encoding="utf-8")).get("prediction", {})
     P = pred.get("predictions", {})
     rule = pred.get("rule", {})
     texts = [str(t) for t in pred.get("texts", summary["rule"]["texts"])]
-    out: dict = {"source": PREDICTION.as_posix(), "clauses": {}}
+    out: dict = {"source": (PREDICTIONS / f"{seal}.json").as_posix(), "clauses": {}}
 
     def verdict(checks):
         vals = [c for c in checks if c is not None]

@@ -20,6 +20,7 @@ prefix_len = 768
 dtype = "float32"
 seed = 0
 registered_by = ""
+seal = "ownrun"
 
 [reader.rule]
 statistic = "median over held-out sequences of the mean per-token KL(pi_fresh || pi_stale) over the continuation, per rung and text (design S13, ledger 0011)"
