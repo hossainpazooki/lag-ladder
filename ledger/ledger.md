@@ -737,3 +737,60 @@ if (i) holds at the floor); statistic (C).
 **Consequences in this commit set:** `config/ownrun.toml` (`registered_by`, the two rollout hashes, the trainer
 pin); `ledger/predictions/ownrun.json` + `.sha256`; `tools/own_run.py` (the instrument pair as an argument; the
 interpreter path kept unresolved).
+
+### 0018 — 2026-10-14 — Outcome: the own run (0017); of the sealed clauses (i) and (ii) HELD, (iii) and (iv) FALSIFIED
+
+prior-entries-sha256: 7830e2e87434f1e28d0931c8c024ffdd119423678666499f5d1d41e58d59d4e7
+
+**Run.** The trajectory and the 420 jobs of 0017 (`config/ownrun.toml`, instrument `5d4aa4a`) ran on one
+A100-SXM4-80GB under torch 2.14.1+cu130, TRL 1.15.0, without a halt. Step-1 distance 2.29e-5 (the policy moved; the
+stop rule did not fire). Every reader's three controls passed: float16 floors 4.3e-8 to 5.3e-8 nats/token on corpus,
+2.1e-8 to 3.0e-8 on on-path (limit 1e-4); identity 0; scrambled 0.55 on every reader (limit 0.1). Records: `ownrun-results.tgz`
+`440b5055…` (reports, `run.json`, the pod's summary), `ownrun-aux.tgz` `3fd92aee…` (33 provenances, 32 step distances,
+12 rung placements, trainer log); kept weights {0, 1, 2, 4, 8, 16, 32} and every step's dumps backed up to the private
+dataset under `ownrun/` (manifest `SHA256SUMS`, 20,527 files, 0 missing, 0 LFS-sha mismatches); all off-repository.
+
+**Trajectory.** Whole-vector relative distance to step 0: 2.29e-5 (step 1), 3.52e-5 (2), 5.27e-5 (4), 7.48e-5 (8),
+9.55e-5 (16), 1.049e-4 (32) — concave and saturating (d32/d1 = 4.6; a √t law gives 5.7), nearly flat after step 20
+(1.00e-4). Exact-match reward mean 0.030 over steps 1–8, 0.148 over 25–32; the format term 0.150 → 0.191 over the same windows; completion
+entropy 2.51 → 0.98. The weights almost stop moving while the policy keeps sharpening.
+
+**Reading** — median (B1), nats/token, at distance x; bands HOLDS_B ≤ 1e-3, DEGRADES_B ≥ 1e-1. *Held-out text*
+(corpus / on-path): lag 1 (x 2.29e-5) 2.04e-7 / 1.22e-7; 2 (3.52e-5) 5.18e-7 / 2.90e-7; 4 (5.27e-5) 1.44e-6 / 7.16e-7;
+8 (7.48e-5) 2.84e-6 / 1.61e-6; 16 (9.55e-5) 4.85e-6 / 2.53e-6; 32 (1.049e-4) 6.65e-6 / 3.54e-6 — HOLDS_B at every
+lag, every rung above 2× its reader's floor; slope of log median on log x over the six rungs 2.26 (corpus), 2.19
+(on-path). *Rollout text* (the step-0 policy's own GSM8K completions, prompt cache stale, completion teacher-forced):
+lag 1 4.68e-3; 2 1.30e-2; 4 2.94e-2; 8 6.38e-2; 16 8.88e-2; 32 8.91e-2 — UNRESOLVED at every lag, four orders of
+magnitude above the same reader on held-out text, with the reader's argmax agreeing with its own fresh cache on 98%
+(lag 1) to 90% (lag 32) of tokens. The per-position profile is that of a stale prompt, not a misaligned one: the median
+per-position KL is largest at the first continuation position (0.033 at lag 1; 2.3 at lag 32) and falls two orders of
+magnitude by position 50; maximum |Δlogit| 3.1–4.8 (lag 1) and 9.9–14.1 (lag 32) against 0.01–0.02 and
+0.05–0.19 on corpus text.
+
+**The seal (`ownrun`, 49472367…).** (i) HELD: at g = 32, 6.65e-6 / 3.54e-6 ≤ 1e-3. (ii) HELD (read by the
+summarizer): slopes 2.26 and 2.19 in [1.5, 2.5]. (iii) FALSIFIED (read by hand against 0015): one rung lies inside
+[1e-4, 1e-1], lag 32 at 1.049e-4; the nearest 0015 backbone rung is noise-0.0001 (6.0e-7 / 4.5e-7), ratio 11.1 on
+corpus, 7.88 on on-path — under the 10× sealed on on-path, and the clause asks both texts (interpolating the backbone's quadratic to 1.049e-4 gives
+10.1 / 7.2; lag 16 at 9.55e-5 sits just outside the range). (iv) FALSIFIED at all six rungs: rollout exceeds corpus
+everywhere; on-path ≤ corpus holds at all six (on-path 40–50% below corpus).
+
+**What the reading says.** At the operating lag of a pipelined trainer a cache up to 32 GRPO steps stale is HOLDS_B
+on held-out text by two and a half orders of magnitude, and the backbone's quadratic law (0015) holds along a real RL
+trajectory at distances 1e-5 to 1e-4, a decade below where 0015 measured it. The excess of RL over isotropic noise at
+matched distance (0015: 1–3 orders on OLMo's published chain; here ≈ 10× at the one comparable point) is small on
+held-out text — and enormous on the policy's own text: the same step-1 reader reads 2e-7 on web text and 5e-3 on its
+own prompts, and by step 32 the prompt cache of step 0 is 0.09 nats/token stale, near DEGRADES_B, while the weights
+have moved 1e-4. Where the cache is read matters more than how far the weights moved; the held-out texts of 0012
+measure the pretraining manifold, which RL barely touches, and understate staleness on the trainer's own stream by
+four orders of magnitude at this scale.
+
+**Also recorded.** `summarize_reader`'s seal readout asked the slope clause for a rollout slope no corpus rung can
+carry and printed UNREAD on the pod; it now fits only the texts the sealed rungs carry (no number changed; the pod's
+summary is retained). The reward and entropy trajectories are descriptive, not sealed.
+
+**Not ruled here.** Whether (B)'s statement of record (0016) is amended for the rollout text; the sliding writer,
+a second seed, the 128-step extension; whether rollout-text controls (floor, scrambled) join the configuration;
+statistic (C).
+
+**Consequences in this commit set:** `src/lag_ladder/summarize_reader.py`, `tests/test_summarize_reader.py`,
+`README.md`, `CLAUDE.md`.

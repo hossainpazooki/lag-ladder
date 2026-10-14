@@ -40,7 +40,9 @@ the context is held fixed and only the weights move. (A) has been run and closed
 this repository (ledger 0011; design §13) and registered with its seal committed (0012), has run and is closed on
 the ladder (0015, 0016): the reader's KL grows as the square of weight distance on the isotropic backbone and
 leaves HOLDS_B between 3e-3 and 1e-2, an order of magnitude inside (A)'s edge; trained directions read one to
-three orders of magnitude above noise at matched distance. (C) is designed and unbuilt.
+three orders of magnitude above noise at matched distance. The own run (0017, 0018) read (B) along a 32-step GRPO
+trajectory of Qwen2.5-1.5B: HOLDS_B at every lag on held-out text, four orders of magnitude higher on the policy's
+own prompts. (C) is designed and unbuilt.
 
 ## How a rung is measured
 
@@ -91,8 +93,20 @@ matched distance the OLMo-2 post-training steps read 355–875× the backbone an
 at every lag. Of the five sealed clauses, the quadratic backbone and the OLMo excess held; the backbone's HOLDS_B
 reach, Qwen Instruct's nearness to noise, and on-path ≤ corpus without exception were falsified, each toward
 a more sensitive statistic than sealed. (B) is a reader's number, not a trainer's; the operating lag of a
-pipelined trainer (a few steps) is below the published chain's stride and is the own run's question, not
-ruled on. (C) is not ruled on.
+pipelined trainer (a few steps) is below the published chain's stride and was the own run's question. (C) is not
+ruled on.
+
+**The own run is complete (ledger 0017, 0018).** Qwen2.5-1.5B trained by GRPO for 32 steps (lr 1e-6, no
+reference-KL term, GSM8K); the reader at step g ∈ {1, 2, 4, 8, 16, 32} reads the step-0 cache. The weights moved
+2.3e-5 (step 1) to 1.05e-4 (step 32), concave and nearly flat after step 20, while reward rose fivefold. On
+held-out text (B1) is HOLDS_B at every lag, 2.0e-7 to 6.7e-6 nats/token on corpus, and grows as the square of
+distance (slopes 2.26 and 2.19), so the backbone's law holds a decade below where 0015 measured it. On the
+policy's own prompts the same readers read 4.7e-3 (lag 1) to 8.9e-2 (lag 32): UNRESOLVED at every lag, four
+orders of magnitude above held-out text, with the stale-prompt profile (KL largest at the first continuation
+token, falling a hundredfold by position 50). Of the four sealed clauses, HOLDS_B at the operating lag and the
+quadratic slope held; the 10× excess over isotropic noise (11× on corpus, 7.9× on on-path at the one in-range rung)
+and rollout ≤ on-path ≤ corpus were falsified. Whether (B)'s statement of record is amended for the rollout text is
+not ruled on.
 
 The ledger holds the founding record (chassis provenance, inherited definitions, the first rulings), the
 ruling that the instrument serves statistic (A) only, two re-pins of the instrument, the registrations with
@@ -103,7 +117,7 @@ retained off-repository with the hashes the entries state.
 **Citing.** For statistic (A), cite this repository at the commit that carries ledger entry 0010 (tag
 `statistic-a-closed`); name entries 0006 and 0009 for the numbers and 0001 for the statistic's provenance.
 For statistic (B), cite the commit that carries entry 0016 (tag `statistic-b-closed`); name 0015 for the
-numbers and 0011 for the statistic.
+numbers and 0011 for the statistic. For the own run, name 0018 for the numbers and 0017 for the registration.
 
 ## How the record stays auditable
 

@@ -9,7 +9,8 @@ entry 0005 the pilot's registration, entry 0006 its outcome (f\* = 0 at every la
 entry 0007 the ruling that weight distance is the axis, entry 0008 the weight-distance ladder's registration,
 entry 0009 its outcome, entry 0010 the closure of statistic (A) with the statement of record, entry 0011
 the ruling that the lane continues under statistic (B) as design §13 defines it, entries 0012–0014 (B)'s
-registration and amendments, entry 0015 its outcome, and entry 0016 its closure on the ladder with the statement of record.
+registration and amendments, entry 0015 its outcome, entry 0016 its closure on the ladder with the statement of record,
+entry 0017 the own run's registration and entry 0018 its outcome.
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never
@@ -92,7 +93,10 @@ floors (KL only; limit band-relative at 1e-4); 0014 also registers the five R-B4
 (0015)**: all controls passed; (B1) grows as x² on the backbone (slope 2.0) and leaves HOLDS_B between 3e-3 and 1e-2;
 OLMo directions read 355–875× the backbone at matched distance, Qwen Instruct 11×; RL-phase lags 200–2400 all HOLDS_B;
 seal clauses (i), (iii) HELD, (ii), (iv), (v) FALSIFIED. **(B) on the ladder is closed (0016)**, statement of record in
-that entry and the README; the scorer stays the registered instrument for later rungs. **The own run (§14) is designed
-and built, UNREGISTERED**: `tools/own_run.py`, the reader's per-pair heldout/spans and the `rollout` text,
-`config/ownrun.toml` with `ROLLOUT_*_PENDING` pins. Next: sample the rollouts on the run machine (hashes), the registration
-entry 0017 with the seal, the sitting, the outcome entry. (C) is not ruled.
+that entry and the README; the scorer stays the registered instrument for later rungs. **The own run (§14) is complete
+(0017, 0018)**: `config/ownrun.toml` registered by 0017 with the rollout pins and the seal; one A100 sitting ran the
+32-step GRPO trajectory and the 420 jobs without a halt; held-out text HOLDS_B at every lag (lag 32: 6.65e-6 corpus,
+3.54e-6 on-path; slopes 2.26 / 2.19), rollout text UNRESOLVED at every lag (4.68e-3 to 8.91e-2); clauses (i), (ii)
+HELD, (iii), (iv) FALSIFIED. Records and dumps are off-repository under the hashes 0018 states. Not ruled: amending
+0016's statement for the rollout text, the sliding writer, a second seed, the 128-step extension, rollout-text
+controls, statistic (C).
