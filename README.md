@@ -36,9 +36,11 @@ block stays cached across every sync unless something clears it, so its age is u
 
 τ is inherited from [linear-ceiling](https://github.com/hossainpazooki/linear-ceiling), where the same
 statistic was calibrated on a cache carried across a change of *context* (the paper *Carryover*). Here
-the context is held fixed and only the weights move. Only (A) has been run. (B) is defined for this
-repository (ledger 0011; design §13), built, and registered with its seal committed (ledger 0012); its run is
-next. (C) is designed and unbuilt.
+the context is held fixed and only the weights move. (A) has been run and closed (ledger 0010). (B), defined for
+this repository (ledger 0011; design §13) and registered with its seal committed (0012), has run (0015): the
+reader's KL grows as the square of weight distance on the isotropic backbone and leaves HOLDS_B between 3e-3 and
+1e-2, an order of magnitude inside (A)'s edge; trained directions read two to three orders of magnitude above
+noise at matched distance. (C) is designed and unbuilt.
 
 ## How a rung is measured
 
@@ -79,14 +81,15 @@ degrades 2,400 updates out (entry 0006). The statistic is a step function of dis
 resolve the hundredfold difference in whole-cache deviation between a trained direction and isotropic
 noise of the same size, which the entries record descriptively.
 
-Statistic (B) is registered (entry 0012, sealed before any score): the reader's per-token KL over the
-writer's cache against its own, on the dumps the distance ladder produced, with the float16 floor probed on
-the run machine and HOLDS_B confirmed at 1e-3; its run and outcome are the next entry. (C) and the own run
-are not ruled on. The ledger holds the founding record (chassis provenance, inherited definitions, the first
-rulings), the ruling that the instrument serves statistic (A) only, two re-pins of the instrument, the two
-registrations with their sealed predictions, the two outcomes, the closure, and the (B) ruling. Every
-number in it was recomputed from `results/` by a summarizer that refuses on any mismatch, and the score
-records behind both outcomes are retained off-repository with the hashes the entries state.
+Statistic (B) was registered (entry 0012, sealed before any score; 0013, 0014 amended its float16-floor
+control and added the RL-phase lag rungs) and has run (0015): of the five sealed clauses, the quadratic
+backbone and the OLMo directions' excess over it held; the backbone's HOLDS_B reach, Qwen Instruct's nearness
+to noise, and on-path ≤ corpus on every rung were falsified. Its closure, (C) and the own run are not ruled on.
+The ledger holds the founding record (chassis provenance, inherited definitions, the first rulings), the
+ruling that the instrument serves statistic (A) only, two re-pins of the instrument, the registrations with
+their sealed predictions, the outcomes, the (A) closure, and the (B) ruling. Every number in it was recomputed
+from `results/` by a summarizer that refuses on any mismatch, and the score records behind the outcomes are
+retained off-repository with the hashes the entries state.
 
 **Citing.** Cite this repository at the commit that carries ledger entry 0010; name entries 0006 and 0009
 for the numbers and 0001 for the statistic's provenance.

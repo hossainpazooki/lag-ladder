@@ -7,8 +7,9 @@ is append-only by numbered entry; entry 0001 carries the chassis provenance, the
 0003 and 0004 the instrument re-pins (checkpoint selection; per-side `ModelRef` with verified provenance),
 entry 0005 the pilot's registration, entry 0006 its outcome (f\* = 0 at every lag to 2400: HOLDS),
 entry 0007 the ruling that weight distance is the axis, entry 0008 the weight-distance ladder's registration,
-entry 0009 its outcome, entry 0010 the closure of statistic (A) with the statement of record, and entry 0011
-the ruling that the lane continues under statistic (B) as design §13 defines it.
+entry 0009 its outcome, entry 0010 the closure of statistic (A) with the statement of record, entry 0011
+the ruling that the lane continues under statistic (B) as design §13 defines it, entries 0012–0014 (B)'s
+registration and amendments, and entry 0015 its outcome.
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never
@@ -62,7 +63,8 @@ and reader refs, Hub revision or local checkpoint; controls per writer; the nois
 per rung) · `summarize_distance` (rungs by measured distance, tied to the dumps' manifests) · `reader` (the
 (B) driver: plan|check|run|probe; controls per reader, then the rungs, by subprocess into the pinned
 instrument; refuses while `reader.toml` is unregistered) · `summarize_reader` (recomputes B1–B4 from the
-reports, withholds failed-control rungs). `tools/` — `perturb_checkpoint.py`, `convert_bin_checkpoint.py`,
+reports, withholds failed-control rungs, places rungs by the distance ladder's `distance.json`, reads the sealed
+clauses out). `tools/` — `perturb_checkpoint.py`, `convert_bin_checkpoint.py`,
 `weight_distance.py`, `score_continuation.py` (the (B) scorer: injects a stale vs fresh cache, scores the
 continuation): run with the instrument's interpreter, import nothing from it. (C)'s scorer does not exist.
 `config/` — `seal.toml`, `pilot.toml`, `distance.toml`, `reader.toml`. `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
@@ -82,5 +84,8 @@ to run on RunPod. **Statistic (B) is registered (0012)**: the float16 floor was 
 (median mean-KL 3.9e-8, HOLDS_B confirmed at 1e-3), the seal is committed, `config/reader.toml` is pinned, and
 the noise backbone is re-dumped on the run machine because 0008's noise checkpoints do not regenerate
 byte-identically there. 0013 and 0014 amended the float16-floor control after the first run halted twice on other readers'
-floors (KL only; limit band-relative at 1e-4); 0014 also registers the five R-B4 lag rungs. Next: the (B) run, then
-its outcome entry; then the own run (R8) at lags 1–32, approved in principle, to be designed and registered. (C) is not ruled.
+floors (KL only; limit band-relative at 1e-4); 0014 also registers the five R-B4 lag rungs. **The (B) run completed
+(0015)**: all controls passed; (B1) grows as x² on the backbone (slope 2.0) and leaves HOLDS_B between 3e-3 and 1e-2;
+OLMo directions read 355–875× the backbone at matched distance, Qwen Instruct 11×; RL-phase lags 200–2400 all HOLDS_B;
+seal clauses (i), (iii) HELD, (ii), (iv), (v) FALSIFIED. Next: the (B) closure entry (the analogue of 0010); then the
+own run (R8) at lags 1–32, approved in principle, to be designed and registered. (C) is not ruled.

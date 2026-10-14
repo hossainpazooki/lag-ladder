@@ -584,3 +584,60 @@ is designed and registered by later entries.
 
 **Consequences in this commit set:** `config/reader.toml` (`registered_by`, the floor limit, five rungs);
 `tests/test_reader.py`.
+
+### 0015 — 2026-10-14 — Outcome: statistic (B) on the weight-distance ladder; of the sealed clauses (i) and (iii) HELD, (ii), (iv) and (v) FALSIFIED
+
+prior-entries-sha256: 9c4e6a046d0843bcb427d1d9bf0555086d4de03054b3a291c3ba6f87a4d7e7b1
+
+**Run.** The 1,100 jobs of 0014 (`config/reader.toml`, instrument `5d4aa4a`), on one A100-SXM4-80GB under torch
+2.14.1+cu130, completed without a halt. Every reader's three controls passed: float16 floors 1.3e-8 to 1.4e-7
+nats/token (limit 1e-4), identity 0 on every reader, scrambled medians 0.47 to 1.9 (limit 0.1). The run machine's
+eight regenerations are byte-identical to 0013's. Records: `reader-results-c2.tgz` `828a545b…` (the reports and
+`run.json`); `summary.json` `5d761594…`, written by `summarize_reader`, which recomputed every number below from the
+per-token arrays and refuses on any mismatch; both retained off-repository.
+
+**Reading** — median (B1), nats/token, corpus / on-path, at whole-vector relative distance x; bands HOLDS_B ≤ 1e-3,
+DEGRADES_B ≥ 1e-1. *Isotropic backbone* (OLMo-2 1B RLVR1 step_200): 1e-4 → 6.0e-7 / 4.5e-7; 3e-4 → 4.9e-6 / 3.7e-6;
+1e-3 → 5.3e-5 / 4.4e-5; 3e-3 → 4.8e-4 / 3.9e-4; 1e-2 → 5.6e-3 / 4.4e-3; 3e-2 → 6.6e-2 / 5.4e-2; 1e-1 → 4.1 / 4.3.
+HOLDS_B through 3e-3, UNRESOLVED at 1e-2 and 3e-2, DEGRADES_B at 1e-1; the slope of log median on log x over the
+sealed rungs {1e-3, 3e-3, 1e-2} is 2.02 (corpus) and 2.00 (on-path). *Post-training directions*: SFT → DPO
+(x 8.5e-4) 4.1e-2 / 3.9e-2 and SFT → RLVR step_2600 (9.4e-4) 3.8e-2 / 3.5e-2, both UNRESOLVED; DPO → RLVR step_200
+(8.6e-5) 2.1e-4 / 1.9e-4, HOLDS_B. *RL phase* (writer step_200, R-B4): lag 200 (x 1.3e-4) 8.4e-5 / 7.4e-5; 600
+(2.0e-4) 3.2e-4 / 2.4e-4; 1000 (2.6e-4) 6.5e-4 / 5.0e-4; 1400 (3.0e-4) 6.0e-4 / 5.5e-4; 2400 (4.0e-4) 8.1e-4 /
+7.0e-4 — HOLDS_B at every lag, rising with distance, between one and two orders of magnitude above the backbone
+rung nearest it. *Qwen2.5-1.5B*: isotropic 1e-2 (R-B8) 3.3e-4 / 2.1e-4, HOLDS_B; base → Instruct (1.0e-2) 3.5e-3 / 2.3e-3,
+UNRESOLVED; Math → R1-Distill (1.2e-1) 2.6e-1 / 1.0e-1, DEGRADES_B / UNRESOLVED; base → Math (1.1, cache re-rotated
+θ 1e6 → 1e4) 1.26 / 0.31, DEGRADES_B, above the Math reader's scrambled control (0.47) on corpus text. No rung sits
+within 2× its reader's floor.
+
+**The seal (6bbd9bf), read by the summarizer against the recomputed statistics.** (i) HELD: slopes 2.02 and 2.00
+lie in [1.7, 2.3]. (ii) FALSIFIED: at x = 1e-2 the backbone reads 5.6e-3 / 4.4e-3, above 1e-3; HOLDS_B is left
+between 3e-3 and 1e-2. (iii) HELD: at the nearest backbone rung the three OLMo directions read 355× to 875× the
+backbone, against the 10× sealed. (iv) FALSIFIED: base → Instruct reads 10.6× / 11.2× the Qwen isotropic rung,
+outside 3× either side. (v) FALSIFIED by one rung of nineteen: at noise-0.1 on-path (4.3) exceeds corpus (4.1) — a
+reader whose argmax agrees with its own fresh cache on 13% / 10% of tokens, generating under the stale one; the
+other eighteen rungs above 2× floor read on-path below corpus by 5–76%.
+
+**What the reading says.** Statistic (B) is graded where (A) was a step: it grows as the square of distance over
+three decades of the backbone, and its HOLDS_B edge (3e-3 < x < 1e-2) lies an order of magnitude inside (A)'s
+(3e-2 ≤ x < 1e-1, entry 0009). Trained directions are not isotropic to the reader: at matched whole-vector distance
+the OLMo-2 post-training steps read two to three orders of magnitude above noise and Qwen's instruct tuning one
+order — the excess 0009 saw in 1 − R² and (A) could not read. On the published RL chain a cache 200–2400 optimizer
+steps stale stays HOLDS_B at every lag measured; the operating lag of a pipelined trainer (a few steps) lies below
+the Hub's stride and is the own run's question (R8).
+
+**Also recorded.** The DeepSeek-R1-Distill reader's float16 floor is 1.4e-7 here against 3.6e-5 in 0014's halted
+run — same dumps, same torch build, different host; a reader-and-host property, read against a limit set at the band
+(0014), moving no rung. `summarize_reader` had carried each rung's position from a `run.json` field the driver never
+wrote, so the slope and backbone matching were empty in every production summary until now; it reads the position
+from the distance ladder's record (`results/distance/rungs/<label>/distance.json`, or a local noise checkpoint's
+`provenance.json`; the five lag distances and qwen-noise-0.01's provenance were written on the run machine, hashes in
+the records above),
+resolves run-machine paths by trailing components under the pinned instrument with the recorded sha256 still
+enforced, and reads the sealed clauses out itself.
+
+**Not ruled here.** Whether (B) is closed and how it is cited (the analogue of 0010); the own run (R8); statistic
+(C). 0012's rule, sources, bands and the configuration of 0014 stand as run.
+
+**Consequences in this commit set:** `src/lag_ladder/summarize_reader.py`, `tests/test_summarize_reader.py`,
+`README.md`, `CLAUDE.md`.
