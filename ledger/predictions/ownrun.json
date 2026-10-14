@@ -1,0 +1,89 @@
+{
+  "pair": "ownrun",
+  "prediction": {
+    "descriptive_not_sealed": [
+      "median (B1) at g = 1 and whether it is at the floor",
+      "the per-step distance curve",
+      "the per-step reward mean"
+    ],
+    "predictions": {
+      "i_backbone_quadratic": {
+        "fit": "least squares of log median (B1) on log rel_delta_all, per text",
+        "note": "clause (ii) of entry 0017; the key name is the one summarize_reader reads",
+        "rungs": [
+          "ownrun-lag-1",
+          "ownrun-lag-2",
+          "ownrun-lag-4",
+          "ownrun-lag-8",
+          "ownrun-lag-16",
+          "ownrun-lag-32"
+        ],
+        "slope_in": [
+          1.5,
+          2.5
+        ]
+      },
+      "i_holds_at_operating_lag": {
+        "rung": "ownrun-lag-32",
+        "statement": "median (B1) <= 1e-3 on both texts",
+        "texts": [
+          "corpus",
+          "on-path"
+        ]
+      },
+      "iii_rl_excess_over_0015_backbone": {
+        "against": "results/reader/summary.json sha256 5d76159485892f1dec5627b70b8e394ee6bda8d73aad1aedfe0c6b10045cfd29 (entry 0015)",
+        "statement": "at every lag rung with rel_delta_all in [1e-4, 1e-1], median (B1) >= 10x the 0015 OLMo backbone's median at the nearest noise rung by log distance, both texts; read by hand in the outcome entry"
+      },
+      "iv_rollout_le_onpath_le_corpus": "at every lag rung above 2x the reader's float16 floor: rollout (B1) <= on-path (B1) <= corpus (B1)"
+    },
+    "registering_entry": "0017",
+    "rollouts": {
+      "n": 10,
+      "sampled_on": "Mac mini Apple M6, CPU, torch 2.14.1, transformers 5.15.1, 2026-10-14",
+      "seed": 0,
+      "spans_sha256": "e631fd845aa7838186f5feebda66f13bb725b59d0cc7e8841e1a23639a977f15",
+      "temperature": 1.0,
+      "tokens_sha256": "7d6dec47ad87a6860094287f736ebbe44582864c2ba2918a927e5851025e80de"
+    },
+    "rule": {
+      "at_floor_factor": 2.0,
+      "degrades_min": 0.1,
+      "floor_max_median_kl": 0.0001,
+      "holds_max": 0.001
+    },
+    "ruled": "2026-10-14",
+    "statistic": "per rung and text, median over held-out sequences of the mean per-token KL(pi_fresh || pi_stale) over the continuation (B1), nats/token; x = whole-vector relative L2 weight distance of the reader (step g) to the writer (step 0), tools/weight_distance.py",
+    "texts": [
+      "corpus",
+      "on-path",
+      "rollout"
+    ],
+    "trajectory": {
+      "beta": 0.0,
+      "keep": [
+        0,
+        1,
+        2,
+        4,
+        8,
+        16,
+        32
+      ],
+      "lr": 1e-06,
+      "master_dtype": "float32",
+      "max_completion_length": 256,
+      "model": "Qwen/Qwen2.5-1.5B@8faed761d45a263340a0528343f099c05c9a4323",
+      "prompts_x_completions": [
+        16,
+        8
+      ],
+      "seed": 0,
+      "steps": 32,
+      "temperature": 1.0,
+      "trainer": "trl==1.15.0@dae7b6adc8d2729cfa8d21bc8480656ede769240"
+    }
+  },
+  "prior_artifacts": [],
+  "sealed_pre_fit": true
+}
