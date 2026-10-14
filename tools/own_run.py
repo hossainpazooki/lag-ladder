@@ -105,9 +105,12 @@ def select_prompt_indices(n_total: int, k: int, seed: int) -> list[int]:
     return sorted(int(i) for i in rng.choice(n_total, size=k, replace=False))
 
 
-def dump_command(kvt_python: Path, kvt_root: Path, ckpt: Path, tokens_npy: Path, out: Path) -> list[str]:
-    """`scripts.dump_kv` for one sequence file, as the (B) sittings ran it (float32 forward, stride 1)."""
-    return [str(kvt_python), "-m", "scripts.dump_kv", "--pair", KVT_PAIR, "--which", "source",
+def dump_command(kvt_python: Path, kvt_root: Path, ckpt: Path, tokens_npy: Path, out: Path,
+                 kvt_pair: str = KVT_PAIR) -> list[str]:
+    """`scripts.dump_kv` for one sequence file, as the (B) sittings ran it (float32 forward, stride 1). The
+    instrument refuses a checkpoint that is not KV-matched to the pair's source (head dim, layers), so the pair
+    must be the one whose source is the trained model."""
+    return [str(kvt_python), "-m", "scripts.dump_kv", "--pair", kvt_pair, "--which", "source",
             "--local-path", str(ckpt), "--tokens", str(tokens_npy), "--stride", "1", "--dtype", "float32",
             "--out", str(out)]
 
@@ -159,8 +162,9 @@ class StepArtifacts:
     def __init__(self, *, lag_ladder: Path, kvt_root: Path, kvt_python: Path, tool_python: Path,
                  heldout_tokens: Path, heldout_seqs: range, heldout_pair: str,
                  rollout_tokens: Path, rollout_seqs: range, rollout_pair: str,
-                 labels: dict[int, list[str]], keep: frozenset[int], log: Path):
+                 labels: dict[int, list[str]], keep: frozenset[int], log: Path, kvt_pair: str = KVT_PAIR):
         self.ll, self.kvt, self.kvt_py, self.tool_py = lag_ladder, kvt_root, kvt_python, tool_python
+        self.kvt_pair = kvt_pair
         self.heldout = (heldout_tokens, heldout_seqs, heldout_pair)
         self.rollout = (rollout_tokens, rollout_seqs, rollout_pair)
         self.labels, self.keep, self.log = labels, keep, log
@@ -193,7 +197,7 @@ class StepArtifacts:
                 out = self.ll / "results" / "distance" / "pairs" / pair / "dumps" / f"source@local-{name}" / f"seq{i}"
                 if (out / "meta.json").exists():
                     continue
-                self._run(dump_command(self.kvt_py, self.kvt, kept, p, out), cwd=self.kvt)
+                self._run(dump_command(self.kvt_py, self.kvt, kept, p, out, self.kvt_pair), cwd=self.kvt)
         if step > 0:
             # every step's distance to step 0 (the trajectory on the axis), then a copy under each rung label
             # the config gives this step, where summarize_reader reads it (0015's layout)
@@ -298,11 +302,14 @@ def cmd_train(a) -> int:
     labels = labels_by_step(Path(a.config))
     if not labels:
         raise SystemExit(f"{a.config} names no local:step_<g> readers; nothing to label")
-    hook = StepArtifacts(lag_ladder=ll, kvt_root=Path(a.kvt).resolve(), kvt_python=Path(a.kvt_python).resolve(),
+    # the instrument's interpreter is a venv symlink: resolving it would follow the link to the base interpreter
+    # and lose the venv (its packages), so the path is made absolute without resolving symlinks
+    hook = StepArtifacts(lag_ladder=ll, kvt_root=Path(a.kvt).resolve(), kvt_python=Path(a.kvt_python).expanduser().absolute(),
                          tool_python=Path(sys.executable), heldout_tokens=Path(a.heldout_tokens).resolve(),
                          heldout_seqs=range(a.heldout[0], a.heldout[1]), heldout_pair=a.heldout_pair,
                          rollout_tokens=Path(a.rollout_tokens).resolve(), rollout_seqs=range(0, a.n_rollouts),
-                         rollout_pair=a.rollout_pair, labels=labels, keep=keep_set(a.keep), log=out_dir / "steps.log")
+                         rollout_pair=a.rollout_pair, labels=labels, keep=keep_set(a.keep), log=out_dir / "steps.log",
+                         kvt_pair=a.kvt_pair)
     out_dir.mkdir(parents=True, exist_ok=True)
     step0 = out_dir / "checkpoint-0"
     model.save_pretrained(step0, safe_serialization=True)
@@ -354,7 +361,8 @@ def main(argv=None) -> int:
     t.add_argument("--seed", type=int, default=0)
     t.add_argument("--lag-ladder", required=True); t.add_argument("--kvt", required=True); t.add_argument("--kvt-python", required=True)
     t.add_argument("--heldout-tokens", required=True); t.add_argument("--heldout", type=int, nargs=2, default=(40, 50))
-    t.add_argument("--heldout-pair", default=KVT_PAIR)
+    t.add_argument("--heldout-pair", default=KVT_PAIR, help="the lag-ladder pair name the held-out dumps are filed under")
+    t.add_argument("--kvt-pair", default=KVT_PAIR, help="the instrument pair whose `source` is the trained model (KV-matched)")
     t.add_argument("--rollout-tokens", required=True); t.add_argument("--n-rollouts", type=int, default=10)
     t.add_argument("--rollout-pair", default="qwen2.5-1.5b-ownrun-rollout")
     t.add_argument("--excluded-indices", required=True, help="excluded_train_indices.json from sample-rollouts")

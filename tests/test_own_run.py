@@ -87,3 +87,8 @@ def test_labels_by_step_reads_the_config_rungs():
     labels = own_run.labels_by_step(REPO_ROOT / "config" / "ownrun.toml")
     assert sorted(labels) == [1, 2, 4, 8, 16, 32]
     assert labels[32] == ["ownrun-lag-32", "ownrun-rollout-lag-32"]
+
+
+def test_dump_command_takes_the_instrument_pair():
+    cmd = own_run.dump_command(Path("py"), Path("kvt"), Path("ckpt"), Path("s.npy"), Path("o"), kvt_pair="qwen3-0.6b-to-1.7b")
+    assert cmd[cmd.index("--pair") + 1] == "qwen3-0.6b-to-1.7b"

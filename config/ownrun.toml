@@ -1,6 +1,9 @@
 # Statistic (B) at the operating lag — the own run (design §14). UNREGISTERED until a numbered entry fixes every
 # value below; `reader run` refuses while registered_by is empty or any *_PENDING pin remains.
 #
+# Trainer (0017): trl==1.15.0 (tag v1.15.0, commit dae7b6adc8d2729cfa8d21bc8480656ede769240), transformers 5.19.0,
+# torch 2.14.1+cu130 on the run machine; lr 1e-6, beta 0, 16 prompts x 8 completions per step, T 1.0, fp32, seed 0.
+# Rollouts sampled 2026-10-14 on the Mac mini (Apple M6, CPU, torch 2.14.1, transformers 5.15.1).
 # One GRPO trajectory on Qwen2.5-1.5B (tools/own_run.py): writer cache at step 0, readers at steps 1..32 kept as
 # local checkpoints under results/distance/checkpoints/step_<g>. Dumps are made on the run machine after every
 # saved step (R-C3). Two pairs: the held-out corpus sequences of 0008's Qwen pair (texts corpus + on-path, as §13),
@@ -19,7 +22,7 @@ heldout = [40, 50]
 prefix_len = 768
 dtype = "float32"
 seed = 0
-registered_by = ""
+registered_by = "0017"
 seal = "ownrun"
 
 [reader.rule]
@@ -44,9 +47,9 @@ tokens_sha256 = "01bd7698f7413ab9a3b6958991487bbba626f5a8cc4f24142cd22091d96af74
 [[reader.pairs]]
 name = "qwen2.5-1.5b-ownrun-rollout"
 tokens = "data/tokens/qwen2.5-1.5b-ownrun_rollout_n10_seed0.npy"
-tokens_sha256 = "ROLLOUT_TOKENS_PENDING"
+tokens_sha256 = "7d6dec47ad87a6860094287f736ebbe44582864c2ba2918a927e5851025e80de"
 spans = "data/tokens/qwen2.5-1.5b-ownrun_rollout_n10_seed0.spans.json"
-spans_sha256 = "ROLLOUT_SPANS_PENDING"
+spans_sha256 = "e631fd845aa7838186f5feebda66f13bb725b59d0cc7e8841e1a23639a977f15"
 heldout = [0, 10]
 
 # Lag rungs on the held-out corpus: writer step 0, reader step g (R-C3). Labels fix the distance-file names.

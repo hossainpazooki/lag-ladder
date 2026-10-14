@@ -689,3 +689,51 @@ the numbers, 0011 and design §13 for the statistic, and 0010 for statistic (A) 
 behind 0015 are retained off-repository with the hashes 0015 states.
 
 **Consequences in this commit set:** `README.md`, `docs/2026-09-19-holdover-design.md` §13, `CLAUDE.md`; the tag.
+
+### 0017 — 2026-10-14 — The own run registered: statistic (B) at lags 1–32 on a GRPO trajectory of Qwen2.5-1.5B (design §14)
+
+prior-entries-sha256: 4a530e8788348ff84de1b9d396832597929fee5d3e35f4bf5688466503bdafbd
+
+**Registers** `config/ownrun.toml`, now `registered_by = "0017"`, as design §14 defines the own run (approved in
+principle 2026-10-13, ruled all-as-recommended 2026-10-14, R-C1–R-C8). Rule, bands, controls and scorer are 0012's
+as amended by 0013 and 0014: median (B1) per rung and text, HOLDS_B ≤ 1e-3, DEGRADES_B ≥ 1e-1 nats/token; float16
+floor on median KL at 1e-4, identity 1e-5, scrambled 0.1, per reader; instrument `5d4aa4a`, float32, seed 0.
+
+**Trajectory.** GRPO on Qwen2.5-1.5B (`8faed761…`), full weight, 32 optimizer steps from the released checkpoint,
+one seed: TRL 1.15.0 (`dae7b6ad…`), learning rate 1e-6, no reference-KL term, 16 prompts × 8 completions per step,
+temperature 1.0, 256-token completions, fp32 master weights, GSM8K train with an exact-match reward plus a format
+term, one fixed system line. Weights kept at steps {0, 1, 2, 4, 8, 16, 32} as local checkpoints with provenance;
+every step's whole-vector distance to step 0 is recorded. The held-out and rollout sequences are dumped from every
+step on the run machine; nothing is transferred from 0008 but the Qwen token file (`01bd7698…`).
+
+**Cells.** Writer cache at step 0, reader at step g ∈ {1, 2, 4, 8, 16, 32}. Two pairs: the ten held-out Qwen
+sequences of 0008 (corpus and greedy on-path texts, as §13), and ten rollout sequences — GSM8K train prompts
+{123, 306, 562, 1309, 2014, 2298, 3816, 4754, 6077, 6349}, chosen by seed 0 and excluded from the run's batches,
+each with one completion sampled from the step-0 policy at temperature 1.0 on a Mac mini (CPU, torch 2.14.1):
+token file `qwen2.5-1.5b-ownrun_rollout_n10_seed0.npy` `7d6dec47…`, spans `….spans.json` `e631fd84…`; prompts
+75–117 tokens, completions 146–256 tokens (seven of ten ran to the 256-token cap; none reached the gold answer —
+the sample is the policy's, not a solution set). On rollout text the reader teacher-forces the stored completion
+under its own prompt cache and under step 0's; each reader's controls run once, on the held-out pair. 12 rungs,
+6 readers, 420 jobs.
+
+**Seal** (`ledger/predictions/ownrun.json`, sidecar `49472367…`, pre-fit, committed before any score). (i) Median
+(B1) at g = 32 ≤ 1e-3 on corpus and on-path text. (ii) The slope of log median (B1) on log distance over the six
+corpus lag rungs lies in [1.5, 2.5], both texts (the summarizer fits it). (iii) At every lag rung whose distance lies
+inside 0015's backbone range (1e-4 to 1e-1), (B1) ≥ 10× the OLMo backbone's median at the nearest 0015 rung by log
+distance, both texts — read against 0015's `summary.json` (`5d761594…`) in the outcome entry, since this
+configuration carries no noise rung. (iv) At every rung above 2× floor, rollout (B1) ≤ on-path (B1) ≤ corpus (B1).
+Descriptive, not sealed: (B1) at g = 1 and whether it is at the floor; the per-step distance curve; the per-step
+reward mean.
+
+**Halting and reading.** A reader whose floor median exceeds 1e-4 halts the run; a reader whose scrambled median is
+under 0.1 is UNEVALUABLE. A step-1 distance under 1e-6 (the policy did not move) stops the sitting before the reader
+run, and the outcome entry reads what ran. The trainer is smoke-tested for two steps on the run machine before the
+registered run; its outputs are discarded. Rungs are placed by `results/distance/rungs/<label>/distance.json`,
+written by the trainer's save hook.
+
+**Not registered here.** The sliding variant (writer at t > 0); a second seed; the 128-step extension (an amendment
+if (i) holds at the floor); statistic (C).
+
+**Consequences in this commit set:** `config/ownrun.toml` (`registered_by`, the two rollout hashes, the trainer
+pin); `ledger/predictions/ownrun.json` + `.sha256`; `tools/own_run.py` (the instrument pair as an argument; the
+interpreter path kept unresolved).
