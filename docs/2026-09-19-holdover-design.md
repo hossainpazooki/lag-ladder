@@ -579,3 +579,26 @@ chain, not of a step.
 | R-C7 | dumps and kept weights to the private dataset; reports tar and summary off-repository with hashes |
 | R-C8 | the PipelineRL Fig. 7 comparison is stated descriptively on the lag axis; no claim about their run |
 
+**Rulings (2026-10-14, after 0018 and 0019; R-C9–R-C13).** Neither of the decision rules above fired: (i) held and
+lag 32 read far above the floor, so neither the 128-step extension nor the sliding variant is called by them. What the
+rules did not anticipate is the rollout text (0018, 0019). The rulings answer to that.
+
+| | ruling |
+|---|---|
+| R-C9 | rollout-text controls: registered now (0020) as a second reader configuration over the own run's dumps — float16 floor and scrambled per reader on the rollout pair under 0014's limits; no retraining; 0019's prerequisite |
+| R-C10 | the sliding writer: held-out text only, descriptive, in the same sitting — writer and reader at kept steps, placed by the measured writer–reader distance; rollout sliding deferred (it needs rollouts sampled by the step-w policy) |
+| R-C11 | a second seed: deferred until 0020's outcome is read |
+| R-C12 | the 128-step extension: kept open, decided after 0020's outcome; any run would be at a larger learning rate (distance saturates at 1e-4 by step 20) |
+| R-C13 | statistic (C): ruled in principle — 0018 gives it something to predict on rollout text; §15 is designed after 0020's outcome; the scorer stays unbuilt until registered |
+
+### 14.1 Controls on the rollout text and the sliding writer (0020)
+
+`config/ownrun_controls.toml`: the same instrument, pins, pairs, bands and limits as `ownrun.toml`, which stays as run,
+with `per_pair = true` — every reader's controls run per pair its rungs use, on that pair's own texts (floor on the
+pair's texts; identity and scrambled on its first text, `rollout` for the rollout pair). Rungs: fifteen sliding rungs
+`ownrun-slide-<w>-<r>` (w < r, both in {1, 2, 4, 8, 16, 32}) on the held-out pair, corpus and on-path, placed by
+`tools/weight_distance.py` on the kept weights; 0017's six rollout rungs re-run as a descriptive replicate (the record
+stays 0018). Seal `ownrun-controls` (pre-fit): (i) every rollout rung of 0018 reads above 2× its reader's rollout
+floor; (ii) the slope of log median (B1) on log writer–reader distance over the fifteen sliding rungs lies in
+[1.5, 2.5] on both texts. 740 jobs, inference only, from the private dataset's dumps and kept weights.
+

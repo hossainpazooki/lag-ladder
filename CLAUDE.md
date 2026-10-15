@@ -10,8 +10,8 @@ entry 0007 the ruling that weight distance is the axis, entry 0008 the weight-di
 entry 0009 its outcome, entry 0010 the closure of statistic (A) with the statement of record, entry 0011
 the ruling that the lane continues under statistic (B) as design §13 defines it, entries 0012–0014 (B)'s
 registration and amendments, entry 0015 its outcome, entry 0016 its closure on the ladder with the statement of record,
-entry 0017 the own run's registration, entry 0018 its outcome, and entry 0019 the ruling that restricts 0016's statement of
-record to the held-out texts it names.
+entry 0017 the own run's registration, entry 0018 its outcome, entry 0019 the ruling that restricts 0016's statement of
+record to the held-out texts it names, and entry 0020 the registration of rollout-text controls and the sliding writer.
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never
@@ -73,7 +73,7 @@ clauses out; per-rung texts and ragged continuations for §14). `tools/` — `pe
 cache, scores the continuation; `--text rollout` teacher-forces a stored continuation cut at `--length`): run with
 the instrument's interpreter, import nothing from it. `own_run.py` (§14: the GRPO trajectory with its save hook;
 run with the trainer's interpreter, imports nothing from here or the instrument). (C)'s scorer does not exist.
-`config/` — `seal.toml`, `pilot.toml`, `distance.toml`, `reader.toml`, `ownrun.toml` (UNREGISTERED). `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
+`config/` — `seal.toml`, `pilot.toml`, `distance.toml`, `reader.toml`, `ownrun.toml` (0017, as run), `ownrun_controls.toml` (0020; `per_pair` controls). `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
 `mappers/` — seal artifact roots, gitignored past their placeholders. `docs/` — the design doc.
 
 ## State
@@ -101,5 +101,9 @@ that entry and the README; the scorer stays the registered instrument for later 
 HELD, (iii), (iv) FALSIFIED. Records and dumps are off-repository under the hashes 0018 states. **0019 restricts 0016's
 statement of record** to the held-out texts it names (the trainer's own text is not predicted by weight distance) and
 registers a prerequisite: no rollout-text number becomes a statement of record before per-reader float16-floor and
-scrambled controls on rollout text pass under 0014's limits. Not ruled: the sliding writer, a second seed, the 128-step
-extension, statistic (C).
+scrambled controls on rollout text pass under 0014's limits. **0020 registers those controls** (`config/ownrun_controls.toml`,
+`per_pair = true`: controls per (reader, pair) on the pair's own text; seal `ownrun-controls`) together with fifteen
+descriptive sliding rungs on held-out text (writer and reader at kept steps, placed by writer–reader distance) and a
+replicate of the six rollout rungs — 740 inference-only jobs from the Hub's dumps and kept weights; not yet run. Rulings
+R-C9–R-C13 (design §14): second seed and 128-step extension decided after 0020's outcome; statistic (C) ruled in
+principle, designed after it.

@@ -832,3 +832,45 @@ becomes a statement of record once its controls exist; statistic (C).
 
 **Consequences in this commit set:** `README.md` (the (B) paragraph's closing sentence and the citing line),
 `CLAUDE.md` (the entry list and State).
+
+### 0020 — 2026-10-14 — Amendment: float16-floor and scrambled controls on the rollout text, and the held-out sliding writer, scored from the own run's dumps
+
+prior-entries-sha256: 610118e98ae85df2e25ebbc10e18939db50be16959509e530f459efcfb5154d0
+
+**Registers** `config/ownrun_controls.toml` (`registered_by = "0020"`), a second reader configuration over the own run's
+artefacts (0017, 0018): the same instrument (`5d4aa4a`), pins, pairs, bands and control limits as `config/ownrun.toml`,
+which stays as run. It answers 0019's prerequisite and rulings R-C9 and R-C10 of this date (design §14, §14.1).
+
+**Controls on the rollout text (0019's prerequisite).** For each reader g ∈ {1, 2, 4, 8, 16, 32}: the float16 floor on
+the reader's own cache of the rollout prompts (median KL ≤ 1e-4, as 0014), identity, and the scrambled control on
+rollout text (another sequence's prompt cache under the same completion; median KL ≥ 0.1). The driver and summarizer
+now plan and judge controls per (reader, pair) when a configuration says `per_pair = true`, on that pair's own texts;
+the default is unchanged and the plans of 0012–0018 are as they ran. Each rung is judged against the controls of its
+own pair. 0017's six rollout rungs are re-run on the same pod as a descriptive replicate; the record of their reading
+stays 0018.
+
+**The sliding writer (held-out text, descriptive).** Fifteen rungs `ownrun-slide-<w>-<r>` with writer at kept step w
+and reader at kept step r > w, w, r ∈ {1, 2, 4, 8, 16, 32}, on the held-out pair's corpus and on-path texts, placed by
+the measured relative distance ‖θ_r − θ_w‖ / ‖θ_w‖ from the kept weights (`tools/weight_distance.py`, written to
+`results/distance/rungs/<label>/distance.json` on the run machine). Rollout sliding is not registered: it needs rollouts
+sampled by the step-w policy.
+
+**Seal** (`ledger/predictions/ownrun-controls.json`, sidecar `27af2dc2…`, pre-fit, committed before any score).
+(i) Every rollout rung of 0018 reads above 2× its reader's float16 floor on rollout text as measured here (read by hand
+against 0018's summary), and the six replicate rungs are not at the floor (read by the summarizer). (ii) The slope of
+log median (B1) on log writer–reader distance over the fifteen sliding rungs lies in [1.5, 2.5] on both texts.
+Descriptive, not sealed: the sliding rungs against 0018's step-0-writer rungs at matched distance; the replicate against
+0018; identity on rollout text.
+
+**Run.** 740 jobs, inference only, on one GPU sitting under the GPU protocol: six kept readers, the held-out and rollout
+dumps at the kept steps and step 0 from the private dataset; the results tar, summary and the fifteen distance files
+off-repository with hashes. A rollout floor over its limit halts, as 0014; a rollout scrambled under 0.1 makes that
+reader's rollout rungs UNEVALUABLE and, in the outcome, withdraws 0018's reading on that rung to descriptive.
+
+**Not registered here.** A second seed and the 128-step extension (R-C11, R-C12: decided after this entry's outcome);
+statistic (C) (R-C13: ruled in principle, designed after it); rollout sliding.
+
+**Consequences in this commit set:** `src/lag_ladder/reader.py`, `src/lag_ladder/summarize_reader.py`,
+`src/lag_ladder/config.py`, `tests/test_reader.py`, `tests/test_summarize_reader.py`, `config/ownrun_controls.toml`,
+`ledger/predictions/ownrun-controls.json` + `.sha256`, `docs/2026-09-19-holdover-design.md` §14 (R-C9–R-C13, §14.1),
+`README.md`, `CLAUDE.md`.

@@ -106,8 +106,9 @@ policy's own prompts the same readers read 4.7e-3 (lag 1) to 8.9e-2 (lag 32): UN
 orders of magnitude above held-out text, with the stale-prompt profile (KL largest at the first continuation
 token, falling a hundredfold by position 50). Of the four sealed clauses, HOLDS_B at the operating lag and the
 quadratic slope held; the 10× excess over isotropic noise (11× on corpus, 7.9× on on-path at the one in-range rung)
-and rollout ≤ on-path ≤ corpus were falsified. Whether (B)'s statement of record is amended for the rollout text is
-not ruled on.
+and rollout ≤ on-path ≤ corpus were falsified. Entry 0019 restricts (B)'s statement of record to the held-out
+texts and makes rollout-text controls the prerequisite for any rollout number to become a statement of record; entry
+0020 registers those controls, and the sliding writer on held-out text, to be scored from the run's dumps.
 
 The ledger holds the founding record (chassis provenance, inherited definitions, the first rulings), the
 ruling that the instrument serves statistic (A) only, two re-pins of the instrument, the registrations with
