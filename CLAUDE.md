@@ -51,7 +51,7 @@ outcome, and entry 0024 the ruling that adds the trainer's own text to (B)'s sta
 .venv/Scripts/python.exe -m lag_ladder.summarize_distance        # rungs by measured distance; refuses on mismatch
 .venv/Scripts/python.exe -m lag_ladder.reader plan|check|run|probe [--config config/ownrun.toml]   # statistic (B)
 .venv/Scripts/python.exe -m lag_ladder.summarize_reader [--config config/ownrun.toml]
-.venv/Scripts/python.exe -m lag_ladder.task plan|check|run|probe [--config config/ownrun_task.toml]   # statistic (C), §15; probe: --out OUTSIDE results/, --n 64
+.venv/Scripts/python.exe -m lag_ladder.task plan|check|run|probe [--config config/ownrun_task.toml]   # statistic (C), §15; probe: --out OUTSIDE results/, --n 64 [--max-new N overrides the config's cap]
 .venv/Scripts/python.exe -m lag_ladder.summarize_task [--config config/ownrun_task.toml]
 ```
 On macOS/Linux the interpreter is `.venv/bin/python`. The project pins Python 3.12.
@@ -82,7 +82,8 @@ cache, scores the continuation; `--text rollout` teacher-forces a stored continu
 the instrument's interpreter, import nothing from it. `own_run.py` (§14: the GRPO trajectory with its save hook;
 run with the trainer's interpreter, imports nothing from here or the instrument). `task_swap.py` (§15, the (C) tool:
 `equivalence` | `cells` | `prepare`; builds prompt caches live, rounds them through float16 and injects them through
-`score_continuation.py`'s functions; greedy generation per arm; records per prompt; run with the instrument's
+`score_continuation.py`'s functions; greedy generation per arm; one `task-record-v2` per prompt and arm, keeping the
+decoded completion text and the first-`####` answer beside the registered last-`####` answer; run with the instrument's
 interpreter). Built 2026-10-15, UNREGISTERED: `config/ownrun_task.toml` carries a `GSM8K_TEST_PENDING` pin and a
 placeholder floor limit until the probe and the registering entry.
 `config/` — `seal.toml`, `pilot.toml`, `distance.toml`, `reader.toml`, `ownrun.toml` (0017, as run), `ownrun_controls.toml` (0020; `per_pair` controls), `ownrun_far.toml` (0022; `far_pair` + `far_min`), `ownrun_task.toml` (§15, UNREGISTERED). `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
