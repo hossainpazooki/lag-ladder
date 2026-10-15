@@ -12,8 +12,8 @@ the ruling that the lane continues under statistic (B) as design §13 defines it
 registration and amendments, entry 0015 its outcome, entry 0016 its closure on the ladder with the statement of record,
 entry 0017 the own run's registration, entry 0018 its outcome, entry 0019 the ruling that restricts 0016's statement of
 record to the held-out texts it names, entry 0020 the registration of rollout-text controls and the sliding writer,
-entry 0021 their outcome, entry 0022 the registration of a far scrambled control on rollout text, and entry 0023 its
-outcome.
+entry 0021 their outcome, entry 0022 the registration of a far scrambled control on rollout text, entry 0023 its
+outcome, and entry 0024 the ruling that adds the trainer's own text to (B)'s statement of record, on one seed.
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never
@@ -51,6 +51,8 @@ outcome.
 .venv/Scripts/python.exe -m lag_ladder.summarize_distance        # rungs by measured distance; refuses on mismatch
 .venv/Scripts/python.exe -m lag_ladder.reader plan|check|run|probe [--config config/ownrun.toml]   # statistic (B)
 .venv/Scripts/python.exe -m lag_ladder.summarize_reader [--config config/ownrun.toml]
+.venv/Scripts/python.exe -m lag_ladder.task plan|check|run [--config config/ownrun_task.toml]   # statistic (C), §15
+.venv/Scripts/python.exe -m lag_ladder.summarize_task [--config config/ownrun_task.toml]
 ```
 On macOS/Linux the interpreter is `.venv/bin/python`. The project pins Python 3.12.
 
@@ -70,12 +72,20 @@ per rung) · `summarize_distance` (rungs by measured distance, tied to the dumps
 (B) driver: plan|check|run|probe; controls per reader, then the rungs, by subprocess into the pinned
 instrument; refuses while `reader.toml` is unregistered) · `summarize_reader` (recomputes B1–B4 from the
 reports, withholds failed-control rungs, places rungs by the distance ladder's `distance.json`, reads the sealed
-clauses out; per-rung texts and ragged continuations for §14). `tools/` — `perturb_checkpoint.py`,
+clauses out; per-rung texts and ragged continuations for §14) · `task` (the (C) driver, §15: plan|check|run; the
+dump-equivalence control first, then one `cells` job per reader with the floor and identity arms; halts on the
+equivalence, the floor or the identity) · `summarize_task` (recomputes Δ accuracy with a seeded paired bootstrap, the
+(C) bands, flip / no-answer / cap rates, the (B)→(C) rank correlation; withholds a lag whose positive controls do not
+fire; reads the sealed clauses out). `tools/` — `perturb_checkpoint.py`,
 `convert_bin_checkpoint.py`, `weight_distance.py`, `score_continuation.py` (the (B) scorer: injects a stale vs fresh
 cache, scores the continuation; `--text rollout` teacher-forces a stored continuation cut at `--length`): run with
 the instrument's interpreter, import nothing from it. `own_run.py` (§14: the GRPO trajectory with its save hook;
-run with the trainer's interpreter, imports nothing from here or the instrument). (C)'s scorer does not exist.
-`config/` — `seal.toml`, `pilot.toml`, `distance.toml`, `reader.toml`, `ownrun.toml` (0017, as run), `ownrun_controls.toml` (0020; `per_pair` controls), `ownrun_far.toml` (0022; `far_pair` + `far_min`). `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
+run with the trainer's interpreter, imports nothing from here or the instrument). `task_swap.py` (§15, the (C) tool:
+`equivalence` | `cells` | `prepare`; builds prompt caches live, rounds them through float16 and injects them through
+`score_continuation.py`'s functions; greedy generation per arm; records per prompt; run with the instrument's
+interpreter). Built 2026-10-15, UNREGISTERED: `config/ownrun_task.toml` carries a `GSM8K_TEST_PENDING` pin and a
+placeholder floor limit until the probe and the registering entry.
+`config/` — `seal.toml`, `pilot.toml`, `distance.toml`, `reader.toml`, `ownrun.toml` (0017, as run), `ownrun_controls.toml` (0020; `per_pair` controls), `ownrun_far.toml` (0022; `far_pair` + `far_min`), `ownrun_task.toml` (§15, UNREGISTERED). `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
 `mappers/` — seal artifact roots, gitignored past their placeholders. `docs/` — the design doc.
 
 ## State
@@ -119,6 +129,7 @@ same completion, limit `far_min` 0.1; seal `ownrun-far`: far ≥ 2× scrambled p
 inference-only jobs). **0023 is its outcome**: one A40 sitting, no halt; far 0.450 to 0.669 against scrambled 0.115 to
 0.126 (far/scrambled 3.57 to 5.80, clause (i) HELD); 0018's rollout medians over far 0.010 to 0.146 (clause (ii) HELD);
 the replicate matches 0018 to 5e-5 on a second host. Records and the Hub backup (`ownrun-far/`) under the hashes 0023
-states. Open: R-C14 (the statement-of-record amendment; only the seed count in the way), R-C16 second seed, R-C18 the
-build and registration of statistic (C) from §15 (whole-prompt cache swap, GSM8K test, greedy, FRESH/STALE/NEAR/FAR arms,
+states. **0024 amends (B)'s statement of record** with the rollout reading, on one seed (the clause names the seed count,
+the controls and the two ratios; 0019's restriction stands). Open: R-C16 second seed (would strengthen 0024, not change
+it), R-C18 the build and registration of statistic (C) from §15 (whole-prompt cache swap, GSM8K test, greedy, FRESH/STALE/NEAR/FAR arms,
 Δ accuracy with a paired bootstrap, flip rate descriptive); 128-step closed.

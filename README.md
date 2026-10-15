@@ -95,7 +95,10 @@ reach, Qwen Instruct's nearness to noise, and on-path ≤ corpus without excepti
 a more sensitive statistic than sealed. (B) is a reader's number, not a trainer's; the operating lag of a
 pipelined trainer (a few steps) is below the published chain's stride and was the own run's question. Entry 0019
 restricts the statement to the held-out texts it names: on the trainer's own text (0018) the reader's KL is not
-predicted by weight distance. (C) is not ruled on.
+predicted by weight distance. Entry 0024 adds that text to the record, on one seed: on the trainer's own prompts (B1)
+leaves HOLDS_B at the first optimizer step and by sixteen steps reads three quarters of a different prompt's cache and
+one seventh of an information-free one, with the floor, near and far controls of 0021 and 0023 behind it. (C) is not
+ruled on.
 
 **The own run is complete (ledger 0017, 0018).** Qwen2.5-1.5B trained by GRPO for 32 steps (lr 1e-6, no
 reference-KL term, GSM8K); the reader at step g ∈ {1, 2, 4, 8, 16, 32} reads the step-0 cache. The weights moved
@@ -126,9 +129,9 @@ retained off-repository with the hashes the entries state.
 
 **Citing.** For statistic (A), cite this repository at the commit that carries ledger entry 0010 (tag
 `statistic-a-closed`); name entries 0006 and 0009 for the numbers and 0001 for the statistic's provenance.
-For statistic (B), cite the commit that carries entry 0016 (tag `statistic-b-closed`), read with 0019; name 0015
-for the numbers and 0011 for the statistic. For the own run, name 0018 for the numbers, 0017 for the registration and
-0021 for the controls on rollout text.
+For statistic (B), cite the commit that carries entry 0016 (tag `statistic-b-closed`), read with 0019 and 0024; name
+0015 for the ladder's numbers and 0011 for the statistic. For the own run, name 0018 for the numbers, 0017 for the
+registration and 0021 and 0023 for the controls on rollout text.
 
 ## How the record stays auditable
 

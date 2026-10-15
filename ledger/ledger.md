@@ -1004,3 +1004,41 @@ one-seed caveat stands.
 (R-C16); statistic (C)'s registration (§15, R-C18); a chat-formatted non-GSM8K prompt as an intermediate control.
 
 **Consequences in this commit set:** `README.md`, `CLAUDE.md`.
+
+### 0024 — 2026-10-15 — Ruling: (B)'s statement of record gains the trainer's own text, on one seed
+
+prior-entries-sha256: 2e1a257cec0784a9897571d419a2393611512b247eb4ea097489d28bb426da1c
+
+**Ruled 2026-10-15, after 0023.** 0019 restricted 0016's statement of record to the held-out texts it was measured on and
+set a prerequisite for any rollout-text number to enter it: per-reader float16-floor and scrambled controls on rollout
+text, passed under 0014's limits. 0021 met it; 0022 and 0023 added a far control after the near one proved a near
+neighbour, and a replicate on a second host. R-C14 (design §14) declined the amendment on 2026-10-15 for two reasons; one
+is answered and the other — one seed — is a caveat the sentence below carries. The alternative, a second trainer sitting
+first, was weighed and declined: the direction, the four orders of magnitude, the loss of HOLDS_B at the first step and
+the two control ratios are not readings a second seed reverses.
+
+**Amendment to the statement of record.** The statement of record for statistic (B) (0016, read with 0019) is read with
+this clause appended after 0019's: *on the trainer's own text — its own prompts under the policy that wrote them — on one
+seed of one 1.5B model (Qwen2.5-1.5B, GRPO on GSM8K, 32 optimizer steps at learning rate 1e-6; 0017, 0018), (B1) leaves
+HOLDS_B at the first optimizer step (4.7e-3 nats/token at distance 2.3e-5) and reads 8.9e-2 at lags 16 and 32 (distances
+9.5e-5 and 1.05e-4), UNRESOLVED at every lag from 1 to 32 and four orders of magnitude above the same readers' reading of
+held-out text (2.0e-7 to 6.7e-6, HOLDS_B throughout). The readers' float16 floors on that text are 1.5e-7 to 1.9e-7, their
+cache of a different GSM8K prompt reads 0.12 and their cache of a web prefix of the prompt's length 0.45 to 0.67 (0021,
+0023): by sixteen steps the step-0 cache moves the reader three quarters as far as a different prompt's cache and one
+seventh as far as an information-free one. The number is a reader's, on text the trainer serves; it is not an importance
+weight, an advantage or a task outcome.* Nothing else in 0016 or 0019 is amended; 0019's clause — that the trainer's own
+text is not predicted by whole-vector weight distance and that the published chain's lag readings bound a reader of
+held-out text — stands as written.
+
+**What this ruling does not claim.** A law on rollout text (no slope is sealed or read there); anything beyond one
+seed, one model, one task, 32 steps, or a cache older than 32 steps; anything a trainer computes (the importance-weight
+dispersions of 0018 are descriptive); anything about task output (statistic (C), §15, unregistered).
+
+**Citing.** 0016 is cited as before (tag `statistic-b-closed`), read with 0019 and this entry; name 0018 for the rollout
+numbers, 0021 and 0023 for their controls, 0015 for the ladder's. No new tag.
+
+**Not ruled here.** The second seed (R-C16, deferred; it would strengthen this clause, not change it); statistic (C)'s
+registration (R-C18, §15); rollout sliding.
+
+**Consequences in this commit set:** `README.md` (the (B) paragraph's closing sentences and the citing line),
+`CLAUDE.md` (the entry list and State).
