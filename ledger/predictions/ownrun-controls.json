@@ -1,0 +1,71 @@
+{
+  "pair": "ownrun-controls",
+  "prediction": {
+    "controls": "per (reader, pair): float16 floor on the pair's texts, identity and scrambled on the pair's first text (rollout for the rollout pair); limits as 0014",
+    "descriptive_not_sealed": [
+      "sliding rungs against the step-0-writer rungs of 0018 at matched distance",
+      "the six replicate rollout rungs against 0018's reading",
+      "identity on rollout text"
+    ],
+    "predictions": {
+      "i_backbone_quadratic": {
+        "fit": "least squares of log median (B1) on log rel_delta_all (writer-reader distance), per text",
+        "note": "clause (ii) of entry 0020: the quadratic law off step 0; the key name is the one summarize_reader reads",
+        "rungs": [
+          "ownrun-slide-1-2",
+          "ownrun-slide-1-4",
+          "ownrun-slide-2-4",
+          "ownrun-slide-1-8",
+          "ownrun-slide-2-8",
+          "ownrun-slide-4-8",
+          "ownrun-slide-1-16",
+          "ownrun-slide-2-16",
+          "ownrun-slide-4-16",
+          "ownrun-slide-8-16",
+          "ownrun-slide-1-32",
+          "ownrun-slide-2-32",
+          "ownrun-slide-4-32",
+          "ownrun-slide-8-32",
+          "ownrun-slide-16-32"
+        ],
+        "slope_in": [
+          1.5,
+          2.5
+        ],
+        "texts": [
+          "corpus",
+          "on-path"
+        ]
+      },
+      "i_rollout_rungs_above_their_floor": {
+        "against": "results/ownrun/summary.json (entry 0018), read by hand in the outcome entry; the replicate read by the summarizer",
+        "rungs": [
+          "ownrun-rollout-lag-1",
+          "ownrun-rollout-lag-2",
+          "ownrun-rollout-lag-4",
+          "ownrun-rollout-lag-8",
+          "ownrun-rollout-lag-16",
+          "ownrun-rollout-lag-32"
+        ],
+        "statement": "every rollout rung of 0018 (median (B1) on rollout text, results/ownrun/summary.json sha256 f3b8f00f...) reads above 2x its reader's float16 floor on rollout text as measured here; and the same for the six replicate rungs of this configuration (summary at_floor false on every ownrun-rollout-lag-* rung)"
+      }
+    },
+    "registering_entry": "0020",
+    "rule": {
+      "at_floor_factor": 2.0,
+      "degrades_min": 0.1,
+      "floor_max_median_kl": 0.0001,
+      "holds_max": 0.001,
+      "scrambled_min": 0.1
+    },
+    "ruled": "2026-10-14",
+    "statistic": "per rung and text, median over held-out sequences of the mean per-token KL(pi_fresh || pi_stale) over the continuation (B1), nats/token; sliding rungs: x = whole-vector relative L2 distance of the reader (step r) to the writer (step w), tools/weight_distance.py on the kept weights",
+    "texts": [
+      "corpus",
+      "on-path",
+      "rollout"
+    ]
+  },
+  "prior_artifacts": [],
+  "sealed_pre_fit": true
+}
