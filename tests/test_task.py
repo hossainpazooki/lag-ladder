@@ -196,6 +196,20 @@ def test_probe_runs_unregistered_on_a_subset_and_writes_the_registration_numbers
     assert "halfwidth_points_at_discordance" in rec["arms"]["stale"]
 
 
+def test_probe_max_new_override_reaches_the_tool_and_the_record_and_defaults_to_the_config(repo, seal_cfg, tmp_path):
+    cfg, tools = _setup_task(repo, seal_cfg, registered="", seal=False)
+    fake = FakeTaskSwap()
+    rec = task.probe(cfg, repo, out=tmp_path / "p256", n=4, runner=fake, tools_dir=tools)
+    cells = fake.calls[1]
+    assert cells[cells.index("--max-new") + 1] == str(cfg.max_new) and rec["max_new"] == cfg.max_new
+    fake = FakeTaskSwap()
+    rec = task.probe(cfg, repo, out=tmp_path / "p1024", n=4, max_new=1024, runner=fake, tools_dir=tools)
+    cells = fake.calls[1]
+    assert cells[cells.index("--max-new") + 1] == "1024" and rec["max_new"] == 1024
+    with pytest.raises(task.Refusal, match="max_new"):
+        task.probe(cfg, repo, out=tmp_path / "p0", n=4, max_new=0, runner=FakeTaskSwap(), tools_dir=tools)
+
+
 def test_probe_refuses_an_out_under_results_and_a_reader_the_config_does_not_name(repo, seal_cfg, tmp_path):
     cfg, tools = _setup_task(repo, seal_cfg, registered="", seal=False)
     with pytest.raises(task.Refusal, match="results"):

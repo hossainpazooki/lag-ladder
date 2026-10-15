@@ -109,8 +109,8 @@ def _load_jsonl(path: Path, named_sha: str) -> dict[int, dict]:
         if not line.strip():
             continue
         r = json.loads(line)
-        if r.get("schema") != "task-record-v1":
-            raise _refuse(f"{path}: a record is not task-record-v1")
+        if r.get("schema") != "task-record-v2":
+            raise _refuse(f"{path}: a record is not task-record-v2")
         if r["index"] in rows:
             raise _refuse(f"{path}: index {r['index']} twice")
         rows[int(r["index"])] = r

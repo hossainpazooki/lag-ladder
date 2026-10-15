@@ -14,7 +14,8 @@ of the arm's weights over the prompt, rounded through float16 (the dump path's p
 prompt is compared layer by layer with the step-0 dump on disk (float16; equal to the last bit expected), and, with
 --reader, 0018's rollout (B1) at that reader is reproduced by teacher-forcing the stored completions under the live
 caches. `cells` writes one JSONL per arm under --out (fresh.jsonl, stale.jsonl, near.jsonl, far.jsonl) with the record
-keys RECORD_KEYS; the STALE records also carry (B1) on the fresh path: the FRESH arm's completion teacher-forced under
+keys RECORD_KEYS (task-record-v2: the decoded completion text and the first-`####` answer are stored beside the
+registered last-`####` answer); the STALE records also carry (B1) on the fresh path: the FRESH arm's completion teacher-forced under
 both caches. For the first --control-n prompts it also writes fresh32.jsonl (the floor: FRESH from a cache NOT rounded
 through float16) and fresh2.jsonl (the identity: FRESH generated a second time). Every pure helper is at module level and tested offline; torch is imported inside the commands.
 """
@@ -31,13 +32,14 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from own_run import final_number, gsm8k_gold  # noqa: E402  (pure helpers; own_run imports nothing heavy at import)
+import re  # noqa: E402
 
-SCHEMA = "task-record-v1"
+SCHEMA = "task-record-v2"   # v2 (2026-10-15): records keep the completion text and the first-`####` answer
 ARMS = ("fresh", "stale", "near", "far")
 CONTROL_ARMS = ("fresh32", "fresh2")   # the floor (FRESH built in float32, not rounded) and the identity (FRESH again)
 RECORD_KEYS = frozenset({
     "schema", "index", "prompt_len", "n_tokens", "reached_cap", "answer", "gold", "correct",
-    "completion_sha256", "first_divergence", "b1_fresh_path",
+    "completion_sha256", "completion_text", "answer_first_hash", "first_divergence", "b1_fresh_path",
 })
 
 
@@ -84,6 +86,14 @@ def is_correct(answer: str | None, gold: str) -> bool:
         return answer == gold
 
 
+def first_hash_number(text: str) -> str | None:
+    """The number after the FIRST `####`, commas removed; None without a marker. Kept beside the registered rule
+    (`final_number`: the LAST marker, else the last number) so a completion that re-states a different answer after
+    its first `####` can be told apart from one that never answered — a loop diagnosis, not a verdict."""
+    m = re.search(r"####\s*(-?[\d,]*\.?\d+)", text)
+    return m.group(1).replace(",", "") if m else None
+
+
 def first_divergence(a: list[int], b: list[int]) -> int | None:
     for i, (x, y) in enumerate(zip(a, b)):
         if x != y:
@@ -97,12 +107,14 @@ def tokens_sha256(tokens) -> str:
 
 def cell_record(*, index: int, prompt_len: int, completion: list[int], max_new: int, eos_id: int | None, text: str,
                 gold: str, fresh_completion: list[int] | None, b1_fresh_path: float | None = None) -> dict:
-    """One arm's record for one prompt. reached_cap: the generation hit max_new without an EOS."""
+    """One arm's record for one prompt. reached_cap: the generation hit max_new without an EOS. The decoded text is
+    kept whole (tens of MB over a full sitting; nothing next to the dumps) so any answer can be re-read offline."""
     answer = final_number(text)
     reached_cap = len(completion) >= max_new and (eos_id is None or completion[-1] != eos_id)
     return {"schema": SCHEMA, "index": int(index), "prompt_len": int(prompt_len), "n_tokens": len(completion),
             "reached_cap": bool(reached_cap), "answer": answer, "gold": gold, "correct": is_correct(answer, gold),
-            "completion_sha256": tokens_sha256(completion),
+            "completion_sha256": tokens_sha256(completion), "completion_text": text,
+            "answer_first_hash": first_hash_number(text),
             "first_divergence": None if fresh_completion is None else first_divergence(completion, fresh_completion),
             "b1_fresh_path": b1_fresh_path}
 

@@ -145,8 +145,8 @@ def _read_jsonl(path: Path) -> list[dict]:
         raise _refuse(f"{TOOL} did not write {path}")
     rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
     for r in rows:
-        if r.get("schema") != "task-record-v1":
-            raise _refuse(f"{path} holds a record that is not task-record-v1")
+        if r.get("schema") != "task-record-v2":
+            raise _refuse(f"{path} holds a record that is not task-record-v2")
     return rows
 
 
@@ -258,10 +258,11 @@ def run(cfg: TaskConfig, repo_root: Path, *, runner=subprocess.run, seal_cfg=Non
 
 # --- probe ---------------------------------------------------------------------------------------------------------
 
-def probe(cfg: TaskConfig, repo_root: Path, *, out: Path, n: int, reader: str | None = None, runner=subprocess.run,
-          upstream_check=check_upstream, tools_dir: Path = TOOLS) -> dict:
+def probe(cfg: TaskConfig, repo_root: Path, *, out: Path, n: int, reader: str | None = None, max_new: int | None = None,
+          runner=subprocess.run, upstream_check=check_upstream, tools_dir: Path = TOOLS) -> dict:
     """The pre-registration probe: equivalence, then one cells job for `reader` (default the last reader) over the
-    first n prompts with the control arms on all of them; writes OUTSIDE results/ only; decides nothing."""
+    first n prompts with the control arms on all of them; writes OUTSIDE results/ only; decides nothing. `max_new`
+    overrides the config's cap (the probe may read the cap's effect before the registration fixes it)."""
     import math
     from lag_ladder.summarize_task import flip_rate, no_answer_rate, paired_delta
     repo_root = Path(repo_root)
@@ -275,6 +276,9 @@ def probe(cfg: TaskConfig, repo_root: Path, *, out: Path, n: int, reader: str | 
         raise _refuse(f"probe reader {reader!r} is not one of the config's readers {list(cfg.readers)}")
     if not (0 < n <= cfg.n_prompts):
         raise _refuse(f"probe n must be in (0, n_prompts={cfg.n_prompts}]")
+    max_new = cfg.max_new if max_new is None else int(max_new)
+    if max_new <= 0:
+        raise _refuse(f"probe max_new must be positive, got {max_new}")
     try:
         upstream_check(cfg.upstream_path, cfg.upstream_sha, UPSTREAM_PATHS, who="task-probe")
     except RuntimeError as e:
@@ -307,12 +311,12 @@ def probe(cfg: TaskConfig, repo_root: Path, *, out: Path, n: int, reader: str | 
     _call(cfg, repo_root, ["cells", "--reader", reader, "--writer", cfg.writer,
                            "--prompts", str(Path(cfg.prompts).resolve()), "--indices", str(idx_path.resolve()),
                            "--far-tokens", str(Path(cfg.far_tokens).resolve()), "--far-seq", str(cfg.far_seq),
-                           "--max-new", str(cfg.max_new), "--control-n", str(n), "--out", str(cells_dir)], runner, tools_dir)
+                           "--max-new", str(max_new), "--control-n", str(n), "--out", str(cells_dir)], runner, tools_dir)
     fresh = _by_index(_read_jsonl(cells_dir / "fresh.jsonl"))
     if sorted(fresh) != idx:
         raise _refuse(f"fresh.jsonl holds {len(fresh)} records, expected {n}")
     ctl = judge_controls(cells_dir, n, cfg)
-    rec = {"schema": "task-probe-v1", "reader": reader, "writer": cfg.writer, "n": n, "max_new": cfg.max_new,
+    rec = {"schema": "task-probe-v1", "reader": reader, "writer": cfg.writer, "n": n, "max_new": max_new,
            "prompts_sha256": sha256_file_bytes(cfg.prompts), "far_tokens_sha256": sha256_file_bytes(cfg.far_tokens),
            "equivalence": equivalence, "controls": ctl,
            "acc_fresh": float(100.0 * sum(fresh[i]["correct"] for i in idx) / n), "arms": {},
@@ -342,15 +346,16 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default=None, help="probe: output directory, OUTSIDE results/")
     ap.add_argument("--n", type=int, default=64, help="probe: the first n prompts")
     ap.add_argument("--reader", default=None, help="probe: the reader spec; default the config's last reader")
+    ap.add_argument("--max-new", type=int, default=None, help="probe: override the config's max_new")
     a = ap.parse_args(argv)
     cfg = load_task_config(Path(a.config), REPO_ROOT)
     try:
         if a.command == "probe":
             if not a.out:
                 raise _refuse("probe needs --out (outside results/)")
-            rec = probe(cfg, REPO_ROOT, out=Path(a.out), n=a.n, reader=a.reader)
+            rec = probe(cfg, REPO_ROOT, out=Path(a.out), n=a.n, reader=a.reader, max_new=a.max_new)
             eq, c = rec["equivalence"], rec["controls"]
-            print(f"probe {rec['reader']} n {rec['n']}: equivalence {'ok' if eq['passed'] else 'FAILED'} "
+            print(f"probe {rec['reader']} n {rec['n']} max_new {rec['max_new']}: equivalence {'ok' if eq['passed'] else 'FAILED'} "
                   f"(max_abs_diff {eq['max_abs_diff']:.3e}, b1 rel gap {eq['b1_rel_gap']}); "
                   f"floor flip {c['floor_flip_rate']:.3f}; identity flips {c['identity_flips']}; acc_fresh {rec['acc_fresh']:.1f}")
             for arm, x in rec["arms"].items():

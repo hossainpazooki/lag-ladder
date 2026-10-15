@@ -1,6 +1,6 @@
 """A stand-in for tools/task_swap.py, called the way the (C) driver calls `subprocess.run`:
 `[python, <tools>/task_swap.py, equivalence|cells, ...]`. It writes the files the real tool writes — `equivalence.json`,
-and one JSONL per arm (fresh, fresh32, fresh2, stale, near, far) with the task-record-v1 keys — by rules a test chooses:
+and one JSONL per arm (fresh, fresh32, fresh2, stale, near, far) with the task-record-v2 keys — by rules a test chooses:
 
   * `equivalence(args) -> (max_abs_diff, b1_median)`; default (0.0, the --expect-b1 value);
   * `outcome(index, step, arm) -> (answer, reached_cap)`; default: FRESH answers gold on prompts with index % 2 == 0,
@@ -75,9 +75,10 @@ class FakeTaskSwap:
                         fresh_ans, _ = self.outcome(i, step, "fresh", gold)
                         comp = [int(ans or 0) + 1, 2, 3]
                         fresh_comp = [int(fresh_ans or 0) + 1, 2, 3]
-                        rec = {"schema": "task-record-v1", "index": i, "prompt_len": 50 + i % 7, "n_tokens": 3,
+                        text = f"#### {ans}" if ans is not None else "no answer"
+                        rec = {"schema": "task-record-v2", "index": i, "prompt_len": 50 + i % 7, "n_tokens": 3,
                                "reached_cap": cap, "answer": ans, "gold": gold, "correct": ans == gold,
-                               "completion_sha256": _sha(comp),
+                               "completion_sha256": _sha(comp), "completion_text": text, "answer_first_hash": ans,
                                "first_divergence": None if arm == "fresh" else (None if comp == fresh_comp else 0),
                                "b1_fresh_path": (0.001 * step * (1 + i % 3)) if arm == "stale" else None}
                         f.write(json.dumps(rec) + "\n")

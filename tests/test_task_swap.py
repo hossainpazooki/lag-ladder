@@ -61,14 +61,27 @@ def test_first_divergence_is_the_first_differing_position_or_none():
     assert task_swap.first_divergence([1, 2], [1, 2, 3]) == 2
 
 
+def test_first_hash_number_is_the_number_after_the_first_marker_or_none():
+    assert task_swap.first_hash_number("so #### 3 ... later #### 5") == "3"
+    assert task_swap.first_hash_number("#### 1,234.5 and #### 7") == "1234.5"
+    assert task_swap.first_hash_number("the answer is 42") is None
+    # the registered rule reads the LAST marker; the first-marker reading is kept beside it for the loop diagnosis
+    assert task_swap.final_number("so #### 3 ... later #### 5") == "5"
+
+
 def test_record_has_the_contract_keys_and_marks_the_cap_and_a_missing_answer():
     rec = task_swap.cell_record(index=7, prompt_len=80, completion=[5, 6, 7], max_new=3, eos_id=99, text="no number here",
                                 gold="4", fresh_completion=[5, 6, 8])
-    assert set(rec) == task_swap.RECORD_KEYS
+    assert set(rec) == task_swap.RECORD_KEYS and rec["schema"] == "task-record-v2"
+    assert rec["completion_text"] == "no number here" and rec["answer_first_hash"] is None
     assert rec["index"] == 7 and rec["prompt_len"] == 80 and rec["answer"] is None and rec["correct"] is False
     assert rec["reached_cap"] is True and rec["first_divergence"] == 2 and rec["n_tokens"] == 3
     assert rec["completion_sha256"] == task_swap.tokens_sha256([5, 6, 7])
     rec = task_swap.cell_record(index=1, prompt_len=5, completion=[1, 99], max_new=3, eos_id=99, text="#### 4", gold="4",
                                 fresh_completion=None)
     assert rec["reached_cap"] is False and rec["correct"] is True and rec["first_divergence"] is None
+    assert rec["completion_text"] == "#### 4" and rec["answer_first_hash"] == "4"
+    rec = task_swap.cell_record(index=2, prompt_len=5, completion=[1, 2, 3], max_new=3, eos_id=99,
+                                text="#### 4 wait #### 6", gold="4", fresh_completion=None)
+    assert rec["answer"] == "6" and rec["correct"] is False and rec["answer_first_hash"] == "4"
     json.dumps(rec)
