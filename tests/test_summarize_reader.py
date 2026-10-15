@@ -219,3 +219,19 @@ def test_seal_readout_fits_the_slope_only_over_texts_the_sealed_rungs_carry(tmp_
     assert seal_readout(summary, tmp_path, "x")["clauses"]["i"]["verdict"] == "FALSIFIED"
     summary["slope_fit"]["on-path"]["slope"] = None
     assert seal_readout(summary, tmp_path, "x")["clauses"]["i"]["verdict"] == "UNREAD"
+
+
+def test_summary_judges_a_rung_against_the_controls_of_its_own_pair_under_per_pair(repo, seal_cfg):
+    from tests.test_reader import _setup_per_pair
+    cfg, tools = _setup_per_pair(repo, seal_cfg)
+    reader.run(cfg, repo, runner=FakeInstrument(), seal_cfg=seal_cfg, tools_dir=tools)
+    s = summarize(cfg)
+    ctl = s["controls"]
+    roll_key = [k for k in ctl if "ownrun-rollout" in k and "local:noise-0.001" in k]
+    held_key = [k for k in ctl if "olmo2-1b-rlvr1" in k and "local:noise-0.001" in k]
+    assert len(roll_key) == 1 and len(held_key) == 1
+    rc = ctl[roll_key[0]]
+    assert set(rc["floor"]["median_kl_by_text"]) == {"rollout"} and rc["scrambled"]["passed"] and rc["passed"]
+    assert set(ctl[held_key[0]]["floor"]["median_kl_by_text"]) == {"corpus", "on-path"}
+    e = {x["label"]: x for x in s["rungs"]}
+    assert e["rollout-1e-3"]["controls_passed"] is True and e["rollout-1e-3"]["controls"] == roll_key[0]

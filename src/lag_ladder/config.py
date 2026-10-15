@@ -309,6 +309,11 @@ def load_reader_config(path: Path, repo_root: Path) -> ReaderConfig:
         raise ValueError(f"{path.name} [reader.controls] identity_max_logit_diff must be in (0, 1)")
     if not (0 < float(controls["scrambled_min"])):
         raise ValueError(f"{path.name} [reader.controls] scrambled_min must be positive")
+    # 0020: controls per (reader, pair) on the pair's own texts; the default keeps 0012-0018's plans as they ran.
+    per_pair = controls.get("per_pair", False)
+    if not isinstance(per_pair, bool):
+        raise ValueError(f"{path.name} [reader.controls] per_pair must be a bool when set")
+    controls["per_pair"] = per_pair
     for k in _READER_FLOOR_KEYS:
         # Empty-able: 0012 fixes them from the floor probe; `run` refuses while they are unset.
         if k not in controls:
@@ -388,7 +393,7 @@ def load_reader_config(path: Path, repo_root: Path) -> ReaderConfig:
     first = {}
     for r in rungs:
         first.setdefault(r.reader, r)
-    for r in first.values():
+    for r in ([] if controls["per_pair"] else first.values()):
         if r.texts is not None and "rollout" in r.texts:
             raise ValueError(f"{path.name}: reader {r.reader}'s first rung ({r.label}) is a rollout rung; its controls "
                              "run on the first rung's pair, so a corpus rung must come first")

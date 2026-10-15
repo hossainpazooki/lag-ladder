@@ -192,6 +192,15 @@ def _band(median_kl: float, rule: dict) -> str:
     return "UNRESOLVED"
 
 
+def _control_key(reader: str, pair: str | None, cfg: ReaderConfig) -> str:
+    """The unit a control judges: the reader (0012), or the reader on one pair (0020, per_pair)."""
+    if cfg.controls.get("per_pair"):
+        if not pair:
+            raise _refuse(f"reader {reader}: a control job names no pair under per_pair")
+        return f"{reader} @ {pair}"
+    return reader
+
+
 def _controls(reader: str, jobs: dict, cfg: ReaderConfig) -> dict:
     """One reader's controls judged from its floor/identity/scrambled reports. Floor limits unset => failed."""
     floor_lim_kl = cfg.controls.get("floor_max_median_kl") or None
@@ -218,7 +227,7 @@ def _controls(reader: str, jobs: dict, cfg: ReaderConfig) -> dict:
                            "passed": max_logit <= float(cfg.controls["identity_max_logit_diff"])}
     scr = [r for (kind, _t, _s), r in jobs.items() if kind == "scrambled"]
     if scr:
-        if any(r["text"] != "corpus" for r in scr):
+        if not cfg.controls.get("per_pair") and any(r["text"] != "corpus" for r in scr):
             raise _refuse(f"reader {reader}: a scrambled control report is not on corpus text")
         med = float(np.median([np.mean(r["kl_per_token"]) for r in scr]))
         out["scrambled"] = {"median_kl": med, "passed": med >= float(cfg.controls["scrambled_min"])}
@@ -252,7 +261,7 @@ def summarize(cfg: ReaderConfig, root: Path | None = None, out: Path | None = No
         rep = _load_report(root / j["dir"], j["report_sha256"], root, cfg.upstream_path)
         key = (j["kind"], rep["text"], int(rep["seq"]))
         if j["kind"] in ("floor", "identity", "scrambled"):
-            cell = by_reader.setdefault(j["reader"], {})
+            cell = by_reader.setdefault(_control_key(j["reader"], j.get("pair"), cfg), {})
         elif j["kind"] == "rung":
             if "label" not in j:
                 raise _refuse(f"{RUN_RECORD} rung job {j['dir']} names no rung label")
@@ -274,9 +283,10 @@ def summarize(cfg: ReaderConfig, root: Path | None = None, out: Path | None = No
     sealed = _sealed_backbone_rungs(repo, cfg.seal)
     for label, cell in sorted(rungs.items()):
         reader = cell["reader"]
-        ctl = controls.get(reader)
+        ckey = _control_key(reader, pair_of.get(label), cfg)
+        ctl = controls.get(ckey)
         if ctl is None:
-            raise _refuse(f"rung {label}: reader {reader} has no control reports")
+            raise _refuse(f"rung {label}: {ckey} has no control reports")
         meta = _rung_distance(label, reader, repo)
         reps = list(cell["reports"].values())
         digests = {side: {d for r in reps if (d := _digest(r, side, root, cfg.upstream_path)) is not None} for side in ("fresh", "stale")}
@@ -289,7 +299,7 @@ def summarize(cfg: ReaderConfig, root: Path | None = None, out: Path | None = No
         entry = {"label": label, "reader": reader, "pair": pair_of.get(label), "kind": meta["kind"],
                  "rel_norm": meta["rel_norm"], "rel_delta_all": meta["rel_delta_all"], "distance_source": meta["distance_source"],
                  "manifest_digest": {s: (next(iter(d)) if d else None) for s, d in digests.items()},
-                 "controls_passed": ctl["passed"], "withheld": withheld, "texts": {}}
+                 "controls": ckey, "controls_passed": ctl["passed"], "withheld": withheld, "texts": {}}
         for text in texts_of.get(label, texts):
             trs = sorted((r for (_k, t, _s), r in cell["reports"].items() if t == text), key=lambda r: int(r["seq"]))
             if not trs:

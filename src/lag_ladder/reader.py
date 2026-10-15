@@ -94,6 +94,8 @@ def plan(cfg: ReaderConfig) -> Plan:
             readers.append(r.reader)
             own[r.reader] = r
     jobs: list[Job] = []
+    if cfg.controls.get("per_pair"):
+        return _plan_per_pair(cfg, readers, texts)
     for spec in readers:
         o = own[spec]
         slug = reader_slug(spec)
@@ -115,6 +117,46 @@ def plan(cfg: ReaderConfig) -> Plan:
     return Plan(tuple(readers), tuple(jobs))
 
 
+def _plan_per_pair(cfg: ReaderConfig, readers: list[str], texts: list[str]) -> Plan:
+    """0020: per reader, per pair its rungs use (config order): floor on that pair's texts, identity and scrambled on
+    the pair's first text, then the pair's rungs. A rollout pair's controls run on rollout text."""
+    jobs: list[Job] = []
+    for spec in readers:
+        mine = [r for r in cfg.rungs if r.reader == spec]
+        pairs: list[str] = []
+        for r in mine:
+            if r.pair not in pairs:
+                pairs.append(r.pair)
+        for pair in pairs:
+            rs = [r for r in mine if r.pair == pair]
+            ptexts: list[str] = []
+            for r in rs:
+                for t in (r.texts or texts):
+                    if t not in ptexts:
+                        ptexts.append(t)
+            o = rs[0]
+            slug = reader_slug(spec)
+            seqs = list(range(*(cfg.pairs[pair].heldout or cfg.heldout)))
+            for t in ptexts:
+                for i in seqs:
+                    jobs.append(Job("floor", spec, slug, pair, i, t, o.reader_dump, o.reader_dump, i, live=True))
+            for i in seqs:
+                jobs.append(Job("identity", spec, slug, pair, i, ptexts[0], o.reader_dump, o.reader_dump, i))
+            for pos, i in enumerate(seqs):
+                j = seqs[(pos + 1) % len(seqs)]
+                jobs.append(Job("scrambled", spec, slug, pair, i, ptexts[0], o.reader_dump, o.reader_dump, j))
+            for r in rs:
+                for t in (r.texts or texts):
+                    for i in seqs:
+                        jobs.append(Job("rung", spec, r.label, pair, i, t, r.reader_dump, r.writer_dump, i, rung=r))
+    return Plan(tuple(readers), tuple(jobs))
+
+
+def control_key(j: Job, cfg: ReaderConfig) -> str:
+    """The unit a control judges: the reader (0012), or the reader on one pair (0020, per_pair)."""
+    return f"{j.reader} @ {j.pair}" if cfg.controls.get("per_pair") else j.reader
+
+
 # --- layout ------------------------------------------------------------------------------------------------
 
 def dumps_root(repo_root: Path, pair: str) -> Path:
@@ -132,6 +174,8 @@ def dump_dir(repo_root: Path, pair: str, key: str, seq: int) -> Path:
 def job_dir(cfg: ReaderConfig, j: Job) -> Path:
     if j.kind == "rung":
         return cfg.results_dir / "rungs" / j.label / j.text / f"seq{j.seq}"
+    if cfg.controls.get("per_pair"):
+        return cfg.results_dir / "controls" / reader_slug(j.reader) / j.pair / j.kind / j.text / f"seq{j.seq}"
     return cfg.results_dir / "controls" / reader_slug(j.reader) / j.kind / j.text / f"seq{j.seq}"
 
 
@@ -314,7 +358,7 @@ def run(cfg: ReaderConfig, repo_root: Path, *, runner=subprocess.run, limit: int
         for j in p.jobs:
             if limit is not None and done >= limit:
                 break
-            if j.kind == "rung" and j.reader in unevaluable:
+            if j.kind == "rung" and control_key(j, cfg) in unevaluable:
                 continue
             out = job_dir(cfg, j)
             out.mkdir(parents=True, exist_ok=True)
@@ -331,7 +375,7 @@ def run(cfg: ReaderConfig, repo_root: Path, *, runner=subprocess.run, limit: int
             if j.kind == "floor":
                 # 0013: the floor halts on median mean-KL only; max_abs_logit_diff is recorded, not a limit
                 # (a single float16 rounding extreme over 256 x vocab logits is heavy-tailed across readers).
-                key = (j.reader, j.text)
+                key = (control_key(j, cfg), j.text)
                 floor_kls.setdefault(key, []).append(mkl)
                 if len(floor_kls[key]) == n_of[j.pair]:
                     med = float(np.median(floor_kls[key]))
@@ -344,13 +388,14 @@ def run(cfg: ReaderConfig, repo_root: Path, *, runner=subprocess.run, limit: int
                                   f"{mdiff:.3e} > {cfg.controls['identity_max_logit_diff']}; the scorer does not "
                                   "reproduce its own forward")
             elif j.kind == "scrambled":
-                scrambled_kls.setdefault(j.reader, []).append(mkl)
-                if len(scrambled_kls[j.reader]) == n_of[j.pair]:
-                    med = float(np.median(scrambled_kls[j.reader]))
+                ck = control_key(j, cfg)
+                scrambled_kls.setdefault(ck, []).append(mkl)
+                if len(scrambled_kls[ck]) == n_of[j.pair]:
+                    med = float(np.median(scrambled_kls[ck]))
                     if med < float(cfg.controls["scrambled_min"]):
                         # Not a halt: the reader's rungs are UNEVALUABLE (design §13) and are skipped.
-                        unevaluable.add(j.reader)
-                        record["unevaluable_readers"][j.reader] = (
+                        unevaluable.add(ck)
+                        record["unevaluable_readers"][ck] = (
                             f"UNEVALUABLE: median scrambled mean-KL {med:.3e} < scrambled_min "
                             f"{cfg.controls['scrambled_min']}; its rungs are skipped")
             save()

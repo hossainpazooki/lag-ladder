@@ -380,3 +380,70 @@ def test_a_readers_first_rung_may_not_be_a_rollout_rung(repo, seal_cfg):
     cpath.write_text(head.replace("[[reader.rungs]]", "[[reader.rungs]]\nlabel = \"rollout-1e-3\"" + roll + "\n[[reader.rungs]]", 1), encoding="utf-8")
     with pytest.raises(ValueError, match="first rung"):
         load_reader_config(cpath, repo)
+
+
+# --- 0020: controls per (reader, pair), on the pair's own text --------------------------------------------------
+
+def _setup_per_pair(repo, seal_cfg, *, rollout_first: bool = False):
+    """The rollout fixture with `per_pair = true`; optionally the rollout rung moved ahead of the reader's others."""
+    cfg, tools = _setup_rollout(repo, seal_cfg)
+    cpath = repo / "config" / "reader.toml"
+    text = cpath.read_text(encoding="utf-8").replace("[reader.controls]\n", "[reader.controls]\nper_pair = true\n", 1)
+    if rollout_first:
+        head, roll = text.split("\n[[reader.rungs]]\nlabel = \"rollout-1e-3\"", 1)
+        text = head.replace("[[reader.rungs]]", "[[reader.rungs]]\nlabel = \"rollout-1e-3\"" + roll + "\n[[reader.rungs]]", 1)
+    cpath.write_text(text, encoding="utf-8")
+    commit_all(repo, "per-pair controls")
+    return load_reader_config(cpath, repo), tools
+
+
+def test_per_pair_controls_run_on_each_pair_of_the_reader_on_that_pairs_own_text(repo, seal_cfg):
+    cfg, tools = _setup_per_pair(repo, seal_cfg)
+    assert cfg.controls["per_pair"] is True
+    p = reader.plan(cfg)
+    ctl = [j for j in p.jobs if j.reader == "local:noise-0.001" and j.kind != "rung"]
+    held = [j for j in ctl if j.pair == "olmo2-1b-rlvr1"]
+    roll = [j for j in ctl if j.pair == "ownrun-rollout"]
+    assert {j.seq for j in held} == {1, 2, 3}
+    assert {(j.kind, j.text) for j in held} == {("floor", "corpus"), ("floor", "on-path"), ("identity", "corpus"),
+                                                ("scrambled", "corpus")}
+    assert {j.seq for j in roll} == {0, 1, 2, 3}
+    assert {(j.kind, j.text) for j in roll} == {("floor", "rollout"), ("identity", "rollout"), ("scrambled", "rollout")}
+    # a pair's controls precede that pair's rungs, and land under their own directory
+    order = {id(j): i for i, j in enumerate(p.jobs)}
+    rung = [j for j in p.jobs if j.label == "rollout-1e-3"]
+    assert max(order[id(j)] for j in roll) < min(order[id(j)] for j in rung)
+    assert len({reader.job_dir(cfg, j) for j in ctl}) == len(ctl)
+    assert "ownrun-rollout" in reader.job_dir(cfg, roll[0]).as_posix()
+    rec = reader.run(cfg, repo, runner=FakeInstrument(), seal_cfg=seal_cfg, tools_dir=tools)
+    assert rec["halted"] is None
+    scr = [j for j in rec["jobs"] if j["kind"] == "scrambled" and j["pair"] == "ownrun-rollout"]
+    assert len(scr) == 4 and {j["text"] for j in scr} == {"rollout"}
+
+
+def test_per_pair_lets_a_readers_first_rung_be_a_rollout_rung(repo, seal_cfg):
+    cfg, _ = _setup_per_pair(repo, seal_cfg, rollout_first=True)
+    assert cfg.rungs[0].label == "rollout-1e-3"
+
+
+def test_per_pair_scrambled_failure_withholds_only_that_pairs_rungs(repo, seal_cfg):
+    cfg, tools = _setup_per_pair(repo, seal_cfg)
+    # the rollout pair's dumps are copies of the olmo pair's; name the pair in their metadata so the fake can see it
+    for meta in (repo / "results" / "distance" / "pairs" / "ownrun-rollout" / "dumps").rglob("meta.json"):
+        m = json.loads(meta.read_text(encoding="utf-8"))
+        m["pair"] = "ownrun-rollout"
+        meta.write_text(json.dumps(m), encoding="utf-8")
+
+    def blind_on_rollout(fm, sm, fs, ss, live):
+        if not live and fs != ss and fm.get("pair") == "ownrun-rollout":
+            return 0.0, 0.0
+        return default_kl(fm, sm, fs, ss, live)
+
+    fake = FakeInstrument(kl=blind_on_rollout)
+    rec = reader.run(cfg, repo, runner=fake, seal_cfg=seal_cfg, tools_dir=tools)
+    assert rec["finished"] and rec["halted"] is None
+    ran = {(j["label"], j["pair"]) for j in rec["jobs"] if j["kind"] == "rung"}
+    assert ("rollout-1e-3", "ownrun-rollout") not in ran
+    assert any(pair == "olmo2-1b-rlvr1" and reader_of == "local:noise-0.001"
+               for (reader_of, pair) in {(j["reader"], j["pair"]) for j in rec["jobs"] if j["kind"] == "rung"})
+    assert "UNEVALUABLE" in json.dumps(rec["unevaluable_readers"])
