@@ -11,7 +11,11 @@ answer-flip rate against FRESH over its limit halts; an identity flip halts. NEA
 (DEGRADES_C or the cell is UNEVALUABLE); no number is decided here beyond the halting thresholds.
 
 `run` refuses while the config is unregistered, uncommitted, unpinned, missing its ledger entry, or unsealed; `check`
-is the gate alone; `plan` prints the jobs and decides nothing.
+is the gate alone; `plan` prints the jobs and decides nothing. `probe` is the pre-registration probe (section 15): one
+reader, the first n prompts, every arm and both control arms, the equivalence control first; it needs no registration,
+pin or seal - only the upstream gate - refuses to write under results/, and writes probe.json with the numbers the
+registering entry fixes (the floor's flip rate, the FRESH baseline, each arm's discordance and the bootstrap half-width
+it implies at the registered n).
 """
 import argparse
 import json
@@ -252,13 +256,111 @@ def run(cfg: TaskConfig, repo_root: Path, *, runner=subprocess.run, seal_cfg=Non
     return record
 
 
+# --- probe ---------------------------------------------------------------------------------------------------------
+
+def probe(cfg: TaskConfig, repo_root: Path, *, out: Path, n: int, reader: str | None = None, runner=subprocess.run,
+          upstream_check=check_upstream, tools_dir: Path = TOOLS) -> dict:
+    """The pre-registration probe: equivalence, then one cells job for `reader` (default the last reader) over the
+    first n prompts with the control arms on all of them; writes OUTSIDE results/ only; decides nothing."""
+    import math
+    from lag_ladder.summarize_task import flip_rate, no_answer_rate, paired_delta
+    repo_root = Path(repo_root)
+    out_dir = Path(out).resolve()
+    results = (repo_root / "results").resolve()
+    if out_dir == results or results in out_dir.parents:
+        raise _refuse(f"probe --out {out_dir} is under results/; the probe is pre-registration and must not write "
+                      "where a registered run records")
+    reader = reader or cfg.readers[-1]
+    if reader not in cfg.readers:
+        raise _refuse(f"probe reader {reader!r} is not one of the config's readers {list(cfg.readers)}")
+    if not (0 < n <= cfg.n_prompts):
+        raise _refuse(f"probe n must be in (0, n_prompts={cfg.n_prompts}]")
+    try:
+        upstream_check(cfg.upstream_path, cfg.upstream_sha, UPSTREAM_PATHS, who="task-probe")
+    except RuntimeError as e:
+        raise Refusal(str(e)) from e
+    for what, path in (("prompts", cfg.prompts), ("far_tokens", cfg.far_tokens),
+                       ("rollout_tokens", cfg.controls["rollout_tokens"]), ("rollout_spans", cfg.controls["rollout_spans"])):
+        if not Path(path).exists():
+            raise _refuse(f"{what} file {path} does not exist")
+    if not (Path(tools_dir) / TOOL).exists():
+        raise _refuse(f"tool {TOOL} is missing under {tools_dir}")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    eq_dir = out_dir / "equivalence"
+    eq_dir.mkdir(exist_ok=True)
+    _call(cfg, repo_root, ["equivalence", "--writer", cfg.writer,
+                           "--dump-root", str(Path(cfg.controls["rollout_dump_root"]).resolve()),
+                           "--tokens", str(Path(cfg.controls["rollout_tokens"]).resolve()),
+                           "--spans", str(Path(cfg.controls["rollout_spans"]).resolve()),
+                           "--reader", cfg.controls["equivalence_reader"],
+                           "--expect-b1", repr(float(cfg.controls["equivalence_expect_b1"])),
+                           "--out", str(eq_dir)], runner, tools_dir)
+    eq_path = eq_dir / "equivalence.json"
+    if not eq_path.exists():
+        raise _refuse(f"{TOOL} did not write {eq_path}")
+    equivalence = judge_equivalence(json.loads(eq_path.read_text(encoding="utf-8")), cfg)
+    cells_dir = out_dir / "cells"
+    cells_dir.mkdir(exist_ok=True)
+    idx = list(range(n))
+    idx_path = cells_dir / "indices.json"
+    idx_path.write_text(json.dumps(idx), encoding="utf-8")
+    _call(cfg, repo_root, ["cells", "--reader", reader, "--writer", cfg.writer,
+                           "--prompts", str(Path(cfg.prompts).resolve()), "--indices", str(idx_path.resolve()),
+                           "--far-tokens", str(Path(cfg.far_tokens).resolve()), "--far-seq", str(cfg.far_seq),
+                           "--max-new", str(cfg.max_new), "--control-n", str(n), "--out", str(cells_dir)], runner, tools_dir)
+    fresh = _by_index(_read_jsonl(cells_dir / "fresh.jsonl"))
+    if sorted(fresh) != idx:
+        raise _refuse(f"fresh.jsonl holds {len(fresh)} records, expected {n}")
+    ctl = judge_controls(cells_dir, n, cfg)
+    rec = {"schema": "task-probe-v1", "reader": reader, "writer": cfg.writer, "n": n, "max_new": cfg.max_new,
+           "prompts_sha256": sha256_file_bytes(cfg.prompts), "far_tokens_sha256": sha256_file_bytes(cfg.far_tokens),
+           "equivalence": equivalence, "controls": ctl,
+           "acc_fresh": float(100.0 * sum(fresh[i]["correct"] for i in idx) / n), "arms": {},
+           "written": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+    for arm in ("stale", "near", "far"):
+        rows = _by_index(_read_jsonl(cells_dir / f"{arm}.jsonl"))
+        if sorted(rows) != idx:
+            raise _refuse(f"{arm}.jsonl holds {len(rows)} records, expected {n}")
+        d = paired_delta([rows[i]["correct"] for i in idx], [fresh[i]["correct"] for i in idx],
+                         reps=int(cfg.rule["bootstrap_reps"]), seed=cfg.seed)
+        disc = d["discordant"] / n
+        rec["arms"][arm] = {"delta": d, "discordant": d["discordant"], "discordance_rate": disc,
+                            "flip_rate": flip_rate([rows[i]["answer"] for i in idx], [fresh[i]["answer"] for i in idx]),
+                            "no_answer_rate": no_answer_rate([rows[i]["answer"] for i in idx]),
+                            "cap_rate": float(sum(bool(rows[i]["reached_cap"]) for i in idx) / n),
+                            # the interval half-width this discordance implies: 1.96 * sqrt(d / m) in points
+                            "halfwidth_points_at_discordance": {str(m): 100.0 * 1.96 * math.sqrt(disc / m)
+                                                                for m in (n, cfg.n_prompts)}}
+    (out_dir / "probe.json").write_text(json.dumps(rec, indent=1) + "\n", encoding="utf-8")
+    return rec
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python -m lag_ladder.task")
-    ap.add_argument("command", choices=["plan", "check", "run"])
+    ap.add_argument("command", choices=["plan", "check", "run", "probe"])
     ap.add_argument("--config", default=str(REPO_ROOT / "config" / "ownrun_task.toml"))
+    ap.add_argument("--out", default=None, help="probe: output directory, OUTSIDE results/")
+    ap.add_argument("--n", type=int, default=64, help="probe: the first n prompts")
+    ap.add_argument("--reader", default=None, help="probe: the reader spec; default the config's last reader")
     a = ap.parse_args(argv)
     cfg = load_task_config(Path(a.config), REPO_ROOT)
     try:
+        if a.command == "probe":
+            if not a.out:
+                raise _refuse("probe needs --out (outside results/)")
+            rec = probe(cfg, REPO_ROOT, out=Path(a.out), n=a.n, reader=a.reader)
+            eq, c = rec["equivalence"], rec["controls"]
+            print(f"probe {rec['reader']} n {rec['n']}: equivalence {'ok' if eq['passed'] else 'FAILED'} "
+                  f"(max_abs_diff {eq['max_abs_diff']:.3e}, b1 rel gap {eq['b1_rel_gap']}); "
+                  f"floor flip {c['floor_flip_rate']:.3f}; identity flips {c['identity_flips']}; acc_fresh {rec['acc_fresh']:.1f}")
+            for arm, x in rec["arms"].items():
+                d = x["delta"]
+                hw = x["halfwidth_points_at_discordance"][str(cfg.n_prompts)]
+                print(f"  {arm:6s} delta {d['delta_points']:+6.2f} [{d['ci_low']:+6.2f}, {d['ci_high']:+6.2f}]  "
+                      f"discordance {x['discordance_rate']:.3f}  flips {x['flip_rate']:.3f}  no-answer {x['no_answer_rate']:.3f}  "
+                      f"cap {x['cap_rate']:.3f}  halfwidth at n={cfg.n_prompts}: {hw:.2f} points")
+            print(f"wrote {Path(a.out) / 'probe.json'}")
+            return 0
         if a.command == "plan":
             for j in plan(cfg).jobs:
                 print(f"{j.kind:12s} reader {j.reader:16s} writer {j.writer}  prompts {len(j.indices)}  controls {j.control_n}")

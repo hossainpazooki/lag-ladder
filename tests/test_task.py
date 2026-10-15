@@ -167,3 +167,38 @@ def test_run_halts_on_a_floor_over_its_limit_or_a_nondeterministic_identity(repo
 
     with pytest.raises(task.Refusal, match="identity"):
         task.run(cfg, repo, runner=FakeTaskSwap(outcome=flaky), seal_cfg=seal_cfg, tools_dir=tools)
+
+
+# --- the probe: pre-registration, one reader, a prompt subset, outside results/ ----------------------------------
+
+def test_probe_runs_unregistered_on_a_subset_and_writes_the_registration_numbers(repo, seal_cfg, tmp_path):
+    cfg, tools = _setup_task(repo, seal_cfg, registered="", seal=False)
+    cpath = repo / "config" / "task.toml"
+    cpath.write_text(cpath.read_text(encoding="utf-8").replace(f'prompts_sha256 = "{cfg.prompts_sha256}"', 'prompts_sha256 = "GSM8K_TEST_PENDING"'), encoding="utf-8")
+    cfg = load_task_config(cpath, repo)
+    assert cfg.registered_by == "" and cfg.prompts_sha256.endswith("_PENDING")
+    fake = FakeTaskSwap()
+    out = tmp_path / "probe-out"
+    rec = task.probe(cfg, repo, out=out, n=8, runner=fake, tools_dir=tools)
+    assert [c[2] for c in fake.calls] == ["equivalence", "cells"]
+    cells = fake.calls[1]
+    assert cells[cells.index("--reader") + 1] == "local:step_32" and cells[cells.index("--control-n") + 1] == "8"
+    assert json.loads(Path(cells[cells.index("--indices") + 1]).read_text()) == list(range(8))
+    assert rec["reader"] == "local:step_32" and rec["n"] == 8 and rec["equivalence"]["passed"] is True
+    assert rec["prompts_sha256"] == hashlib.sha256(cfg.prompts.read_bytes()).hexdigest()
+    assert rec["controls"]["floor_flip_rate"] == pytest.approx(1 / 8) and rec["controls"]["identity_flips"] == 0
+    assert rec["acc_fresh"] == pytest.approx(50.0)
+    for arm in ("stale", "near", "far"):
+        a = rec["arms"][arm]
+        assert {"delta", "flip_rate", "no_answer_rate", "cap_rate", "discordant"} <= set(a) and a["delta"]["n"] == 8
+    assert rec["arms"]["near"]["delta"]["delta_points"] == pytest.approx(-50.0)
+    assert (out / "probe.json").exists() and not (out / "run.json").exists()
+    assert "halfwidth_points_at_discordance" in rec["arms"]["stale"]
+
+
+def test_probe_refuses_an_out_under_results_and_a_reader_the_config_does_not_name(repo, seal_cfg, tmp_path):
+    cfg, tools = _setup_task(repo, seal_cfg, registered="", seal=False)
+    with pytest.raises(task.Refusal, match="results"):
+        task.probe(cfg, repo, out=repo / "results" / "probe", n=4, runner=FakeTaskSwap(), tools_dir=tools)
+    with pytest.raises(task.Refusal, match="reader"):
+        task.probe(cfg, repo, out=tmp_path / "p", n=4, reader="local:step_7", runner=FakeTaskSwap(), tools_dir=tools)

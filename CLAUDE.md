@@ -51,7 +51,7 @@ outcome, and entry 0024 the ruling that adds the trainer's own text to (B)'s sta
 .venv/Scripts/python.exe -m lag_ladder.summarize_distance        # rungs by measured distance; refuses on mismatch
 .venv/Scripts/python.exe -m lag_ladder.reader plan|check|run|probe [--config config/ownrun.toml]   # statistic (B)
 .venv/Scripts/python.exe -m lag_ladder.summarize_reader [--config config/ownrun.toml]
-.venv/Scripts/python.exe -m lag_ladder.task plan|check|run [--config config/ownrun_task.toml]   # statistic (C), §15
+.venv/Scripts/python.exe -m lag_ladder.task plan|check|run|probe [--config config/ownrun_task.toml]   # statistic (C), §15; probe: --out OUTSIDE results/, --n 64
 .venv/Scripts/python.exe -m lag_ladder.summarize_task [--config config/ownrun_task.toml]
 ```
 On macOS/Linux the interpreter is `.venv/bin/python`. The project pins Python 3.12.
@@ -72,7 +72,7 @@ per rung) · `summarize_distance` (rungs by measured distance, tied to the dumps
 (B) driver: plan|check|run|probe; controls per reader, then the rungs, by subprocess into the pinned
 instrument; refuses while `reader.toml` is unregistered) · `summarize_reader` (recomputes B1–B4 from the
 reports, withholds failed-control rungs, places rungs by the distance ladder's `distance.json`, reads the sealed
-clauses out; per-rung texts and ragged continuations for §14) · `task` (the (C) driver, §15: plan|check|run; the
+clauses out; per-rung texts and ragged continuations for §14) · `task` (the (C) driver, §15: plan|check|run|probe; the
 dump-equivalence control first, then one `cells` job per reader with the floor and identity arms; halts on the
 equivalence, the floor or the identity) · `summarize_task` (recomputes Δ accuracy with a seeded paired bootstrap, the
 (C) bands, flip / no-answer / cap rates, the (B)→(C) rank correlation; withholds a lag whose positive controls do not
