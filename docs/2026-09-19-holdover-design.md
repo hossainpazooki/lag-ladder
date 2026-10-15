@@ -637,7 +637,7 @@ to 32. Falsified (i): the format is most of the distance and 0021's 0.77 stands 
 stale cache is as bad as no prompt. Not registered: a chat-formatted non-GSM8K prompt (same system line, other task) as an
 intermediate control — a later registration if far reads large and near small.
 
-## 15. Statistic (C), "does the task notice", on the own run (designed 2026-10-15; unregistered, unbuilt)
+## 15. Statistic (C), "does the task notice", on the own run (designed 2026-10-15, revised after review the same day; unregistered, unbuilt)
 
 **Why.** (B) at the operating lag on the trainer's own prompts: the reader notices from the first optimizer step (0018),
 with per-reader controls passed (0021). (C) asks whether the task output changes — the number a practitioner weighs
@@ -664,36 +664,63 @@ completion; exact match against gold as the run's reward defined it.
 
 **Statistics.** (C1), verdict-bearing: per g, Δ = acc(STALE) − acc(FRESH) in points over the 1,319 prompts, with a seeded
 paired bootstrap over prompts (2,000 reps) carrying the interval. (C2), descriptive: the answer-flip rate (final answer
-differs between STALE and FRESH, right or wrong); the first-divergence token position; the per-prompt flip against the
-per-prompt (B1) of the same prompt and reader (rank correlation — the (B)→(C) link); McNemar on the discordant pairs
-beside the interval, not verdict-bearing. Multiplicity as §4: six cells, no correction claimed, the count named.
+differs between STALE and FRESH, right or wrong); the per-arm no-answer rate (no extractable number, the cap reached) —
+a stale cache can change the truncation rate itself, so it is recorded per arm, not folded into "wrong"; the
+first-divergence token position; and the (B)→(C) link: per test prompt, (B1) is computed by the same tool on the FRESH
+arm's greedy completion teacher-forced under the FRESH and the STALE cache (one extra forward; §13's on-path text with
+the fresh path as the continuation — a new text for (B1), named so, descriptive), and the per-prompt flip is rank-correlated
+with it. (B)'s rollout (B1) of 0018 exists for ten training prompts only; nothing in (C) is correlated with it. McNemar
+on the discordant pairs beside the interval, not verdict-bearing. Multiplicity as §4: six cells, no correction claimed,
+the count named.
 
 **Bands (§4's, the sign fixed).** HOLDS_C: |Δ| ≤ 1.0 point with the interval inside ±2.0. DEGRADES_C: Δ ≤ −5.0 with the
 interval below −2.0. UNRESOLVED between. The interval's half-width is ≈ 1.96·√(d/n) for discordance d: 1.5 to 1.7 points
-at 7–10%, so HOLDS_C needs discordance well under 7% — which is why the flip rate is reported beside the verdict.
+at 7–10%, so HOLDS_C needs discordance well under 7% — which is why the flip rate is reported beside the verdict. The
+bands are in accuracy points and were drafted (§4) with no baseline in mind; the step-32 policy's test accuracy is not
+known before the probe, and a one-point band on a low baseline is a different claim than on a high one. R-C22 restates
+the bands, in points and as a fraction of the probe's FRESH accuracy, before the seal is written.
 
 **Controls, per g, before the cells; the cell is UNEVALUABLE without them.** Positive: NEAR and FAR must read DEGRADES_C
-(the instrument fires on a wrong cache; §4's SCRAMBLED, in two strengths, as §14.2). Floor: FRESH built through float16
-against FRESH in float32 — the answer-flip rate between them under a limit fixed from the probe (the (C) analogue of the
-float16 floor). Identity: FRESH twice — zero flips, a determinism check.
+(the instrument fires on a wrong cache; §4's SCRAMBLED, in two strengths, as §14.2). NEAR is a stronger control here
+than in (B): under another prompt's cache the model answers the other question, and accuracy against this prompt's gold
+collapses whatever the format shared — 0021's near-neighbour worry does not transfer, though the probe confirms NEAR
+degrades before the full run spends its generations on it. Floor: FRESH built through float16 against FRESH in float32
+— the answer-flip rate between them under a limit fixed from the probe (the (C) analogue of the float16 floor). Identity:
+FRESH twice — zero flips, a determinism check. **Dump equivalence, once per sitting, before any cell** — the control that
+ties this tool to the one every (B) number came through: for the ten rollout prompts of 0017 the tool builds the step-0
+cache live from the step-0 weights and compares it layer by layer with the step-0 dump on the private dataset (float16,
+expected equal to the last bit; a tolerance is a finding, not a pass), and reproduces 0018's rollout (B1) at one lag
+(g = 32, 8.914e-2) by teacher-forcing the stored completions under the live caches — within the float16 floor. A
+rounding point, a layout or a scaling factor wrong in the re-implemented injection shows here, not in the verdict cells.
 
 **Seal (structure; values fixed at registration after a 64-prompt probe on the run machine).** (i) NEAR and FAR
-DEGRADES_C at every g. (ii) HOLDS_C at g = 1: one step of lag costs nothing the task can measure. (iii) The answer-flip
-rate STALE vs FRESH at g = 32 ≥ 10%: a task-level effect exists where (B) reads 0.09 nats/token. Descriptive, not sealed:
-Δ at g ∈ {2, …, 32}; the flip rate's growth with lag against (B1)'s; NEAR against FAR.
+DEGRADES_C at every g. (ii) At g = 1 the interval for Δ contains 0 and its lower end lies above −2.0 points: one step of
+lag shows no measurable cost. This is a statement about the interval's location, not the HOLDS_C band: the band's
+"inside ±2.0" is decided by the discordance — at 8–10% flips the half-width alone is 1.6–1.7 points and the band is a
+coin flip at a true Δ of zero, which the prior above (near-total path divergence from g = 1) makes likely. If the probe's
+discordance at g = 1 is low enough that HOLDS_C has power (half-width ≤ 1.0, discordance ≲ 3.5%), R-C23 may tighten (ii)
+to the band; otherwise the location clause stands. (iii) The answer-flip rate STALE vs FRESH at g = 32 ≥ 10%. Read, by
+pre-commitment, as "the greedy output is not reproducible under a stale cache", not "the task degrades": a 10% flip
+rate with Δ ≈ 0 is path divergence that reconverges to a different, equally accurate answer, and a practitioner weighs
+reproducibility and accuracy separately; the accuracy claim is (ii)'s and the descriptive Δ's. Descriptive, not sealed:
+Δ at g ∈ {2, …, 32}; the flip rate's growth with lag against (B1)'s; the no-answer rate per arm; NEAR against FAR.
 
 **Where it runs; cost (estimate, not a record).** One A40 sitting under the GPU protocol: 1,319 × 6 × 4 ≈ 31.7k greedy
 generations of ≤ 256 tokens plus the cache forwards, batched; 3–5 h, $2–3; the probe first (it also sizes the TTL). Step 0
-and the kept weights from the private dataset; no dumps. Records: per (g, arm) a JSONL of {index, prompt_len, answer,
-gold, correct, completion sha256, first divergence vs FRESH}, the summary, hashes in the outcome entry.
+and the kept weights from the private dataset; the step-0 dump of the rollout prompts for the equivalence control.
+Records: per (g, arm) a JSONL of {index, prompt_len, answer (None when no number is extractable), reached_cap, gold,
+correct, completion sha256, first divergence vs FRESH, (B1) on the fresh path}, the summary, hashes in the outcome entry.
 
 **Build (after 0022's outcome, R-C18).** `tools/task_swap.py` (the instrument's interpreter; imports nothing from `kvt` or
 `lag_ladder`; re-implements the injection as `score_continuation.py` does), `lag_ladder/task.py` (gate, plan, run, record,
 halting), `lag_ladder/summarize_task.py` (bootstrap, flips, bands, seal readout), `config/ownrun_task.toml` UNREGISTERED
 until its entry; TDD with a fake. Rulings to take at registration: R-C19 greedy decoding as the verdict arm (T = 1.0
-sampling not registered); R-C20 the full test set, n = 1,319; R-C21 the four arms; R-C22 the bands above; R-C23 the
-seal's values.
+sampling not registered); R-C20 the full test set, n = 1,319; R-C21 the four arms and the dump-equivalence control;
+R-C22 the bands, restated against the probe's baseline; R-C23 the seal's values, and whether (ii) is the location clause
+or the band, from the probe's discordance.
 
-**What §15 cannot say.** Nothing about sampled generation (the trainer samples at T = 1.0; greedy is the paired,
-deterministic reading); nothing about a swap inside a generation; nothing beyond one seed, one 1.5B model, one task, 32
+**What §15 cannot say.** Nothing about sampled generation: the trainer samples at T = 1.0, sampling adds its own floor
+of flips against which stale-cache flips may be small, and greedy divergence is a different regime — every sentence (C)
+produces is about the *greedy* task output, and the outcome entry's wording carries the word; nothing about a swap
+inside a generation; nothing beyond one seed, one 1.5B model, one task, 32
 steps; nothing about a cache older than 32 steps; nothing a reward model would compute.
