@@ -655,9 +655,10 @@ across seeds, at a LoRA-sized gap. Expect UNRESOLVED on accuracy and a readable 
 **Construction.** Prompts: GSM8K test, all 1,319, in the run's chat template with its system line; gold = the `####`
 number. Reader at kept step g ∈ {1, 2, 4, 8, 16, 32}. Per (prompt, g) four arms, each a greedy generation of ≤ 256 new
 tokens from the same prompt under an injected prompt cache: FRESH (the reader's own cache), STALE (step 0's — the
-writer's), NEAR (another test prompt's cache under the reader's weights: the next prompt in descending token-length
-order, cut to this prompt's length; the shortest takes the longest's), FAR (a held-out web sequence's cache under the
-reader's weights, cut to this prompt's length). Caches are built live — one float32 forward of the arm's weights over the
+writer's), NEAR (another test prompt's cache under the reader's weights: the next prompt in ascending token-length
+order, so the source is at least as long and is cut to this prompt's length; the longest takes the shortest's, padded —
+the one pairing that is not a true cut), FAR (a held-out web sequence's cache under the reader's weights, cut to this
+prompt's length). Caches are built live — one float32 forward of the arm's weights over the
 prompt, rounded through float16 (the dump path's precision) — and injected as `tools/score_continuation.py` injects a dump;
 nothing is written to disk at this scale (1,319 × 6 × 2 dumps would be ≈ 90 GB). The final answer is the last number in the
 completion; exact match against gold as the run's reward defined it.
@@ -711,7 +712,7 @@ and the kept weights from the private dataset; the step-0 dump of the rollout pr
 Records: per (g, arm) a JSONL of {index, prompt_len, answer (None when no number is extractable), reached_cap, gold,
 correct, completion sha256, first divergence vs FRESH, (B1) on the fresh path}, the summary, hashes in the outcome entry.
 
-**Build (after 0022's outcome, R-C18).** `tools/task_swap.py` (the instrument's interpreter; imports nothing from `kvt` or
+**Build (after 0022's outcome, R-C18; built 2026-10-15, unregistered).** `tools/task_swap.py` (the instrument's interpreter; imports nothing from `kvt` or
 `lag_ladder`; re-implements the injection as `score_continuation.py` does), `lag_ladder/task.py` (gate, plan, run, record,
 halting), `lag_ladder/summarize_task.py` (bootstrap, flips, bands, seal readout), `config/ownrun_task.toml` UNREGISTERED
 until its entry; TDD with a fake. Rulings to take at registration: R-C19 greedy decoding as the verdict arm (T = 1.0

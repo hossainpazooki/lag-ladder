@@ -508,3 +508,112 @@ def load_distance_config(path: Path, repo_root: Path) -> DistanceConfig:
                           heldout=(int(ho[0]), int(ho[1])), dtype=str(c["dtype"]), seed=int(c["seed"]), rule=rule,
                           controls=controls, noise=noise, pairs=pairs, rungs=tuple(rungs), registered_by=reg,
                           config_path=path)
+
+
+# --- statistic (C): the task driver's configuration (design §15) -------------------------------------------------
+
+_TASK_RULE_KEYS = ("holds_abs_max", "holds_ci_abs_max", "degrades_max", "degrades_ci_max", "bootstrap_reps")
+_TASK_CONTROL_KEYS = ("n_prompts", "floor_max_flip_rate", "equivalence_max_abs_diff", "equivalence_b1_max_rel",
+                      "equivalence_reader", "equivalence_expect_b1", "rollout_tokens", "rollout_tokens_sha256",
+                      "rollout_spans", "rollout_spans_sha256", "rollout_dump_root")
+
+
+@dataclass(frozen=True)
+class TaskConfig:
+    results_dir: Path
+    upstream_path: Path
+    upstream_sha: str
+    registered_by: str
+    seal: str
+    writer: str               # the step-0 policy: local:<name> under results/distance/checkpoints
+    readers: tuple[str, ...]  # local:step_<g>
+    prompts: Path             # [{index, question, gold}] under upstream data/tokens
+    prompts_sha256: str
+    n_prompts: int
+    far_tokens: Path
+    far_tokens_sha256: str
+    far_seq: int
+    max_new: int
+    seed: int
+    rule: dict
+    controls: dict            # paths resolved under upstream; the rest as written
+    config_path: Path
+
+
+def _rel_under_upstream(s, where: str, upstream: Path) -> Path:
+    if (not isinstance(s, str) or not s.strip() or PurePosixPath(s).is_absolute() or PureWindowsPath(s).is_absolute()
+            or ".." in PurePosixPath(s).parts):
+        raise ValueError(f"{where} must be a relative path under upstream_path")
+    return upstream / s
+
+
+def _local_spec(s, where: str) -> str:
+    if not isinstance(s, str) or not s.startswith("local:") or not s[len("local:"):].strip():
+        raise ValueError(f"{where} must be a local:<name> checkpoint spec")
+    _plain_name(s[len("local:"):], where)
+    return s
+
+
+def load_task_config(path: Path, repo_root: Path) -> TaskConfig:
+    path = Path(path)
+    with open(path, "rb") as f:
+        c = tomllib.load(f)["task"]
+    for key in ("results_dir", "upstream_path", "upstream_sha", "writer", "readers", "prompts", "prompts_sha256",
+                "n_prompts", "far_tokens", "far_tokens_sha256", "far_seq", "max_new", "seed", "rule", "controls"):
+        if key not in c:
+            raise ValueError(f"{path.name} [task] is missing {key}")
+    root = Path(repo_root)
+    upstream = (root / c["upstream_path"]).resolve()
+    writer = _local_spec(c["writer"], f"{path.name} [task] writer")
+    readers = c["readers"]
+    if not isinstance(readers, list) or not readers or len(set(readers)) != len(readers):
+        raise ValueError(f"{path.name} [task] readers must be a non-empty list of distinct specs")
+    readers = tuple(_local_spec(r, f"{path.name} [task] readers") for r in readers)
+    if writer in readers:
+        raise ValueError(f"{path.name} [task] writer {writer} is also a reader; FRESH vs STALE would be identity")
+    n = int(c["n_prompts"])
+    if n <= 0:
+        raise ValueError(f"{path.name} [task] n_prompts must be positive")
+    if int(c["max_new"]) <= 0 or int(c["far_seq"]) < 0:
+        raise ValueError(f"{path.name} [task] max_new must be positive and far_seq non-negative")
+    rule = dict(c["rule"])
+    for k in _TASK_RULE_KEYS:
+        if k not in rule:
+            raise ValueError(f"{path.name} [task.rule] is missing {k}")
+    if not (0 < float(rule["holds_abs_max"]) <= float(rule["holds_ci_abs_max"]) < 5):
+        raise ValueError(f"{path.name} [task.rule] needs 0 < holds_abs_max <= holds_ci_abs_max < 5 (points)")
+    if not (float(rule["degrades_max"]) <= float(rule["degrades_ci_max"]) < 0):
+        raise ValueError(f"{path.name} [task.rule] needs degrades_max <= degrades_ci_max < 0 (points)")
+    if int(rule["bootstrap_reps"]) < 100:
+        raise ValueError(f"{path.name} [task.rule] bootstrap_reps must be at least 100")
+    controls = dict(c["controls"])
+    for k in _TASK_CONTROL_KEYS:
+        if k not in controls:
+            raise ValueError(f"{path.name} [task.controls] is missing {k}")
+    if not (0 < int(controls["n_prompts"]) <= n):
+        raise ValueError(f"{path.name} [task.controls] n_prompts must be in (0, task.n_prompts]")
+    if not (0 <= float(controls["floor_max_flip_rate"]) < 1):
+        raise ValueError(f"{path.name} [task.controls] floor_max_flip_rate must be in [0, 1)")
+    if float(controls["equivalence_max_abs_diff"]) < 0 or not (0 < float(controls["equivalence_b1_max_rel"]) < 1):
+        raise ValueError(f"{path.name} [task.controls] equivalence limits out of range")
+    if float(controls["equivalence_expect_b1"]) <= 0:
+        raise ValueError(f"{path.name} [task.controls] equivalence_expect_b1 must be positive")
+    controls["equivalence_reader"] = _local_spec(controls["equivalence_reader"], f"{path.name} [task.controls] equivalence_reader")
+    controls["rollout_tokens"] = _rel_under_upstream(controls["rollout_tokens"], f"{path.name} [task.controls] rollout_tokens", upstream)
+    controls["rollout_spans"] = _rel_under_upstream(controls["rollout_spans"], f"{path.name} [task.controls] rollout_spans", upstream)
+    controls["rollout_tokens_sha256"] = _hex_or_pending(controls["rollout_tokens_sha256"], f"{path.name} rollout_tokens_sha256")
+    controls["rollout_spans_sha256"] = _hex_or_pending(controls["rollout_spans_sha256"], f"{path.name} rollout_spans_sha256")
+    dr = controls["rollout_dump_root"]
+    if not isinstance(dr, str) or PurePosixPath(dr).is_absolute() or PureWindowsPath(dr).is_absolute() or ".." in PurePosixPath(dr).parts:
+        raise ValueError(f"{path.name} [task.controls] rollout_dump_root must be a relative path under the repository")
+    controls["rollout_dump_root"] = root / dr
+    return TaskConfig(
+        results_dir=root / c["results_dir"], upstream_path=upstream, upstream_sha=str(c["upstream_sha"]),
+        registered_by=str(c.get("registered_by", "")), seal=str(c.get("seal", "ownrun-task")),
+        writer=writer, readers=readers,
+        prompts=_rel_under_upstream(c["prompts"], f"{path.name} [task] prompts", upstream),
+        prompts_sha256=_hex_or_pending(c["prompts_sha256"], f"{path.name} prompts_sha256"), n_prompts=n,
+        far_tokens=_rel_under_upstream(c["far_tokens"], f"{path.name} [task] far_tokens", upstream),
+        far_tokens_sha256=_hex_or_pending(c["far_tokens_sha256"], f"{path.name} far_tokens_sha256"),
+        far_seq=int(c["far_seq"]), max_new=int(c["max_new"]), seed=int(c["seed"]), rule=rule, controls=controls,
+        config_path=path)

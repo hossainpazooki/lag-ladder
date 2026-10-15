@@ -1,0 +1,51 @@
+# Statistic (C), "does the task notice", on the own run (design §15). UNREGISTERED: `registered_by` is empty and the
+# prompts pin is a placeholder until the GSM8K test prompts file is prepared on the run machine (`task_swap.py prepare`),
+# the 64-prompt probe has run, and the registering entry fixes the floor limit, the bands (R-C22) and the seal (R-C23).
+# The reader at step g answers GSM8K test prompts greedily under its own prompt cache (FRESH), the step-0 writer's
+# (STALE), another test prompt's (NEAR) and a held-out web prefix of the prompt's length (FAR); caches built live and
+# rounded through float16; `tools/task_swap.py` under the instrument's interpreter.
+
+[task]
+results_dir = "results/ownrun_task"
+upstream_path = "../kv-transfer-replication"
+upstream_sha = "5d4aa4a98b40f5ab37dd83ebb6b2ee802203994a"
+registered_by = ""
+seal = "ownrun-task"
+writer = "local:step_0"
+readers = ["local:step_1", "local:step_2", "local:step_4", "local:step_8", "local:step_16", "local:step_32"]
+# [{index, question, gold}] for every GSM8K test row, written by `task_swap.py prepare` and pinned at registration.
+prompts = "data/tokens/gsm8k_test_prompts.json"
+prompts_sha256 = "GSM8K_TEST_PENDING"
+n_prompts = 1319
+# FAR prefixes: the held-out Qwen token file of 0008 (0012's pin), rows 40..49 cycled, cut to each prompt's length.
+far_tokens = "data/tokens/qwen2.5-1.5b-to-instruct_n50_len1024_seed0.npy"
+far_tokens_sha256 = "01bd7698f7413ab9a3b6958991487bbba626f5a8cc4f24142cd22091d96af747"
+far_seq = 40
+max_new = 256
+seed = 0
+
+[task.rule]
+# §4's bands with the sign fixed (points of accuracy); R-C22 restates them against the probe's baseline.
+holds_abs_max = 1.0
+holds_ci_abs_max = 2.0
+degrades_max = -5.0
+degrades_ci_max = -2.0
+bootstrap_reps = 2000
+
+[task.controls]
+# The floor (FRESH built in float32 vs through float16) and the identity (FRESH twice) run on the first n_prompts prompts
+# of every reader; the floor limit is fixed from the probe at registration (0.0 here is a placeholder, not a limit).
+n_prompts = 1319
+floor_max_flip_rate = 0.0
+# Dump equivalence, once per sitting before any cell: the writer's live cache of 0017's rollout prompts against the
+# step-0 dump (equal to the last bit expected), and 0018's rollout (B1) at step_32 reproduced through this tool
+# (results/ownrun/summary.json: 8.9137e-2).
+equivalence_max_abs_diff = 0.0
+equivalence_b1_max_rel = 1e-3
+equivalence_reader = "local:step_32"
+equivalence_expect_b1 = 0.089137
+rollout_tokens = "data/tokens/qwen2.5-1.5b-ownrun_rollout_n10_seed0.npy"
+rollout_tokens_sha256 = "7d6dec47ad87a6860094287f736ebbe44582864c2ba2918a927e5851025e80de"
+rollout_spans = "data/tokens/qwen2.5-1.5b-ownrun_rollout_n10_seed0.spans.json"
+rollout_spans_sha256 = "e631fd845aa7838186f5feebda66f13bb725b59d0cc7e8841e1a23639a977f15"
+rollout_dump_root = "results/distance/pairs/qwen2.5-1.5b-ownrun-rollout/dumps/source@local-step_0"
