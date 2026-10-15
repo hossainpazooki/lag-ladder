@@ -85,3 +85,28 @@ def test_record_has_the_contract_keys_and_marks_the_cap_and_a_missing_answer():
                                 text="#### 4 wait #### 6", gold="4", fresh_completion=None)
     assert rec["answer"] == "6" and rec["correct"] is False and rec["answer_first_hash"] == "4"
     json.dumps(rec)
+
+
+def test_greedy_and_fresh_path_kl_run_without_autograd():
+    """1024-token generation OOMed on a 44 GB card (2026-10-15): the forwards kept their autograd graphs across steps."""
+    torch = pytest.importorskip("torch", reason="the tool runs with the instrument's interpreter; torch is not pinned here")
+    import types
+    seen = []
+
+    class Out:
+        def __init__(self, cache):
+            self.past_key_values = cache
+            self.logits = torch.zeros(1, 1, 5)
+
+    def model(**kw):
+        seen.append(torch.is_grad_enabled())
+        return Out(kw["past_key_values"])
+
+    fake_sc = types.SimpleNamespace(build_cache=lambda layers, device: "cache",
+                                    forward_logits=lambda m, layers, inp, past, dev: (seen.append(torch.is_grad_enabled()),
+                                                                                      torch.zeros(1, inp.shape[1], 5))[1])
+    task_swap._sc = lambda: fake_sc
+    toks = task_swap._greedy(model, [], seed_token=1, past_len=3, max_new=4, eos_id=None, device="cpu")
+    kl = task_swap._mean_kl_fresh_path(model, [], [], seed_token=1, past_len=3, cont=[2, 3], device="cpu")
+    assert len(toks) == 4 and kl == 0.0
+    assert seen and not any(seen), "every forward must run under torch.no_grad()"

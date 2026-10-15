@@ -137,21 +137,24 @@ def _to_torch(layers):
 
 
 def _greedy(model, layers, seed_token: int, past_len: int, max_new: int, eos_id: int | None, device):
-    """Greedy tokens against the injected cache, stopping after EOS; same forward recipe as score_continuation."""
+    """Greedy tokens against the injected cache, stopping after EOS; same forward recipe as score_continuation.
+    Under no_grad: without it the autograd graph of every step is kept alive through the cache, and 1,024 steps
+    exhaust a 44 GB card (the 2026-10-15 re-probe)."""
     import torch
     sc = _sc()
-    cache = sc.build_cache(layers, device)
     tokens, tok = [], int(seed_token)
-    for i in range(max_new):
-        pos = torch.arange(past_len + i, past_len + i + 1, device=device)
-        attn = torch.ones(1, past_len + i + 1, dtype=torch.long, device=device)
-        out = model(input_ids=torch.tensor([[tok]], device=device), past_key_values=cache, attention_mask=attn,
-                    position_ids=pos[None], cache_position=pos, use_cache=True)
-        cache = out.past_key_values
-        tok = int(out.logits[0, -1].float().argmax())
-        tokens.append(tok)
-        if eos_id is not None and tok == eos_id:
-            break
+    with torch.no_grad():
+        cache = sc.build_cache(layers, device)
+        for i in range(max_new):
+            pos = torch.arange(past_len + i, past_len + i + 1, device=device)
+            attn = torch.ones(1, past_len + i + 1, dtype=torch.long, device=device)
+            out = model(input_ids=torch.tensor([[tok]], device=device), past_key_values=cache, attention_mask=attn,
+                        position_ids=pos[None], cache_position=pos, use_cache=True)
+            cache = out.past_key_values
+            tok = int(out.logits[0, -1].float().argmax())
+            tokens.append(tok)
+            if eos_id is not None and tok == eos_id:
+                break
     return tokens
 
 
@@ -162,9 +165,10 @@ def _mean_kl_fresh_path(model, fresh_layers, stale_layers, seed_token: int, past
     if len(cont) < 1:
         return None
     inp = torch.tensor([[int(seed_token), *cont[:-1]]])
-    lf = torch.log_softmax(sc.forward_logits(model, fresh_layers, inp, past_len, device), dim=-1)
-    ls = torch.log_softmax(sc.forward_logits(model, stale_layers, inp, past_len, device), dim=-1)
-    return float((lf.exp() * (lf - ls)).sum(dim=-1).mean())
+    with torch.no_grad():
+        lf = torch.log_softmax(sc.forward_logits(model, fresh_layers, inp, past_len, device), dim=-1)
+        ls = torch.log_softmax(sc.forward_logits(model, stale_layers, inp, past_len, device), dim=-1)
+        return float((lf.exp() * (lf - ls)).sum(dim=-1).mean())
 
 
 def _tokenizer_for(spec: str):
