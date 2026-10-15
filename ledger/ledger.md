@@ -794,3 +794,41 @@ statistic (C).
 
 **Consequences in this commit set:** `src/lag_ladder/summarize_reader.py`, `tests/test_summarize_reader.py`,
 `README.md`, `CLAUDE.md`.
+
+### 0019 — 2026-10-14 — Ruling: 0016's statement of record is restricted to the held-out texts it was measured on; the trainer's own text is not predicted by weight distance
+
+prior-entries-sha256: 9d45ca8f70ae5028720d200fcb9474f907a4c835d5e582ba258d3395156c4dfb
+
+**Ruled 2026-10-14, after 0018.** The statement of record for statistic (B) (0016) stands on every text it names: the
+quadratic law on the isotropic backbone, the HOLDS_B edge between 3e-3 and 1e-2, the excess of trained directions over
+noise at matched distance, and the published RL chain's HOLDS_B at lags 200 to 2400 were measured on held-out corpus
+text and the reader's own greedy continuation, and 0018 re-read the first of them a decade lower in distance without
+disturbing it. 0016 located the gap between a reader's number and a trainer's in the continuation and in the lags below
+200. 0018 found it in the prefix: on the policy's own prompts the same readers that read 2e-7 to 7e-6 on held-out text
+read 4.7e-3 to 8.9e-2, UNRESOLVED at every lag from 1 to 32, at the same weight distances (2.3e-5 to 1.05e-4).
+
+**Amendment to the statement of record.** The statement of record is read with this clause appended: *every reading
+in it is a reading of the held-out texts of 0012; on the text a pipelined trainer serves — its own prompts under the
+policy that wrote them — (B1) at this scale is not predicted by whole-vector weight distance, exceeds the held-out
+reading by four orders of magnitude, and leaves HOLDS_B at the first optimizer step (0018). The published chain's lag
+readings bound a reader of held-out text, not a trainer's staleness.* Nothing else in 0016 is amended; 0015's numbers
+and 0016's citation stand.
+
+**What this ruling does not claim.** The rollout magnitudes of 0018 are one model, one seed, ten sequences, 32 steps,
+and were read without a floor or scrambled control on rollout text (0017 ran the controls on the held-out pair only).
+They support the scope restriction above — the direction and size of the gap need no control to be read — and do not
+yet support a statement of record of their own. No band, slope or ratio on rollout text is ruled here.
+
+**Prerequisite registered.** Any later entry that states a rollout-text number as a statement of record first registers
+and passes, per reader, a float16-floor and a scrambled control on rollout text under 0014's limits, and places each
+rollout rung against its reader's rollout floor. The configuration change is the next registration entry's, not this
+one's.
+
+**Citing.** 0016 is cited as before (tag `statistic-b-closed`), read with this entry; the README's citing line names
+both. No new tag.
+
+**Not ruled here.** The sliding writer; a second seed; the 128-step extension; whether the own run's rollout reading
+becomes a statement of record once its controls exist; statistic (C).
+
+**Consequences in this commit set:** `README.md` (the (B) paragraph's closing sentence and the citing line),
+`CLAUDE.md` (the entry list and State).

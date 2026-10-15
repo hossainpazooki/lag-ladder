@@ -10,7 +10,8 @@ entry 0007 the ruling that weight distance is the axis, entry 0008 the weight-di
 entry 0009 its outcome, entry 0010 the closure of statistic (A) with the statement of record, entry 0011
 the ruling that the lane continues under statistic (B) as design §13 defines it, entries 0012–0014 (B)'s
 registration and amendments, entry 0015 its outcome, entry 0016 its closure on the ladder with the statement of record,
-entry 0017 the own run's registration and entry 0018 its outcome.
+entry 0017 the own run's registration, entry 0018 its outcome, and entry 0019 the ruling that restricts 0016's statement of
+record to the held-out texts it names.
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never
@@ -97,6 +98,8 @@ that entry and the README; the scorer stays the registered instrument for later 
 (0017, 0018)**: `config/ownrun.toml` registered by 0017 with the rollout pins and the seal; one A100 sitting ran the
 32-step GRPO trajectory and the 420 jobs without a halt; held-out text HOLDS_B at every lag (lag 32: 6.65e-6 corpus,
 3.54e-6 on-path; slopes 2.26 / 2.19), rollout text UNRESOLVED at every lag (4.68e-3 to 8.91e-2); clauses (i), (ii)
-HELD, (iii), (iv) FALSIFIED. Records and dumps are off-repository under the hashes 0018 states. Not ruled: amending
-0016's statement for the rollout text, the sliding writer, a second seed, the 128-step extension, rollout-text
-controls, statistic (C).
+HELD, (iii), (iv) FALSIFIED. Records and dumps are off-repository under the hashes 0018 states. **0019 restricts 0016's
+statement of record** to the held-out texts it names (the trainer's own text is not predicted by weight distance) and
+registers a prerequisite: no rollout-text number becomes a statement of record before per-reader float16-floor and
+scrambled controls on rollout text pass under 0014's limits. Not ruled: the sliding writer, a second seed, the 128-step
+extension, statistic (C).
