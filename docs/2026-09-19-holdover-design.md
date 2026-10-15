@@ -12,7 +12,9 @@ lives there.
 **Date:** 2026-09-19 · **Status:** design, PROPOSED, unregistered, unnumbered, nothing run. **Status
 2026-10-10:** statistic (A) complete and closed under the inherited instrument (ledger 0010); §12 carries the
 outcome. **Status 2026-10-10, later:** statistic (B) ruled and defined for this repository (ledger 0011,
-§13), unbuilt and unregistered; the run moves to RunPod; (C) and the own run not ruled. **Rulings
+§13), unbuilt and unregistered; the run moves to RunPod; (C) and the own run not ruled. **Status 2026-10-15:** the
+own run (§14) is complete and its rollout-text controls passed (0017–0021); §14.2 registers a far control (0022); §15
+designs statistic (C) on the own run, unregistered and unbuilt. **Rulings
 2026-09-22 (§10):** Oct 12 dropped, pilot first; prefix-cache persistence is the primary framing; OLMo is the
 only source until the pilot shows signal; the repo is scaffolded today. Inherits
 `docs/2026-09-02-e-rl-design.md` (the 09-02 design) for the instrument, lag ladders, controls, dumps and
@@ -591,6 +593,18 @@ rules did not anticipate is the rollout text (0018, 0019). The rulings answer to
 | R-C12 | the 128-step extension: kept open, decided after 0020's outcome; any run would be at a larger learning rate (distance saturates at 1e-4 by step 20) |
 | R-C13 | statistic (C): ruled in principle — 0018 gives it something to predict on rollout text; §15 is designed after 0020's outcome; the scorer stays unbuilt until registered |
 
+**Rulings (2026-10-15, after 0021; R-C14–R-C18).** 0021 met 0019's prerequisite. What it did not settle: one seed, and a
+scrambled control on rollout text that passed its limit by 15–26% because another GSM8K prompt's cache is a near
+neighbour — the 0.77 stale-over-scrambled reading at lag 16 has a denominator that carries the format and the system line.
+
+| | ruling |
+|---|---|
+| R-C14 | the statement-of-record amendment for the rollout reading: **not taken** — too soon; the direction and size of the gap are on record through 0019, the magnitudes and the 0.77 ratio wait for R-C15 and a second seed |
+| R-C15 | a far scrambled control on rollout text: **registered now (0022, §14.2)** — a held-out web prefix of the rollout prompt's length under the same completion, an information-free cache; the near control stays and both must pass |
+| R-C16 | a second seed: deferred until the paper's sentence is needed (a trainer sitting; the only thing that addresses one-seed) |
+| R-C17 | the 128-step extension: **closed** (nothing in 0021 reopened its trigger) |
+| R-C18 | statistic (C): **§15 designed now**, built and registered after 0022's outcome; the scorer stays unbuilt until registered |
+
 ### 14.1 Controls on the rollout text and the sliding writer (0020)
 
 `config/ownrun_controls.toml`: the same instrument, pins, pairs, bands and limits as `ownrun.toml`, which stays as run,
@@ -602,3 +616,84 @@ stays 0018). Seal `ownrun-controls` (pre-fit): (i) every rollout rung of 0018 re
 floor; (ii) the slope of log median (B1) on log writer–reader distance over the fifteen sliding rungs lies in
 [1.5, 2.5] on both texts. 740 jobs, inference only, from the private dataset's dumps and kept weights.
 
+### 14.2 The far scrambled control on the rollout text (0022)
+
+`config/ownrun_far.toml`: the same instrument, pins, pairs, bands and limits as `ownrun_controls.toml` (which stays as run,
+0021), `per_pair = true`, and the rollout pair names the held-out pair as its `far_pair`. For each reader g ∈ {1, 2, 4, 8,
+16, 32} the controls on rollout text are the float16 floor, identity, scrambled (0020: another rollout sequence's prompt
+cache under the same completion, `scrambled_min` 0.1) and **far**: the reader's own float16 dump of held-out sequence
+40 + i, of which the scorer reads the first prefix_len_i − 1 rows exactly as for every arm — a non-GSM8K prefix of the
+rollout prompt's token length, carrying no information about the prompt — under rollout sequence i's stored completion;
+median over the ten sequences, limit `far_min` 0.1; under it the unit is UNEVALUABLE, as scrambled. The held-out dumps at
+the kept steps already exist on the private dataset (1,024 tokens, so the cut is always possible); nothing is re-dumped and
+the scorer is unchanged (it checks `T ≥ rows` on the stale dump). 0017's six rollout rungs run again as a second
+descriptive replicate; the record stays 0018. The summarizer gains, per rung and text, the rung's median over its unit's
+scrambled and far medians (`over_scrambled`, `over_far`), and per unit `far_over_scrambled`. 300 jobs, inference only.
+
+Seal `ownrun-far` (pre-fit): (i) far ≥ 2× scrambled on every (reader, rollout pair) unit — the information-free cache is
+at least twice as far as the near neighbour; (ii) median (B1) over far ≤ 0.5 on every replicate rung (summarizer) and on
+0018's six rollout medians (by hand) — the step-0 cache stays nearer than halfway to an information-free one at every lag
+to 32. Falsified (i): the format is most of the distance and 0021's 0.77 stands as read. Falsified (ii): by sixteen steps the
+stale cache is as bad as no prompt. Not registered: a chat-formatted non-GSM8K prompt (same system line, other task) as an
+intermediate control — a later registration if far reads large and near small.
+
+## 15. Statistic (C), "does the task notice", on the own run (designed 2026-10-15; unregistered, unbuilt)
+
+**Why.** (B) at the operating lag on the trainer's own prompts: the reader notices from the first optimizer step (0018),
+with per-reader controls passed (0021). (C) asks whether the task output changes — the number a practitioner weighs
+against the throughput a persistent prefix cache buys. §4 defined (C) for a mid-generation swap on a published chain; this
+section redefines it for the own run, where the swap is the whole prompt cache at the prompt/completion boundary — the
+pipelined trainer's case — and §3's mid-generation construction is not used.
+
+**Prior from (B).** On rollout text, teacher-forced, the per-token argmax agreement between the fresh and the step-0 cache
+reads 0.980 at lag 1 and 0.898 at lag 32 (0018, descriptive), with the KL concentrated at the first continuation tokens.
+Under greedy generation of ~200 tokens a 2% per-token flip means nearly every completion diverges somewhere, so
+continuation exact match is ≈ 0 at every lag and carries nothing; what can move is the **final answer**: whether a
+diverged path lands on the same number. arXiv 2609.17109 (§2) is the only prior for the size — ≤ 5 points, unstable
+across seeds, at a LoRA-sized gap. Expect UNRESOLVED on accuracy and a readable flip rate.
+
+**Construction.** Prompts: GSM8K test, all 1,319, in the run's chat template with its system line; gold = the `####`
+number. Reader at kept step g ∈ {1, 2, 4, 8, 16, 32}. Per (prompt, g) four arms, each a greedy generation of ≤ 256 new
+tokens from the same prompt under an injected prompt cache: FRESH (the reader's own cache), STALE (step 0's — the
+writer's), NEAR (another test prompt's cache under the reader's weights: the next prompt in descending token-length
+order, cut to this prompt's length; the shortest takes the longest's), FAR (a held-out web sequence's cache under the
+reader's weights, cut to this prompt's length). Caches are built live — one float32 forward of the arm's weights over the
+prompt, rounded through float16 (the dump path's precision) — and injected as `tools/score_continuation.py` injects a dump;
+nothing is written to disk at this scale (1,319 × 6 × 2 dumps would be ≈ 90 GB). The final answer is the last number in the
+completion; exact match against gold as the run's reward defined it.
+
+**Statistics.** (C1), verdict-bearing: per g, Δ = acc(STALE) − acc(FRESH) in points over the 1,319 prompts, with a seeded
+paired bootstrap over prompts (2,000 reps) carrying the interval. (C2), descriptive: the answer-flip rate (final answer
+differs between STALE and FRESH, right or wrong); the first-divergence token position; the per-prompt flip against the
+per-prompt (B1) of the same prompt and reader (rank correlation — the (B)→(C) link); McNemar on the discordant pairs
+beside the interval, not verdict-bearing. Multiplicity as §4: six cells, no correction claimed, the count named.
+
+**Bands (§4's, the sign fixed).** HOLDS_C: |Δ| ≤ 1.0 point with the interval inside ±2.0. DEGRADES_C: Δ ≤ −5.0 with the
+interval below −2.0. UNRESOLVED between. The interval's half-width is ≈ 1.96·√(d/n) for discordance d: 1.5 to 1.7 points
+at 7–10%, so HOLDS_C needs discordance well under 7% — which is why the flip rate is reported beside the verdict.
+
+**Controls, per g, before the cells; the cell is UNEVALUABLE without them.** Positive: NEAR and FAR must read DEGRADES_C
+(the instrument fires on a wrong cache; §4's SCRAMBLED, in two strengths, as §14.2). Floor: FRESH built through float16
+against FRESH in float32 — the answer-flip rate between them under a limit fixed from the probe (the (C) analogue of the
+float16 floor). Identity: FRESH twice — zero flips, a determinism check.
+
+**Seal (structure; values fixed at registration after a 64-prompt probe on the run machine).** (i) NEAR and FAR
+DEGRADES_C at every g. (ii) HOLDS_C at g = 1: one step of lag costs nothing the task can measure. (iii) The answer-flip
+rate STALE vs FRESH at g = 32 ≥ 10%: a task-level effect exists where (B) reads 0.09 nats/token. Descriptive, not sealed:
+Δ at g ∈ {2, …, 32}; the flip rate's growth with lag against (B1)'s; NEAR against FAR.
+
+**Where it runs; cost (estimate, not a record).** One A40 sitting under the GPU protocol: 1,319 × 6 × 4 ≈ 31.7k greedy
+generations of ≤ 256 tokens plus the cache forwards, batched; 3–5 h, $2–3; the probe first (it also sizes the TTL). Step 0
+and the kept weights from the private dataset; no dumps. Records: per (g, arm) a JSONL of {index, prompt_len, answer,
+gold, correct, completion sha256, first divergence vs FRESH}, the summary, hashes in the outcome entry.
+
+**Build (after 0022's outcome, R-C18).** `tools/task_swap.py` (the instrument's interpreter; imports nothing from `kvt` or
+`lag_ladder`; re-implements the injection as `score_continuation.py` does), `lag_ladder/task.py` (gate, plan, run, record,
+halting), `lag_ladder/summarize_task.py` (bootstrap, flips, bands, seal readout), `config/ownrun_task.toml` UNREGISTERED
+until its entry; TDD with a fake. Rulings to take at registration: R-C19 greedy decoding as the verdict arm (T = 1.0
+sampling not registered); R-C20 the full test set, n = 1,319; R-C21 the four arms; R-C22 the bands above; R-C23 the
+seal's values.
+
+**What §15 cannot say.** Nothing about sampled generation (the trainer samples at T = 1.0; greedy is the paired,
+deterministic reading); nothing about a swap inside a generation; nothing beyond one seed, one 1.5B model, one task, 32
+steps; nothing about a cache older than 32 steps; nothing a reward model would compute.
