@@ -1,0 +1,57 @@
+{
+  "pair": "ownrun-far",
+  "prediction": {
+    "controls": "per (reader, rollout pair): float16 floor, identity, scrambled (another rollout sequence's prompt cache, 0020) and far (the reader's own dump of held-out sequence 40+i, cut by the scorer to the rollout prompt's length, under the same completion; limit far_min); limits as 0014 plus far_min = 0.1",
+    "descriptive_not_sealed": [
+      "the far medians themselves",
+      "stale over scrambled per lag (0021 read 0.037 to 0.77)",
+      "the replicate rungs against 0018 and against 0021's replicate",
+      "near over far per reader"
+    ],
+    "predictions": {
+      "i_far_over_scrambled": {
+        "at_least": 2.0,
+        "note": "clause (i) of entry 0022; read by the summarizer (controls.<unit>.far_over_scrambled)",
+        "statement": "on every (reader, rollout pair) unit the far control's median mean-KL is at least 2x the same unit's scrambled median: an information-free prefix is at least twice as far as another GSM8K prompt's",
+        "units": [
+          "local:step_1 @ qwen2.5-1.5b-ownrun-rollout",
+          "local:step_2 @ qwen2.5-1.5b-ownrun-rollout",
+          "local:step_4 @ qwen2.5-1.5b-ownrun-rollout",
+          "local:step_8 @ qwen2.5-1.5b-ownrun-rollout",
+          "local:step_16 @ qwen2.5-1.5b-ownrun-rollout",
+          "local:step_32 @ qwen2.5-1.5b-ownrun-rollout"
+        ]
+      },
+      "ii_rollout_over_far": {
+        "at_most": 0.5,
+        "note": "clause (ii) of entry 0022: the step-0 cache stays nearer than halfway to an information-free one at every lag to 32",
+        "rungs": [
+          "ownrun-rollout-lag-1",
+          "ownrun-rollout-lag-2",
+          "ownrun-rollout-lag-4",
+          "ownrun-rollout-lag-8",
+          "ownrun-rollout-lag-16",
+          "ownrun-rollout-lag-32"
+        ],
+        "statement": "on every replicate rollout rung the median (B1) is at most 0.5x its unit's far median (summarizer: texts.rollout.over_far); and the same for 0018's six rollout medians (results/ownrun/summary.json sha256 f3b8f00f...) against this configuration's far medians, read by hand in the outcome entry",
+        "text": "rollout"
+      }
+    },
+    "registering_entry": "0022",
+    "rule": {
+      "at_floor_factor": 2.0,
+      "degrades_min": 0.1,
+      "far_min": 0.1,
+      "floor_max_median_kl": 0.0001,
+      "holds_max": 0.001,
+      "scrambled_min": 0.1
+    },
+    "ruled": "2026-10-15",
+    "statistic": "per rung and text, median over held-out sequences of the mean per-token KL(pi_fresh || pi_stale) over the continuation (B1), nats/token; controls per (reader, pair) on the pair's own text",
+    "texts": [
+      "rollout"
+    ]
+  },
+  "prior_artifacts": [],
+  "sealed_pre_fit": true
+}

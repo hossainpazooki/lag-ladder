@@ -1,0 +1,102 @@
+# Statistic (B): the far scrambled control on the rollout text, scored from the own run's dumps (ledger 0022; ruling of
+# 2026-10-15 after 0021). A third reader configuration over 0017's artefacts: the same instrument, pins, pairs, bands and
+# control limits as config/ownrun_controls.toml (0020), which stays as run (0021). What is new: the rollout pair names the
+# held-out pair as its `far_pair`, so each reader's controls on rollout text gain a FAR cell — the reader's own dump of a
+# held-out web sequence, cut by the scorer to the rollout prompt's token length, under the same stored completion: a
+# prefix that carries no information about the prompt, where 0020's scrambled (another GSM8K prompt) is a near neighbour.
+# Readers are the kept steps {1, 2, 4, 8, 16, 32}; 0017's six rollout rungs run again as a descriptive replicate.
+[reader]
+results_dir = "results/ownrun_far"
+upstream_path = "../kv-transfer-replication"
+upstream_sha = "5d4aa4a98b40f5ab37dd83ebb6b2ee802203994a"
+heldout = [40, 50]
+prefix_len = 768
+dtype = "float32"
+seed = 0
+registered_by = "0022"
+seal = "ownrun-far"
+
+[reader.rule]
+statistic = "median over held-out sequences of the mean per-token KL(pi_fresh || pi_stale) over the continuation, per rung and text (design S13, ledger 0011)"
+holds_max = 1e-3
+degrades_min = 1e-1
+texts = ["corpus", "on-path"]
+generate_under = "stale"
+
+[reader.controls]
+# 0020: controls per (reader, pair) on the pair's own texts; the rollout pair's controls run on rollout text.
+per_pair = true
+identity_max_logit_diff = 1e-5
+scrambled_min = 1e-1
+# 0022: the far control's limit (median mean-KL over the pair's sequences), the same value as scrambled_min.
+far_min = 1e-1
+floor_max_median_kl = 1e-4
+
+# The held-out corpus sequences: 0008's Qwen token file (0012's pin), sequences 40..49.
+[[reader.pairs]]
+name = "qwen2.5-1.5b-to-instruct"
+tokens = "data/tokens/qwen2.5-1.5b-to-instruct_n50_len1024_seed0.npy"
+tokens_sha256 = "01bd7698f7413ab9a3b6958991487bbba626f5a8cc4f24142cd22091d96af747"
+
+# The rollout sequences (R-C6): rows 0..9, prompt = prefix, sampled completion = continuation; hashes pinned at 0017.
+# 0022: far_pair names the held-out pair; rollout sequence i's far prefix is that pair's reader dump of sequence 40 + i.
+[[reader.pairs]]
+name = "qwen2.5-1.5b-ownrun-rollout"
+tokens = "data/tokens/qwen2.5-1.5b-ownrun_rollout_n10_seed0.npy"
+tokens_sha256 = "7d6dec47ad87a6860094287f736ebbe44582864c2ba2918a927e5851025e80de"
+spans = "data/tokens/qwen2.5-1.5b-ownrun_rollout_n10_seed0.spans.json"
+spans_sha256 = "e631fd845aa7838186f5feebda66f13bb725b59d0cc7e8841e1a23639a977f15"
+heldout = [0, 10]
+far_pair = "qwen2.5-1.5b-to-instruct"
+
+# 0017's six rollout rungs, run again as a descriptive replicate (the second; the record of their reading stays 0018).
+# They carry the (reader, rollout pair) units whose far control this configuration registers; the held-out pair is
+# listed only as the far prefixes' source and has no rung here.
+
+[[reader.rungs]]
+label = "ownrun-rollout-lag-1"
+pair = "qwen2.5-1.5b-ownrun-rollout"
+reader = "local:step_1"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_1"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-rollout-lag-2"
+pair = "qwen2.5-1.5b-ownrun-rollout"
+reader = "local:step_2"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_2"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-rollout-lag-4"
+pair = "qwen2.5-1.5b-ownrun-rollout"
+reader = "local:step_4"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_4"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-rollout-lag-8"
+pair = "qwen2.5-1.5b-ownrun-rollout"
+reader = "local:step_8"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_8"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-rollout-lag-16"
+pair = "qwen2.5-1.5b-ownrun-rollout"
+reader = "local:step_16"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_16"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-rollout-lag-32"
+pair = "qwen2.5-1.5b-ownrun-rollout"
+reader = "local:step_32"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_32"
+texts = ["rollout"]
