@@ -920,3 +920,50 @@ ruling, not a reading, and is not taken here. The sliding reading answers R-C10:
 statistic (C) (R-C13); rollout sliding.
 
 **Consequences in this commit set:** `README.md`, `CLAUDE.md`.
+
+### 0022 — 2026-10-15 — Amendment: a far scrambled control on the rollout text, scored from the own run's dumps; rulings after 0021
+
+prior-entries-sha256: e906341d42bef3ecec694e7b3c887fd69534a0d05283a07faafd1a039d7a3b50
+
+**Rulings (2026-10-15, after 0021; design §14 R-C14–R-C18).** The amendment of (B)'s statement of record with the
+rollout reading is not taken: one seed, and the scrambled control 0021 passed on rollout text is a near neighbour —
+another GSM8K prompt's cache, sharing the system line, the format and the length — that cleared 0014's limit by 15–26%, so
+the 0.77 reading of stale over scrambled at lag 16 has a denominator that carries the format. A far control is registered
+here (R-C15); the second seed waits for the paper's sentence (R-C16); the 128-step extension is closed (R-C17); statistic
+(C) is designed in §15, to be built and registered after this entry's outcome (R-C18).
+
+**Registers** `config/ownrun_far.toml` (`registered_by = "0022"`), a third reader configuration over the own run's
+artefacts: the same instrument (`5d4aa4a`), pins, pairs, bands and limits as `config/ownrun_controls.toml`, which stays
+as run (0021), with `per_pair = true` and the rollout pair naming the held-out pair as its `far_pair`.
+
+**The far control.** For each reader g ∈ {1, 2, 4, 8, 16, 32} on the rollout pair, beside the float16 floor, identity and
+scrambled of 0020: the reader's own float16 dump of held-out sequence 40 + i, of which the scorer reads the first
+prefix_len_i − 1 rows as it does for every arm — a web prefix of exactly the rollout prompt's token length, carrying no
+information about the prompt — under rollout sequence i's stored completion. Median over the ten sequences of the mean
+per-token KL; limit `far_min = 0.1`; a unit under it is UNEVALUABLE, as scrambled. Both controls must pass. The held-out
+dumps at the kept steps are on the private dataset; nothing is re-dumped; the scorer is unchanged. The driver plans a
+`far` job per sequence after scrambled when a pair names a far pair; the summarizer judges it and reads, per rung and
+text, the rung's median over its unit's scrambled and far medians (`over_scrambled`, `over_far`) and, per unit,
+`far_over_scrambled`. The default plans of 0012–0021 are unchanged. 0017's six rollout rungs run again as a second
+descriptive replicate; the record stays 0018.
+
+**Seal** (`ledger/predictions/ownrun-far.json`, sidecar `324bd425…`, pre-fit, committed before any score). (i) On every
+(reader, rollout pair) unit the far median is at least 2× the same unit's scrambled median: an information-free prefix
+is at least twice as far as another GSM8K prompt's. (ii) On every replicate rollout rung the median (B1) is at most 0.5×
+its unit's far median (read by the summarizer), and the same for 0018's six rollout medians against these far medians
+(read by hand, as 0020's clause (i)): the step-0 cache stays nearer than halfway to an information-free one at every lag
+to 32. Falsified (i): the format is most of the distance and 0021's 0.77 stands as read. Falsified (ii): by sixteen steps
+the stale cache is as bad as no prompt. Descriptive, not sealed: the far medians; stale over scrambled per lag; the
+replicate against 0018 and 0021; near over far per reader.
+
+**Run.** 300 jobs, inference only, on one GPU sitting under the GPU protocol: six kept readers, the rollout dumps at
+step 0 and the kept steps, the held-out dumps at the kept steps, from the private dataset; the results tar and summary
+off-repository with hashes. Halting and reading as 0020.
+
+**Not registered here.** A chat-formatted non-GSM8K prompt as an intermediate control (format without content); the
+second seed; statistic (C) (§15: designed, unregistered, unbuilt); rollout sliding.
+
+**Consequences in this commit set:** `src/lag_ladder/config.py`, `src/lag_ladder/reader.py`,
+`src/lag_ladder/summarize_reader.py`, `tests/test_reader.py`, `tests/test_summarize_reader.py`,
+`config/ownrun_far.toml`, `ledger/predictions/ownrun-far.json` + `.sha256`, `docs/2026-09-19-holdover-design.md`
+(§14 R-C14–R-C18, §14.2, §15), `README.md`, `CLAUDE.md`.

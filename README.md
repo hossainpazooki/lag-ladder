@@ -112,7 +112,9 @@ texts and makes rollout-text controls the prerequisite for any rollout number to
 controls pass per reader on rollout text (floor 1.5e-7 to 1.9e-7, scrambled 0.12), the rollout numbers stand 2.5e4× to
 5.8e5× their floors and replicate across GPUs to 5e-5, and with the writer moved off step 0 the held-out law keeps its
 slope (1.96 / 1.97) within a factor of two of the step-0 fit. 0019's prerequisite is met; whether the rollout reading
-enters the statement of record is a ruling not yet taken.
+enters the statement of record is a ruling not yet taken: the scrambled control on rollout text is a near neighbour
+(another GSM8K prompt, 0.12 against held-out text's 0.55), so entry 0022 registers a far control — a web prefix of the
+prompt's length, carrying no information about it — before any rollout ratio is read into the record.
 
 The ledger holds the founding record (chassis provenance, inherited definitions, the first rulings), the
 ruling that the instrument serves statistic (A) only, two re-pins of the instrument, the registrations with

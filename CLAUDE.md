@@ -11,8 +11,8 @@ entry 0009 its outcome, entry 0010 the closure of statistic (A) with the stateme
 the ruling that the lane continues under statistic (B) as design §13 defines it, entries 0012–0014 (B)'s
 registration and amendments, entry 0015 its outcome, entry 0016 its closure on the ladder with the statement of record,
 entry 0017 the own run's registration, entry 0018 its outcome, entry 0019 the ruling that restricts 0016's statement of
-record to the held-out texts it names, entry 0020 the registration of rollout-text controls and the sliding writer, and
-entry 0021 their outcome.
+record to the held-out texts it names, entry 0020 the registration of rollout-text controls and the sliding writer,
+entry 0021 their outcome, and entry 0022 the registration of a far scrambled control on rollout text.
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never
@@ -74,7 +74,7 @@ clauses out; per-rung texts and ragged continuations for §14). `tools/` — `pe
 cache, scores the continuation; `--text rollout` teacher-forces a stored continuation cut at `--length`): run with
 the instrument's interpreter, import nothing from it. `own_run.py` (§14: the GRPO trajectory with its save hook;
 run with the trainer's interpreter, imports nothing from here or the instrument). (C)'s scorer does not exist.
-`config/` — `seal.toml`, `pilot.toml`, `distance.toml`, `reader.toml`, `ownrun.toml` (0017, as run), `ownrun_controls.toml` (0020; `per_pair` controls). `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
+`config/` — `seal.toml`, `pilot.toml`, `distance.toml`, `reader.toml`, `ownrun.toml` (0017, as run), `ownrun_controls.toml` (0020; `per_pair` controls), `ownrun_far.toml` (0022; `far_pair` + `far_min`). `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
 `mappers/` — seal artifact roots, gitignored past their placeholders. `docs/` — the design doc.
 
 ## State
@@ -110,5 +110,11 @@ outcome**: one A40 sitting, no halt; all eleven (reader, pair) control units pas
 rollout scrambled 0.115 to 0.126 against the 0.1 limit); clause (i) HELD (0018's rollout rungs 2.5e4× to 5.8e5× their
 floors, replicate within 5e-5), clause (ii) HELD (sliding slopes 1.96 / 1.97); the sliding rungs read 0.93× to 1.85× the
 step-0 law. 0019's prerequisite is met; the rollout reading's entry into (B)'s statement of record is a ruling not yet
-taken. Records and the Hub backup (`ownrun-controls/`) under the hashes 0021 states. Rulings R-C9–R-C13 (design §14):
-R-C10 answered by 0021; second seed, 128-step extension and statistic (C)'s §15 open, decided after 0021.
+taken. Records and the Hub backup (`ownrun-controls/`) under the hashes 0021 states. Rulings R-C14–R-C18 (design §14,
+2026-10-15): the statement-of-record amendment not taken (one seed; the near scrambled control passed by 15–26%); **0022
+registers a far control** (`config/ownrun_far.toml`, §14.2: the rollout pair names the held-out pair as `far_pair`; each
+reader's rollout controls gain a FAR cell — its own dump of held-out sequence 40+i cut to the prompt's length under the
+same completion, limit `far_min` 0.1; seal `ownrun-far`: far ≥ 2× scrambled per unit, median (B1) ≤ 0.5× far per lag; 300
+inference-only jobs; not yet run); second seed deferred; 128-step closed; statistic (C) designed in §15 (whole-prompt
+cache swap, GSM8K test, greedy, FRESH/STALE/NEAR/FAR arms, Δ accuracy with a paired bootstrap, flip rate descriptive),
+unregistered and unbuilt until 0022's outcome.
