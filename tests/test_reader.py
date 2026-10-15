@@ -447,3 +447,85 @@ def test_per_pair_scrambled_failure_withholds_only_that_pairs_rungs(repo, seal_c
     assert any(pair == "olmo2-1b-rlvr1" and reader_of == "local:noise-0.001"
                for (reader_of, pair) in {(j["reader"], j["pair"]) for j in rec["jobs"] if j["kind"] == "rung"})
     assert "UNEVALUABLE" in json.dumps(rec["unevaluable_readers"])
+
+
+# --- 0022: the far scrambled control, a non-GSM8K prefix of the rollout prompt's length ------------------------
+
+def _setup_far(repo, seal_cfg):
+    """The per-pair fixture with the rollout pair naming the olmo pair as its far pair and a far_min limit."""
+    cfg, tools = _setup_per_pair(repo, seal_cfg)
+    cpath = repo / "config" / "reader.toml"
+    text = cpath.read_text(encoding="utf-8")
+    text = text.replace("per_pair = true\n", "per_pair = true\nfar_min = 1e-1\n", 1)
+    text = text.replace('heldout = [0, 4]\n', 'heldout = [0, 4]\nfar_pair = "olmo2-1b-rlvr1"\n', 1)
+    cpath.write_text(text, encoding="utf-8")
+    commit_all(repo, "far control")
+    return load_reader_config(cpath, repo), tools
+
+
+def test_far_control_reads_the_far_pairs_dump_of_the_reader_under_the_rollout_completion(repo, seal_cfg):
+    cfg, tools = _setup_far(repo, seal_cfg)
+    assert cfg.pairs["ownrun-rollout"].far_pair == "olmo2-1b-rlvr1" and cfg.controls["far_min"] == 0.1
+    p = reader.plan(cfg)
+    far = [j for j in p.jobs if j.kind == "far"]
+    assert {(j.reader, j.pair, j.text) for j in far} == {("local:noise-0.001", "ownrun-rollout", "rollout")}
+    assert [j.seq for j in far] == [0, 1, 2, 3]
+    # the stale arm is the reader's own dump of the far pair's sequence, cycling over the far pair's held-out range
+    assert all(j.stale_pair == "olmo2-1b-rlvr1" and j.stale_key == j.fresh_key == "source@local-noise-0.001" for j in far)
+    assert [j.stale_seq for j in far] == [1, 2, 3, 1]
+    # no far job on the held-out pair (it names no far pair), and far follows scrambled, precedes the rungs
+    assert not [j for j in p.jobs if j.kind == "far" and j.pair == "olmo2-1b-rlvr1"]
+    order = {id(j): i for i, j in enumerate(p.jobs)}
+    scr = [j for j in p.jobs if j.kind == "scrambled" and j.pair == "ownrun-rollout"]
+    rung = [j for j in p.jobs if j.label == "rollout-1e-3"]
+    assert max(order[id(j)] for j in scr) < min(order[id(j)] for j in far) < min(order[id(j)] for j in rung)
+    assert "far" in reader.job_dir(cfg, far[0]).as_posix() and len({reader.job_dir(cfg, j) for j in far}) == 4
+    fake = FakeInstrument()
+    rec = reader.run(cfg, repo, runner=fake, seal_cfg=seal_cfg, tools_dir=tools)
+    assert rec["halted"] is None
+    calls = [_parse(c[2:]) for c in fake.calls if len(c) > 1 and c[1].endswith("score_continuation.py")]
+    far_calls = [a for a in calls if "/far/" in a["--out"].replace("\\", "/")]
+    assert len(far_calls) == 4
+    by_seq = {int(a["--seq"]): a for a in far_calls}
+    assert by_seq[0]["--stale"].replace("\\", "/").endswith("pairs/olmo2-1b-rlvr1/dumps/source@local-noise-0.001/seq1")
+    assert by_seq[3]["--stale"].replace("\\", "/").endswith("pairs/olmo2-1b-rlvr1/dumps/source@local-noise-0.001/seq1")
+    assert by_seq[0]["--fresh"].replace("\\", "/").endswith("pairs/ownrun-rollout/dumps/source@local-noise-0.001/seq0")
+    assert [int(by_seq[i]["--prefix-len"]) for i in range(4)] == SPANS["prefix_len"]
+    assert all(a["--text"] == "rollout" and a["--tokens"].replace("\\", "/").endswith("qwen.npy") for a in far_calls)
+    recs = [j for j in rec["jobs"] if j["kind"] == "far"]
+    assert len(recs) == 4 and all(j["pair"] == "ownrun-rollout" and j["stale_pair"] == "olmo2-1b-rlvr1" for j in recs)
+
+
+def test_far_failure_marks_the_pairs_rungs_unevaluable_without_halting(repo, seal_cfg):
+    cfg, tools = _setup_far(repo, seal_cfg)
+    for meta in (repo / "results" / "distance" / "pairs" / "ownrun-rollout" / "dumps").rglob("meta.json"):
+        m = json.loads(meta.read_text(encoding="utf-8"))
+        m["pair"] = "ownrun-rollout"
+        meta.write_text(json.dumps(m), encoding="utf-8")
+
+    def near_far(fm, sm, fs, ss, live):
+        if not live and fm.get("pair") == "ownrun-rollout" and sm.get("pair") != "ownrun-rollout":
+            return 0.01, 0.1          # the far prefix (another pair's dump) reads under far_min
+        return default_kl(fm, sm, fs, ss, live)
+
+    rec = reader.run(cfg, repo, runner=FakeInstrument(kl=near_far), seal_cfg=seal_cfg, tools_dir=tools)
+    assert rec["finished"] and rec["halted"] is None
+    assert ("rollout-1e-3", "ownrun-rollout") not in {(j["label"], j["pair"]) for j in rec["jobs"] if j["kind"] == "rung"}
+    note = json.dumps(rec["unevaluable_readers"])
+    assert "UNEVALUABLE" in note and "far" in note
+
+
+def test_far_pair_must_name_another_pair_and_needs_far_min(repo, seal_cfg):
+    cfg, _ = _setup_per_pair(repo, seal_cfg)
+    cpath = repo / "config" / "reader.toml"
+    base = cpath.read_text(encoding="utf-8")
+    cpath.write_text(base.replace('heldout = [0, 4]\n', 'heldout = [0, 4]\nfar_pair = "olmo2-1b-rlvr1"\n', 1), encoding="utf-8")
+    with pytest.raises(ValueError, match="far_min"):
+        load_reader_config(cpath, repo)
+    text = base.replace("per_pair = true\n", "per_pair = true\nfar_min = 1e-1\n", 1)
+    cpath.write_text(text.replace('heldout = [0, 4]\n', 'heldout = [0, 4]\nfar_pair = "nowhere"\n', 1), encoding="utf-8")
+    with pytest.raises(ValueError, match="far_pair"):
+        load_reader_config(cpath, repo)
+    cpath.write_text(text.replace('heldout = [0, 4]\n', 'heldout = [0, 4]\nfar_pair = "ownrun-rollout"\n', 1), encoding="utf-8")
+    with pytest.raises(ValueError, match="far_pair"):
+        load_reader_config(cpath, repo)

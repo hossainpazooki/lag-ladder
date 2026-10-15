@@ -204,7 +204,7 @@ def _control_key(reader: str, pair: str | None, cfg: ReaderConfig) -> str:
 def _controls(reader: str, jobs: dict, cfg: ReaderConfig) -> dict:
     """One reader's controls judged from its floor/identity/scrambled reports. Floor limits unset => failed."""
     floor_lim_kl = cfg.controls.get("floor_max_median_kl") or None
-    out = {"floor": None, "identity": None, "scrambled": None}
+    out = {"floor": None, "identity": None, "scrambled": None, "far": None, "far_over_scrambled": None}
     floor = [r for (kind, _t, _s), r in jobs.items() if kind == "floor"]
     if floor:
         if any(not r["live"] for r in floor):
@@ -231,8 +231,19 @@ def _controls(reader: str, jobs: dict, cfg: ReaderConfig) -> dict:
             raise _refuse(f"reader {reader}: a scrambled control report is not on corpus text")
         med = float(np.median([np.mean(r["kl_per_token"]) for r in scr]))
         out["scrambled"] = {"median_kl": med, "passed": med >= float(cfg.controls["scrambled_min"])}
-    out["passed"] = (all(c is not None and c["passed"] for c in
-                         (out["floor"], out["identity"], out["scrambled"])))
+    far = [r for (kind, _t, _s), r in jobs.items() if kind == "far"]
+    if far:
+        # 0022: the far prefix is another pair's dump under this pair's continuation; its limit is far_min.
+        if cfg.controls.get("far_min") is None:
+            raise _refuse(f"{reader}: far control reports exist but the config sets no far_min")
+        if any(r["fresh_dump"] == r["stale_dump"] for r in far):
+            raise _refuse(f"{reader}: a far control report names the fresh dump as its stale arm")
+        med = float(np.median([np.mean(r["kl_per_token"]) for r in far]))
+        out["far"] = {"median_kl": med, "passed": med >= float(cfg.controls["far_min"])}
+        if out["scrambled"] and out["scrambled"]["median_kl"] > 0:
+            out["far_over_scrambled"] = med / out["scrambled"]["median_kl"]
+    out["passed"] = (all(c is not None and c["passed"] for c in (out["floor"], out["identity"], out["scrambled"]))
+                     and (out["far"] is None or out["far"]["passed"]))
     return out
 
 
@@ -260,7 +271,7 @@ def summarize(cfg: ReaderConfig, root: Path | None = None, out: Path | None = No
                           f"(halted: {run_rec.get('halted')!r})")
         rep = _load_report(root / j["dir"], j["report_sha256"], root, cfg.upstream_path)
         key = (j["kind"], rep["text"], int(rep["seq"]))
-        if j["kind"] in ("floor", "identity", "scrambled"):
+        if j["kind"] in ("floor", "identity", "scrambled", "far"):
             cell = by_reader.setdefault(_control_key(j["reader"], j.get("pair"), cfg), {})
         elif j["kind"] == "rung":
             if "label" not in j:
@@ -313,6 +324,11 @@ def summarize(cfg: ReaderConfig, root: Path | None = None, out: Path | None = No
                 st["band"] = _band(st["b1"]["median_kl"], cfg.rule)
                 st["at_floor"] = (floor_kl is not None and st["b1"]["median_kl"] <= 2.0 * floor_kl)
                 st["floor_kl"] = floor_kl
+            # 0022, descriptive: the rung's median over its unit's scrambled and far medians (None without the control).
+            for name in ("scrambled", "far"):
+                c = ctl.get(name)
+                st[f"over_{name}"] = (st["b1"]["median_kl"] / c["median_kl"]
+                                      if not withheld and c and c["median_kl"] > 0 else None)
             entry["texts"][text] = st
         summary["rungs"].append(entry)
     # The slope of log median (B1) on log distance over the sealed backbone rungs (all evaluated noise rungs
@@ -438,6 +454,23 @@ def seal_readout(summary: dict, repo: Path, seal: str = "reader") -> dict | None
             checks.append(ok)
         out["clauses"]["v"] = {"rungs_read": rows, "exceptions": sorted(k for k, r in rows.items() if not r["ok"]),
                                "verdict": verdict(checks)}
+    # 0022: the far control. (i) far over scrambled on every named control unit; (ii) every named rung's median over
+    # its unit's far median, on the named text. Both are numbers the summary already carries.
+    fi = P.get("i_far_over_scrambled")
+    if fi:
+        vals = {u: (summary.get("controls", {}).get(u) or {}).get("far_over_scrambled") for u in fi["units"]}
+        lo = float(fi["at_least"])
+        out["clauses"]["i"] = {"units": list(fi["units"]), "at_least": lo, "far_over_scrambled": vals,
+                               "verdict": verdict([None if v is None else v >= lo for v in vals.values()])}
+    fii = P.get("ii_rollout_over_far")
+    if fii:
+        text, hi = str(fii["text"]), float(fii["at_most"])
+        vals = {}
+        for label in fii["rungs"]:
+            e = next((e for e in summary["rungs"] if e["label"] == label), None)
+            vals[label] = None if e is None or e.get("withheld") else e["texts"].get(text, {}).get("over_far")
+        out["clauses"]["ii"] = {"rungs": list(fii["rungs"]), "text": text, "at_most": hi, "over_far": vals,
+                                "verdict": verdict([None if v is None else v <= hi for v in vals.values()])}
     return out
 
 
@@ -449,6 +482,10 @@ def render(s: dict) -> str:
         for name in ("floor", "identity", "scrambled"):
             v = c[name]
             parts.append(f"{name} {'ok' if v and v['passed'] else 'FAILED' if v else 'MISSING'}")
+        if c.get("far") is not None:
+            ratio = c.get("far_over_scrambled")
+            parts.append(f"far {'ok' if c['far']['passed'] else 'FAILED'} ({c['far']['median_kl']:.3e}"
+                         + (f", {ratio:.2f}x scrambled)" if ratio is not None else ")"))
         lines.append(f"reader {reader}: " + "; ".join(parts))
     for e in s["rungs"]:
         for text, st in e["texts"].items():

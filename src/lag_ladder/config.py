@@ -176,6 +176,7 @@ class PairTokens:
     heldout: tuple[int, int] | None = None     # §14: a pair's own held-out range (default: the config's)
     spans: Path | None = None                 # §14: per-sequence {"prefix_len": [...], "length": [...]} for stored continuations
     spans_sha256: str | None = None
+    far_pair: str | None = None               # 0022: the pair whose dumps supply the far control's prefix (per_pair only)
 
 
 @dataclass(frozen=True)
@@ -314,6 +315,9 @@ def load_reader_config(path: Path, repo_root: Path) -> ReaderConfig:
     if not isinstance(per_pair, bool):
         raise ValueError(f"{path.name} [reader.controls] per_pair must be a bool when set")
     controls["per_pair"] = per_pair
+    # 0022: the far control's limit; required when any pair names a far_pair (validated after the pairs are read).
+    if "far_min" in controls and not (float(controls["far_min"]) > 0):
+        raise ValueError(f"{path.name} [reader.controls] far_min must be positive")
     for k in _READER_FLOOR_KEYS:
         # Empty-able: 0012 fixes them from the floor probe; `run` refuses while they are unset.
         if k not in controls:
@@ -357,10 +361,22 @@ def load_reader_config(path: Path, repo_root: Path) -> ReaderConfig:
                     or PureWindowsPath(sp).is_absolute() or "spans_sha256" not in pr):
                 raise ValueError(f"{where}: spans must be a relative path under upstream_path, with spans_sha256")
             spans, spans_sha = upstream / sp, _hex_or_pending(pr["spans_sha256"], where + " spans_sha256")
+        far = pr.get("far_pair")
+        if far is not None and (not isinstance(far, str) or not far.strip()):
+            raise ValueError(f"{where}: far_pair must name a pair")
         pairs[name] = PairTokens(name, upstream / tok, _hex_or_pending(pr["tokens_sha256"], where + " tokens_sha256"),
-                                 pho, spans, spans_sha)
+                                 pho, spans, spans_sha, far)
     if not pairs:
         raise ValueError(f"{path.name} [reader] lists no pairs")
+    for pt in pairs.values():
+        if pt.far_pair is None:
+            continue
+        if pt.far_pair not in pairs or pt.far_pair == pt.name:
+            raise ValueError(f"{path.name} [[reader.pairs]] {pt.name}: far_pair {pt.far_pair!r} must name another pair in the table")
+        if not per_pair:
+            raise ValueError(f"{path.name} [[reader.pairs]] {pt.name}: far_pair needs [reader.controls] per_pair = true")
+        if "far_min" not in controls:
+            raise ValueError(f"{path.name} [reader.controls] far_min is required when a pair names a far_pair")
     rungs, labels = [], set()
     for i, r in enumerate(c["rungs"]):
         where = f"{path.name} [[reader.rungs]] #{i}"

@@ -8,7 +8,10 @@ re-dumped. Controls per distinct reader, before its rungs, halting on failure: f
 `--live` arm; the maximum logit difference and the median mean-KL per text must stay within the limits the
 probe fixed), identity (the reader's own dump in both arms; a determinism check on `identity_max_logit_diff`),
 scrambled (the next held-out sequence's prefix, corpus text; a median mean-KL below `scrambled_min` marks the
-reader's rungs UNEVALUABLE and skips them, recorded for the summarizer). No number is decided here beyond the
+reader's rungs UNEVALUABLE and skips them, recorded for the summarizer); far (0022, per_pair only, for a pair that
+names a `far_pair`: the reader's own dump of the far pair's sequence — a prefix of another text, cut to this
+sequence's prefix length by the scorer — under the same continuation; judged like scrambled against `far_min`).
+No number is decided here beyond the
 configured halting thresholds; `summarize_reader` recomputes everything from the reports and refuses on
 mismatch.
 
@@ -59,7 +62,7 @@ def reader_slug(spec: str) -> str:
 
 @dataclass(frozen=True)
 class Job:
-    kind: str              # floor | identity | scrambled | rung
+    kind: str              # floor | identity | scrambled | far | rung
     reader: str            # the scorer spec
     label: str             # the rung label, or the reader's slug for a control
     pair: str
@@ -70,6 +73,7 @@ class Job:
     stale_seq: int         # the stale arm's sequence (differs from seq only for scrambled)
     live: bool = False
     rung: ReaderRung | None = None
+    stale_pair: str | None = None   # 0022: the pair whose dumps hold the stale arm (far control); None = pair
 
 
 @dataclass(frozen=True)
@@ -145,6 +149,12 @@ def _plan_per_pair(cfg: ReaderConfig, readers: list[str], texts: list[str]) -> P
             for pos, i in enumerate(seqs):
                 j = seqs[(pos + 1) % len(seqs)]
                 jobs.append(Job("scrambled", spec, slug, pair, i, ptexts[0], o.reader_dump, o.reader_dump, j))
+            far = cfg.pairs[pair].far_pair
+            if far is not None:
+                fseqs = list(range(*(cfg.pairs[far].heldout or cfg.heldout)))
+                for pos, i in enumerate(seqs):
+                    j = fseqs[pos % len(fseqs)]
+                    jobs.append(Job("far", spec, slug, pair, i, ptexts[0], o.reader_dump, o.reader_dump, j, stale_pair=far))
             for r in rs:
                 for t in (r.texts or texts):
                     for i in seqs:
@@ -294,7 +304,7 @@ def score(cfg: ReaderConfig, repo_root: Path, j: Job, out: Path, *, probe: bool 
         return report
     args = [str((Path(tools_dir) / SCORER).resolve()),
             "--reader", j.reader,
-            "--stale", str(dump_dir(repo_root, j.pair, j.stale_key, j.stale_seq).resolve()),
+            "--stale", str(dump_dir(repo_root, j.stale_pair or j.pair, j.stale_key, j.stale_seq).resolve()),
             "--tokens", str(cfg.pairs[j.pair].tokens.resolve()), "--seq", str(j.seq),
             *span_args(cfg, j), "--text", j.text,
             "--out", str(out.resolve()), "--device", "auto", "--dtype", cfg.dtype]
@@ -352,6 +362,7 @@ def run(cfg: ReaderConfig, repo_root: Path, *, runner=subprocess.run, limit: int
 
     floor_kls: dict[tuple[str, str], list[float]] = {}     # (reader, text) -> mean KL per sequence
     scrambled_kls: dict[str, list[float]] = {}             # reader -> mean KL per sequence
+    far_kls: dict[str, list[float]] = {}                   # 0022: control unit -> mean KL per sequence
     unevaluable: set[str] = set()
     done = 0
     try:
@@ -367,7 +378,7 @@ def run(cfg: ReaderConfig, repo_root: Path, *, runner=subprocess.run, limit: int
             mkl = _mean_kl(rec)
             mdiff = float(rec["max_abs_logit_diff"])
             record["jobs"].append({"kind": j.kind, "reader": j.reader, "label": j.label, "pair": j.pair,
-                                   "seq": j.seq, "text": j.text, "live": j.live,
+                                   "seq": j.seq, "text": j.text, "live": j.live, "stale_pair": j.stale_pair,
                                    "dir": out.relative_to(cfg.results_dir).as_posix(),
                                    "report_sha256": sha256_file_bytes(report),
                                    "mean_kl": mkl, "max_abs_logit_diff": mdiff, "done": True})
@@ -398,6 +409,16 @@ def run(cfg: ReaderConfig, repo_root: Path, *, runner=subprocess.run, limit: int
                         record["unevaluable_readers"][ck] = (
                             f"UNEVALUABLE: median scrambled mean-KL {med:.3e} < scrambled_min "
                             f"{cfg.controls['scrambled_min']}; its rungs are skipped")
+            elif j.kind == "far":
+                ck = control_key(j, cfg)
+                far_kls.setdefault(ck, []).append(mkl)
+                if len(far_kls[ck]) == n_of[j.pair]:
+                    med = float(np.median(far_kls[ck]))
+                    if med < float(cfg.controls["far_min"]):
+                        unevaluable.add(ck)
+                        record["unevaluable_readers"][ck] = (
+                            f"UNEVALUABLE: median far mean-KL {med:.3e} < far_min "
+                            f"{cfg.controls['far_min']}; its rungs are skipped")
             save()
     except Refusal as e:
         record["halted"] = str(e)

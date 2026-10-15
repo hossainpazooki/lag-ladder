@@ -235,3 +235,50 @@ def test_summary_judges_a_rung_against_the_controls_of_its_own_pair_under_per_pa
     assert set(ctl[held_key[0]]["floor"]["median_kl_by_text"]) == {"corpus", "on-path"}
     e = {x["label"]: x for x in s["rungs"]}
     assert e["rollout-1e-3"]["controls_passed"] is True and e["rollout-1e-3"]["controls"] == roll_key[0]
+
+
+def test_summary_judges_the_far_control_and_reads_each_rung_over_its_controls(repo, seal_cfg):
+    from tests.test_reader import _setup_far
+    cfg, tools = _setup_far(repo, seal_cfg)
+    reader.run(cfg, repo, runner=FakeInstrument(), seal_cfg=seal_cfg, tools_dir=tools)
+    s = summarize(cfg)
+    roll_key = [k for k in s["controls"] if "ownrun-rollout" in k and "local:noise-0.001" in k][0]
+    rc = s["controls"][roll_key]
+    assert rc["far"]["passed"] and rc["far"]["median_kl"] == pytest.approx(2.0) and rc["passed"]
+    assert rc["far_over_scrambled"] == pytest.approx(rc["far"]["median_kl"] / rc["scrambled"]["median_kl"])
+    held_key = [k for k in s["controls"] if "olmo2-1b-rlvr1" in k and "local:noise-0.001" in k][0]
+    assert s["controls"][held_key]["far"] is None and s["controls"][held_key]["passed"]
+    e = {x["label"]: x for x in s["rungs"]}["rollout-1e-3"]["texts"]["rollout"]
+    assert e["over_scrambled"] == pytest.approx(e["b1"]["median_kl"] / rc["scrambled"]["median_kl"])
+    assert e["over_far"] == pytest.approx(e["b1"]["median_kl"] / rc["far"]["median_kl"])
+    # a rung on a unit without a far control carries no far ratio
+    other = [x for x in s["rungs"] if x["pair"] == "olmo2-1b-rlvr1" and not x["withheld"]][0]
+    assert other["texts"]["corpus"]["over_far"] is None and other["texts"]["corpus"]["over_scrambled"] is not None
+
+
+def test_seal_readout_reads_the_far_clauses_from_the_control_units_and_the_rungs(tmp_path):
+    """0022: (i) far over scrambled >= a factor on every unit the seal names; (ii) every named rung's median over
+    its unit's far median <= a bound, on the named text. Withheld or missing inputs read UNREAD."""
+    from lag_ladder.summarize_reader import PREDICTIONS, seal_readout
+    (tmp_path / PREDICTIONS).mkdir(parents=True)
+    (tmp_path / PREDICTIONS / "x.json").write_text(json.dumps({"prediction": {
+        "texts": ["rollout"],
+        "predictions": {"i_far_over_scrambled": {"units": ["r1 @ roll", "r2 @ roll"], "at_least": 2.0},
+                        "ii_rollout_over_far": {"rungs": ["lag-1", "lag-2"], "text": "rollout", "at_most": 0.5}}}}),
+        encoding="utf-8")
+    summary = {"rule": {"texts": ["corpus", "on-path"], "holds_max": 1e-3},
+               "controls": {"r1 @ roll": {"far_over_scrambled": 3.0}, "r2 @ roll": {"far_over_scrambled": 2.5}},
+               "rungs": [{"label": "lag-1", "withheld": False, "texts": {"rollout": {"over_far": 0.1}}},
+                         {"label": "lag-2", "withheld": False, "texts": {"rollout": {"over_far": 0.4}}}],
+               "slope_fit": {}}
+    c = seal_readout(summary, tmp_path, "x")["clauses"]
+    assert c["i"]["verdict"] == "HELD" and c["i"]["far_over_scrambled"] == {"r1 @ roll": 3.0, "r2 @ roll": 2.5}
+    assert c["ii"]["verdict"] == "HELD" and c["ii"]["over_far"] == {"lag-1": 0.1, "lag-2": 0.4}
+    summary["controls"]["r2 @ roll"]["far_over_scrambled"] = 1.5
+    summary["rungs"][1]["texts"]["rollout"]["over_far"] = 0.7
+    c = seal_readout(summary, tmp_path, "x")["clauses"]
+    assert c["i"]["verdict"] == "FALSIFIED" and c["ii"]["verdict"] == "FALSIFIED"
+    summary["controls"]["r2 @ roll"]["far_over_scrambled"] = None
+    summary["rungs"][1]["withheld"] = True
+    c = seal_readout(summary, tmp_path, "x")["clauses"]
+    assert c["i"]["verdict"] == "UNREAD" and c["ii"]["verdict"] == "UNREAD"
