@@ -967,3 +967,40 @@ second seed; statistic (C) (§15: designed, unregistered, unbuilt); rollout slid
 `src/lag_ladder/summarize_reader.py`, `tests/test_reader.py`, `tests/test_summarize_reader.py`,
 `config/ownrun_far.toml`, `ledger/predictions/ownrun-far.json` + `.sha256`, `docs/2026-09-19-holdover-design.md`
 (§14 R-C14–R-C18, §14.2, §15), `README.md`, `CLAUDE.md`.
+
+### 0023 — 2026-10-15 — Outcome: the far control on the rollout text reads 3.6× to 5.8× the near one; both sealed clauses HELD
+
+prior-entries-sha256: 541b34d371b6a19a554f9facbcb63e498606758ff654089f0e601f4b16972671
+
+**Run.** The 300 jobs of `config/ownrun_far.toml` (instrument `5d4aa4a`, this repository at `0f61a32`) ran on one NVIDIA A40
+under torch 2.14.1+cu130 from the own run's dumps and kept weights fetched from the private dataset (4,085 files, every one
+matching the upload's manifest), without a halt; no unit UNEVALUABLE. Records: `far-results.tgz` `8b7046a9…` (reports,
+`run.json`, the pod's summary), `far-aux.tgz` `09caa4a8…` (logs); backed up to the private dataset under `ownrun-far/` with a
+manifest (`SHA256SUMS` `1e859393…`, every LFS digest on the Hub equal to the local one).
+
+**Controls, per (reader, rollout pair), all six passed.** Float16 floor 1.53e-7 to 1.85e-7 nats/token, identity 0, scrambled
+0.115 to 0.126 — each equal to 0021's reading of the same cell to four digits on another host. Far — the reader's own cache of
+a web prefix of the prompt's length, under the same completion — 0.450 (g = 1), 0.468, 0.514, 0.612, 0.669 (g = 16), 0.611
+(g = 32), against the limit of 0.1.
+
+**Seal (`ownrun-far`, 324bd425…).** (i) HELD: far over scrambled 3.57, 3.77, 4.22, 5.14, 5.80, 5.09 at g = 1 … 32, every one
+above 2. (ii) HELD: 0018's rollout medians over the same reader's far median 0.010, 0.028, 0.057, 0.104, 0.133, 0.146,
+every one below 0.5 — read by hand against 0018 and by the summarizer on the six replicate rungs, which reproduce 0018 to
+within 5e-5 relative (the largest gap 4.95e-5, at g = 4) and 0021's replicate to within 5e-6.
+
+**What the three controls say together (descriptive).** On the policy's own prompts a cache that carries no information
+about the prompt moves the reader 0.45 to 0.67 nats/token; a cache of a different GSM8K prompt moves it 0.12, so the format
+and the system line account for three quarters (g = 1) to five sixths (g = 16) of the information-free distance and the
+question's content for the rest. The step-0 cache at lag 16 to 32 reads three quarters of the content term (0021) and one
+seventh of the information-free distance. The far distance grows with the reader's step to g = 16 (0.45 to 0.67) and eases
+at 32 (0.61) while the near one stays within 0.115 to 0.126: later policies are more certain of their own completions and
+lose more when the prompt is gone.
+
+**What this entry settles.** 0021's stale-over-scrambled reading has its anchor: 0.77 at lag 16 is three quarters of a
+near-neighbour's distance and one seventh of an information-free one. The control objection of R-C14 is answered; the
+one-seed caveat stands.
+
+**Not ruled here.** The rollout numbers as a statement of record (R-C14: now only the seed count in the way); the second seed
+(R-C16); statistic (C)'s registration (§15, R-C18); a chat-formatted non-GSM8K prompt as an intermediate control.
+
+**Consequences in this commit set:** `README.md`, `CLAUDE.md`.

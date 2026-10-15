@@ -12,7 +12,8 @@ the ruling that the lane continues under statistic (B) as design §13 defines it
 registration and amendments, entry 0015 its outcome, entry 0016 its closure on the ladder with the statement of record,
 entry 0017 the own run's registration, entry 0018 its outcome, entry 0019 the ruling that restricts 0016's statement of
 record to the held-out texts it names, entry 0020 the registration of rollout-text controls and the sliding writer,
-entry 0021 their outcome, and entry 0022 the registration of a far scrambled control on rollout text.
+entry 0021 their outcome, entry 0022 the registration of a far scrambled control on rollout text, and entry 0023 its
+outcome.
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never
@@ -115,6 +116,9 @@ taken. Records and the Hub backup (`ownrun-controls/`) under the hashes 0021 sta
 registers a far control** (`config/ownrun_far.toml`, §14.2: the rollout pair names the held-out pair as `far_pair`; each
 reader's rollout controls gain a FAR cell — its own dump of held-out sequence 40+i cut to the prompt's length under the
 same completion, limit `far_min` 0.1; seal `ownrun-far`: far ≥ 2× scrambled per unit, median (B1) ≤ 0.5× far per lag; 300
-inference-only jobs; not yet run); second seed deferred; 128-step closed; statistic (C) designed in §15 (whole-prompt
-cache swap, GSM8K test, greedy, FRESH/STALE/NEAR/FAR arms, Δ accuracy with a paired bootstrap, flip rate descriptive),
-unregistered and unbuilt until 0022's outcome.
+inference-only jobs). **0023 is its outcome**: one A40 sitting, no halt; far 0.450 to 0.669 against scrambled 0.115 to
+0.126 (far/scrambled 3.57 to 5.80, clause (i) HELD); 0018's rollout medians over far 0.010 to 0.146 (clause (ii) HELD);
+the replicate matches 0018 to 5e-5 on a second host. Records and the Hub backup (`ownrun-far/`) under the hashes 0023
+states. Open: R-C14 (the statement-of-record amendment; only the seed count in the way), R-C16 second seed, R-C18 the
+build and registration of statistic (C) from §15 (whole-prompt cache swap, GSM8K test, greedy, FRESH/STALE/NEAR/FAR arms,
+Δ accuracy with a paired bootstrap, flip rate descriptive); 128-step closed.

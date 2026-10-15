@@ -114,7 +114,9 @@ controls pass per reader on rollout text (floor 1.5e-7 to 1.9e-7, scrambled 0.12
 slope (1.96 / 1.97) within a factor of two of the step-0 fit. 0019's prerequisite is met; whether the rollout reading
 enters the statement of record is a ruling not yet taken: the scrambled control on rollout text is a near neighbour
 (another GSM8K prompt, 0.12 against held-out text's 0.55), so entry 0022 registers a far control — a web prefix of the
-prompt's length, carrying no information about it — before any rollout ratio is read into the record.
+prompt's length, carrying no information about it — and entry 0023 reads it: 0.45 to 0.67, 3.6 to 5.8 times the near
+control; the step-0 cache at lag 16 to 32 moves the reader one seventh as far as an information-free cache and three
+quarters as far as a different GSM8K prompt's. Both sealed clauses held; one seed remains the caveat.
 
 The ledger holds the founding record (chassis provenance, inherited definitions, the first rulings), the
 ruling that the instrument serves statistic (A) only, two re-pins of the instrument, the registrations with
