@@ -11,7 +11,8 @@ entry 0009 its outcome, entry 0010 the closure of statistic (A) with the stateme
 the ruling that the lane continues under statistic (B) as design §13 defines it, entries 0012–0014 (B)'s
 registration and amendments, entry 0015 its outcome, entry 0016 its closure on the ladder with the statement of record,
 entry 0017 the own run's registration, entry 0018 its outcome, entry 0019 the ruling that restricts 0016's statement of
-record to the held-out texts it names, and entry 0020 the registration of rollout-text controls and the sliding writer.
+record to the held-out texts it names, entry 0020 the registration of rollout-text controls and the sliding writer, and
+entry 0021 their outcome.
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never
@@ -104,6 +105,10 @@ registers a prerequisite: no rollout-text number becomes a statement of record b
 scrambled controls on rollout text pass under 0014's limits. **0020 registers those controls** (`config/ownrun_controls.toml`,
 `per_pair = true`: controls per (reader, pair) on the pair's own text; seal `ownrun-controls`) together with fifteen
 descriptive sliding rungs on held-out text (writer and reader at kept steps, placed by writer–reader distance) and a
-replicate of the six rollout rungs — 740 inference-only jobs from the Hub's dumps and kept weights; not yet run. Rulings
-R-C9–R-C13 (design §14): second seed and 128-step extension decided after 0020's outcome; statistic (C) ruled in
-principle, designed after it.
+replicate of the six rollout rungs — 740 inference-only jobs from the Hub's dumps and kept weights. **0021 is its
+outcome**: one A40 sitting, no halt; all eleven (reader, pair) control units pass (rollout floors 1.53e-7 to 1.87e-7,
+rollout scrambled 0.115 to 0.126 against the 0.1 limit); clause (i) HELD (0018's rollout rungs 2.5e4× to 5.8e5× their
+floors, replicate within 5e-5), clause (ii) HELD (sliding slopes 1.96 / 1.97); the sliding rungs read 0.93× to 1.85× the
+step-0 law. 0019's prerequisite is met; the rollout reading's entry into (B)'s statement of record is a ruling not yet
+taken. Records and the Hub backup (`ownrun-controls/`) under the hashes 0021 states. Rulings R-C9–R-C13 (design §14):
+R-C10 answered by 0021; second seed, 128-step extension and statistic (C)'s §15 open, decided after 0021.

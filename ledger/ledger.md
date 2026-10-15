@@ -874,3 +874,49 @@ statistic (C) (R-C13: ruled in principle, designed after it); rollout sliding.
 `src/lag_ladder/config.py`, `tests/test_reader.py`, `tests/test_summarize_reader.py`, `config/ownrun_controls.toml`,
 `ledger/predictions/ownrun-controls.json` + `.sha256`, `docs/2026-09-19-holdover-design.md` §14 (R-C9–R-C13, §14.1),
 `README.md`, `CLAUDE.md`.
+
+### 0021 — 2026-10-15 — Outcome: 0020's controls on the rollout text pass and both sealed clauses HELD; 0019's prerequisite is met
+
+prior-entries-sha256: bee8ac6211baa5d390c566209d0538f01cf126dcb249fff536de2b6337e40c68
+
+**Run.** The 740 jobs of `config/ownrun_controls.toml` (instrument `5d4aa4a`, this repository at `947171a`) ran on one
+NVIDIA A40 under torch 2.14.1+cu130 from the own run's dumps and kept weights fetched from the private dataset (4,092
+files, every one matching the upload's manifest; `weight_distance.py` on this host reproduces 0018's step_0→step_1
+placement to the last digit), without a halt. Records: `controls-results.tgz` `b8306dbd…` (reports, `run.json`, the
+pod's summary), `controls-aux.tgz` `7d57b065…` (15 distance files, the distance check, logs); backed up to the private
+dataset under `ownrun-controls/` with the fifteen distance files and a manifest (`SHA256SUMS` `142b941c…`, every LFS
+digest on the Hub equal to the local one).
+
+**Controls, per (reader, pair), all eleven passed under 0014's limits.** Rollout pair, readers g ∈ {1, 2, 4, 8, 16, 32}:
+float16 floor 1.53e-7 to 1.87e-7 nats/token (limit 1e-4; about three times the held-out corpus floor), identity 0,
+scrambled 0.115 to 0.126 (limit 0.1). Held-out pair, readers {2, 4, 8, 16, 32}: floors 4.6e-8 to 5.8e-8 on corpus,
+2.2e-8 to 2.9e-8 on on-path, identity 0, scrambled 0.552 — the same range as 0018's A100 readings, on an A40.
+
+**Seal (`ownrun-controls`, 27af2dc2…).** (i) HELD: every rollout rung of 0018 reads 2.5e4× (lag 1) to 5.8e5× (lag 16) its
+reader's float16 floor on rollout text; the six replicate rungs are not at the floor and reproduce 0018's medians to within
+5e-5 relative at every lag (4.679e-3 … 8.914e-2). (ii) HELD: the slope of log median (B1) on log writer–reader distance over
+the fifteen sliding rungs is 1.96 on corpus and 1.97 on on-path, in [1.5, 2.5].
+
+**The sliding writer (descriptive).** Writer at kept step w, reader at kept step r, distance 1.63e-5 (1→2) to 9.42e-5 (1→32):
+median (B1) 1.41e-7 to 5.28e-6 on corpus, 7.3e-8 to 2.85e-6 on on-path, HOLDS_B at every rung and every rung at least 2.46×
+its reader's floor (1→2 on corpus). Against the quadratic fitted to 0018's six step-0-writer rungs, the sliding rungs read
+0.93× to 1.85× the prediction at their distance (median 1.1 on both texts); the excess is largest at the one-doubling gaps
+(16→32 1.85 / 1.65, 2→4 1.54 / 1.54, 1→2 1.50 / 1.31, 4→8 1.35 / 1.22) and vanishes above x ≈ 5e-5 (0.93 to 1.12 there).
+The law off step 0 is the step-0 law within a factor of two.
+
+**Stale against scrambled on the policy's own text (descriptive).** The rollout scrambled control — another rollout
+sequence's prompt cache under the same completion — reads 0.12, not the 0.55 of held-out text: every rollout prompt shares
+the system line, the GSM8K format and a 75–117-token length, so a wrong prompt is a near neighbour. 0018's rollout median
+over the same reader's scrambled median is 0.037 at lag 1, 0.105 at 2, 0.24 at 4, 0.54 at 8, 0.77 at 16 and 0.74 at 32: by
+sixteen steps the step-0 prompt cache moves the reader's next-token distribution on its own prompts three quarters as far
+as the cache of a different prompt does. The control passed its limit by 15–26%; 0014 set that limit on held-out text.
+
+**What this entry settles.** 0019's prerequisite is met: 0018's rollout numbers have per-reader floor and scrambled controls
+on rollout text, passed, and a cross-GPU replicate. Whether they now enter (B)'s statement of record, and in what words, is a
+ruling, not a reading, and is not taken here. The sliding reading answers R-C10: the quadratic law is not a step-0 artefact.
+
+**Not ruled here.** The rollout numbers as a statement of record (0019's gate is open); a rollout-specific scrambled control
+(a non-GSM8K prompt of matched length) and its limit; the second seed (R-C11); the 128-step extension (R-C12); §15 for
+statistic (C) (R-C13); rollout sliding.
+
+**Consequences in this commit set:** `README.md`, `CLAUDE.md`.

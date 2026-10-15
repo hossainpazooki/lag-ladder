@@ -108,7 +108,11 @@ token, falling a hundredfold by position 50). Of the four sealed clauses, HOLDS_
 quadratic slope held; the 10× excess over isotropic noise (11× on corpus, 7.9× on on-path at the one in-range rung)
 and rollout ≤ on-path ≤ corpus were falsified. Entry 0019 restricts (B)'s statement of record to the held-out
 texts and makes rollout-text controls the prerequisite for any rollout number to become a statement of record; entry
-0020 registers those controls, and the sliding writer on held-out text, to be scored from the run's dumps.
+0020 registers those controls and the sliding writer on held-out text; entry 0021 reads them from the run's dumps: the
+controls pass per reader on rollout text (floor 1.5e-7 to 1.9e-7, scrambled 0.12), the rollout numbers stand 2.5e4× to
+5.8e5× their floors and replicate across GPUs to 5e-5, and with the writer moved off step 0 the held-out law keeps its
+slope (1.96 / 1.97) within a factor of two of the step-0 fit. 0019's prerequisite is met; whether the rollout reading
+enters the statement of record is a ruling not yet taken.
 
 The ledger holds the founding record (chassis provenance, inherited definitions, the first rulings), the
 ruling that the instrument serves statistic (A) only, two re-pins of the instrument, the registrations with
@@ -119,7 +123,8 @@ retained off-repository with the hashes the entries state.
 **Citing.** For statistic (A), cite this repository at the commit that carries ledger entry 0010 (tag
 `statistic-a-closed`); name entries 0006 and 0009 for the numbers and 0001 for the statistic's provenance.
 For statistic (B), cite the commit that carries entry 0016 (tag `statistic-b-closed`), read with 0019; name 0015
-for the numbers and 0011 for the statistic. For the own run, name 0018 for the numbers and 0017 for the registration.
+for the numbers and 0011 for the statistic. For the own run, name 0018 for the numbers, 0017 for the registration and
+0021 for the controls on rollout text.
 
 ## How the record stays auditable
 
