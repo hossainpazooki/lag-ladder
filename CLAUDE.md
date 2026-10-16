@@ -14,7 +14,8 @@ entry 0017 the own run's registration, entry 0018 its outcome, entry 0019 the ru
 record to the held-out texts it names, entry 0020 the registration of rollout-text controls and the sliding writer,
 entry 0021 their outcome, entry 0022 the registration of a far scrambled control on rollout text, entry 0023 its
 outcome, entry 0024 the ruling that adds the trainer's own text to (B)'s statement of record, on one seed, and entry
-0025 the registration of statistic (C) on the own run with its seal.
+0025 the registration of statistic (C) on the own run with its seal, entry 0026 the restatement of its
+dump-equivalence limit (absolute 2⁻⁵) after the sitting halted on the relative one.
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never
@@ -86,7 +87,8 @@ run with the trainer's interpreter, imports nothing from here or the instrument)
 `score_continuation.py`'s functions; greedy generation per arm; one `task-record-v2` per prompt and arm, keeping the
 decoded completion text and the first-`####` answer beside the registered last-`####` answer; run with the instrument's
 interpreter). Built 2026-10-15, registered by 0025 after two probes: `config/ownrun_task.toml` pins the GSM8K test
-prompts file, floor 1%, positive controls at 0.5 flips, dump equivalence at one relative float16 ulp.
+prompts file, floor 1%, positive controls at 0.5 flips, dump equivalence at an absolute 2⁻⁵ (0026; the relative
+gap and the share of differing elements descriptive).
 `config/` — `seal.toml`, `pilot.toml`, `distance.toml`, `reader.toml`, `ownrun.toml` (0017, as run), `ownrun_controls.toml` (0020; `per_pair` controls), `ownrun_far.toml` (0022; `far_pair` + `far_min`), `ownrun_task.toml` (0025; §15, the (C) arms and controls). `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
 `mappers/` — seal artifact roots, gitignored past their placeholders. `docs/` — the design doc.
 
@@ -136,7 +138,9 @@ the controls and the two ratios; 0019's restriction stands). **0025 registers st
 §15 as revised after two 64-prompt probes at reader step_32: whole-prompt cache swap, GSM8K test n = 1,319, greedy at
 a 256-token cap, FRESH/STALE/NEAR/FAR arms; **verdict on the STALE answer-flip rate** per lag with a bootstrap
 interval, Δ accuracy descriptive since the probes read FRESH at 4 of 64 with 48 capped in `#### N` loops; floor 1%,
-positive controls NEAR/FAR ≥ 0.5 flips, dump equivalence at one relative float16 ulp with (B1) within 1e-3; seal
+positive controls NEAR/FAR ≥ 0.5 flips, dump equivalence at an absolute 2⁻⁵ with (B1) within 1e-3 (0026 restated
+R-C21 after the 2026-10-16 sitting halted at 0.33 relative with 2⁻⁷ absolute: float32 forward noise on near-zero
+elements, not rounding); seal
 `ownrun-task`: (i) controls fire at every g, (ii) STALE flips ≥ 10% at g = 1 [blind], (iii) ≥ 10% at g = 32 [probes read
 55/64], (iv) the g = 1 interval below the g = 32 interval [blind]). Open: the (C) sitting (one A40, cap 256, v2 records,
-torch build recorded); R-C16 second seed; 128-step closed.
+torch build recorded; readers step_1, step_32 first); R-C16 second seed; 128-step closed.

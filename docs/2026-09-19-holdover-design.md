@@ -700,13 +700,18 @@ zero would be six chances per sitting to halt on one prompt). Identity: FRESH tw
 **Dump equivalence, once per sitting, before any cell** — the control that ties this tool to the one every (B) number
 came through: for the ten rollout prompts of 0017 the tool builds the step-0 cache live from the step-0 weights and
 compares it layer by layer with the step-0 dump on the private dataset, and reproduces 0018's rollout (B1) at one lag
-(g = 32, 8.914e-2) by teacher-forcing the stored completions under the live caches. R-C21: the gap limit is **one float16
-ulp relative to the element** (2⁻¹⁰, with the float16 minimum normal as the absolute floor near zero), the (B1)
-reproduction within 1e-3 relative the material check. The probes read exactly one ulp — 2⁻⁷ absolute on elements of
-magnitude 8–16, then 2⁻⁶ on 16–32 — from a different float32 accumulation order (prompt-only forward against the dump's
-full-row forward), so the first draft's "equal to the last bit" is not what the live path gives and an absolute limit
-calibrated on one probe false-alarms on the next; (B1) reproduced to 6.4e-6 and 4.0e-6. A rounding point, a layout or a
-scaling factor wrong in the re-implemented injection shows here, not in the verdict cells.
+(g = 32, 8.914e-2) by teacher-forcing the stored completions under the live caches. R-C21 as restated by 0026: the gap
+limit is **absolute, 2⁻⁵** — one float16 ulp in the top binade the caches occupy — with the (B1) reproduction within 1e-3
+relative as the material check; the per-element relative gap and the share of elements that differ after the rounding
+are descriptives in the record. 0025 had registered the limit as one ulp *relative to the element* (2⁻¹⁰, float16 minimum
+normal as the floor) on the probes' reading of exactly one ulp at the max-abs element (2⁻⁷ at magnitude 8–16, 2⁻⁶ at
+16–32 on another torch build); the sitting of 2026-10-16 halted on it at 0.33 with the same 2⁻⁷ absolute and the same
+(B1) to seven digits. The discrepancy is float32 forward-to-forward noise (prompt-only forward against the dump's
+full-row forward; the live path is deterministic), of order 1e-5 absolute whatever the element's size: on a V element
+of magnitude 1e-4 that is hundreds of its own ulps, so no live cache meets a per-element relative limit; large elements
+flip one float16 ulp or none. The absolute limit is what the noise model supports, with 4× margin over 2⁻⁷ and 2× over
+2⁻⁶. A rounding point, a layout or a scaling factor wrong in the re-implemented injection shows here, not in the verdict
+cells.
 
 **Seal (R-C23; `ledger/predictions/ownrun-task.json`, 0025).** (i) At every g NEAR and FAR each change the answer on
 at least half the prompts. (ii) At g = 1 the STALE flip rate is ≥ 10%: the greedy output is not reproducible from the
@@ -737,7 +742,7 @@ bootstraps, bands, seal readout), `config/ownrun_task.toml`; TDD with a fake. Tw
 reader step_32, the second storing text and running 17 prompts at a 1,024-token cap as well) fixed the values. Rulings
 taken by 0025: R-C19 greedy decoding, with the **flip rate as the verdict statistic** and accuracy descriptive (T = 1.0
 sampling not registered); R-C20 the full test set, n = 1,319, cap 256; R-C21 the four arms and the dump-equivalence
-control at one relative ulp; R-C22 the accuracy bands kept as descriptives; R-C23 the seal above, (ii) and (iv) blind.
+control (one relative ulp, restated by 0026 to an absolute 2⁻⁵ after the sitting halted on it); R-C22 the accuracy bands kept as descriptives; R-C23 the seal above, (ii) and (iv) blind.
 
 **What §15 cannot say.** Nothing about sampled generation: the trainer samples at T = 1.0, sampling adds its own floor
 of flips against which stale-cache flips may be small, and greedy divergence is a different regime — every sentence (C)
