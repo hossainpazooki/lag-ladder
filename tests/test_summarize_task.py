@@ -104,15 +104,17 @@ def test_summary_marks_a_lag_unevaluable_when_a_positive_control_flips_too_few_a
 
     def lazy_near(i, step, arm, gold):
         if arm == "near" and step == 1:
-            # NEAR flips 5 of 12 answers (under control_min_flip_rate 0.5): the instrument did not fire on the
-            # registered statistic, whatever the accuracy band reads
-            return ("9999" if i % 12 < 5 else default_outcome(i, step, "fresh", gold)[0]), False
+            # NEAR flips 5 of 12 answers, all of them FRESH's correct ones (even indices), so accuracy falls 41.7 points
+            # and the old accuracy band reads DEGRADES_C; under control_min_flip_rate 0.5 the instrument did NOT fire
+            return ("9999" if i % 2 == 0 and i % 12 < 10 else default_outcome(i, step, "fresh", gold)[0]), False
         return default_outcome(i, step, arm, gold)
 
     cfg = _run(repo, seal_cfg, outcome=lazy_near)
     s = st.summarize(cfg)
     g1, g32 = s["lags"]["local:step_1"], s["lags"]["local:step_32"]
     assert g1["arms"]["near"]["flip_rate"] == pytest.approx(5 / 12) and g1["positive_controls_fire"] is False
+    # the band would have fired under the withdrawn rule: this is what makes the test bite on the flips rule
+    assert g1["arms"]["near"]["band"] == "DEGRADES_C"
     assert g1["evaluable"] is False and g1["arms"]["stale"]["band"] is None and g1["arms"]["stale"]["delta"] is not None
     assert g1["arms"]["stale"]["flip_rate"] is not None                    # the descriptives stay
     assert g32["evaluable"] is True
