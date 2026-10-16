@@ -32,7 +32,7 @@ block stays cached across every sync unless something clears it, so its age is u
 |---|---|---|
 | (A) How much of the cache is stale? | f\*(τ), the fraction of tokens an oracle would have to recompute to bring the cache inside a tolerance τ | cache dumps only; no generation |
 | (B) Does the reader notice? | the per-token KL between the reader's next-token distribution over its own cache and over the writer's, on the corpus continuation and on the reader's own greedy continuation | teacher-forced log-probs; one greedy generation per sequence |
-| (C) Does the task notice? | paired exact-match accuracy, stale minus fresh, with a bootstrap interval | generation under each cache |
+| (C) Does the task notice? | the fraction of prompts whose greedy final answer changes under the stale cache, with a bootstrap interval; the paired accuracy difference beside it, descriptive | generation under each cache |
 
 τ is inherited from [linear-ceiling](https://github.com/hossainpazooki/linear-ceiling), where the same
 statistic was calibrated on a cache carried across a change of *context* (the paper *Carryover*). Here
@@ -42,7 +42,7 @@ the ladder (0015, 0016): the reader's KL grows as the square of weight distance 
 leaves HOLDS_B between 3e-3 and 1e-2, an order of magnitude inside (A)'s edge; trained directions read one to
 three orders of magnitude above noise at matched distance. The own run (0017, 0018) read (B) along a 32-step GRPO
 trajectory of Qwen2.5-1.5B: HOLDS_B at every lag on held-out text, four orders of magnitude higher on the policy's
-own prompts. (C) is designed and unbuilt.
+own prompts. (C) is built and registered with its seal committed (0025, design §15); its sitting has not run.
 
 ## How a rung is measured
 

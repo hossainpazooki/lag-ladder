@@ -637,7 +637,7 @@ to 32. Falsified (i): the format is most of the distance and 0021's 0.77 stands 
 stale cache is as bad as no prompt. Not registered: a chat-formatted non-GSM8K prompt (same system line, other task) as an
 intermediate control — a later registration if far reads large and near small.
 
-## 15. Statistic (C), "does the task notice", on the own run (designed 2026-10-15, revised after review the same day; unregistered, unbuilt)
+## 15. Statistic (C), "does the task notice", on the own run (designed 2026-10-15, revised after review the same day and after two probes; built 2026-10-15; registered by 0025)
 
 **Why.** (B) at the operating lag on the trainer's own prompts: the reader notices from the first optimizer step (0018),
 with per-reader controls passed (0021). (C) asks whether the task output changes — the number a practitioner weighs
@@ -660,12 +660,18 @@ order, so the source is at least as long and is cut to this prompt's length; the
 the one pairing that is not a true cut), FAR (a held-out web sequence's cache under the reader's weights, cut to this
 prompt's length). Caches are built live — one float32 forward of the arm's weights over the
 prompt, rounded through float16 (the dump path's precision) — and injected as `tools/score_continuation.py` injects a dump;
-nothing is written to disk at this scale (1,319 × 6 × 2 dumps would be ≈ 90 GB). The final answer is the last number in the
-completion; exact match against gold as the run's reward defined it.
+nothing is written to disk at this scale (1,319 × 6 × 2 dumps would be ≈ 90 GB). The final answer is the run's reward
+extraction: the number after the last `####` marker, else the last number in the completion; exact match against gold.
+The number after the *first* `####` is kept beside it, descriptive: the probes found greedy completions that restate
+`#### N` to the cap.
 
-**Statistics.** (C1), verdict-bearing: per g, Δ = acc(STALE) − acc(FRESH) in points over the 1,319 prompts, with a seeded
-paired bootstrap over prompts (2,000 reps) carrying the interval. (C2), descriptive: the answer-flip rate (final answer
-differs between STALE and FRESH, right or wrong); the per-arm no-answer rate (no extractable number, the cap reached) —
+**Statistics (as revised 2026-10-15 after the probes; R-C19).** (C1), verdict-bearing: per g, the **answer-flip rate** —
+the fraction of the 1,319 prompts whose final answer differs between STALE and FRESH, right or wrong — with a seeded
+bootstrap over prompts (2,000 reps) carrying the interval. (C2), descriptive: Δ = acc(STALE) − acc(FRESH) in points with
+its seeded paired bootstrap and §4's bands (the first draft's verdict statistic, demoted because the probes read the
+step-32 policy at 6% under greedy decoding at the cap — 48 of 64 completions capped, 40 of them a repeated `#### N`
+line, the same at a 1,024-token cap — so a one-point band is a sixth of the baseline and carries nothing; the cap is
+not the limit, the policy's greedy loops are); the per-arm no-answer rate (no extractable number, the cap reached) —
 a stale cache can change the truncation rate itself, so it is recorded per arm, not folded into "wrong"; the
 first-divergence token position; and the (B)→(C) link: per test prompt, (B1) is computed by the same tool on the FRESH
 arm's greedy completion teacher-forced under the FRESH and the STALE cache (one extra forward; §13's on-path text with
@@ -674,54 +680,69 @@ with it. (B)'s rollout (B1) of 0018 exists for ten training prompts only; nothin
 on the discordant pairs beside the interval, not verdict-bearing. Multiplicity as §4: six cells, no correction claimed,
 the count named.
 
-**Bands (§4's, the sign fixed).** HOLDS_C: |Δ| ≤ 1.0 point with the interval inside ±2.0. DEGRADES_C: Δ ≤ −5.0 with the
-interval below −2.0. UNRESOLVED between. The interval's half-width is ≈ 1.96·√(d/n) for discordance d: 1.5 to 1.7 points
-at 7–10%, so HOLDS_C needs discordance well under 7% — which is why the flip rate is reported beside the verdict. The
-bands are in accuracy points and were drafted (§4) with no baseline in mind; the step-32 policy's test accuracy is not
-known before the probe, and a one-point band on a low baseline is a different claim than on a high one. R-C22 restates
-the bands, in points and as a fraction of the probe's FRESH accuracy, before the seal is written.
+**Bands (§4's, the sign fixed; descriptive under R-C22).** HOLDS_C: |Δ| ≤ 1.0 point with the interval inside ±2.0.
+DEGRADES_C: Δ ≤ −5.0 with the interval below −2.0. UNRESOLVED between. The interval's half-width is ≈ 1.96·√(d/n) for
+discordance d: 1.5 to 1.7 points at 7–10%, so HOLDS_C needs discordance well under 7%. The bands were drafted (§4) with
+no baseline in mind; the probes read FRESH at 4 of 64 (6.25%), so a one-point band is a sixth of the baseline. R-C22
+(2026-10-15): the bands stay as written and are read as descriptives; the verdict is the flip rate's. No band on flips
+is defined — the seal names thresholds (10%, 50%) and a growth clause instead.
 
-**Controls, per g, before the cells; the cell is UNEVALUABLE without them.** Positive: NEAR and FAR must read DEGRADES_C
-(the instrument fires on a wrong cache; §4's SCRAMBLED, in two strengths, as §14.2). NEAR is a stronger control here
+**Controls, per g, before the cells; the cell is UNEVALUABLE without them.** Positive: NEAR and FAR must each flip at
+least half the answers against FRESH (`control_min_flip_rate` 0.5; the instrument fires on a wrong cache; §4's SCRAMBLED,
+in two strengths, as §14.2; the probes read 0.906 and 1.000 at g = 32 — the first draft asked for DEGRADES_C, which at
+a 6% baseline NEAR and FAR reach only at n = 1,319, not at the probe's 64). NEAR is a stronger control here
 than in (B): under another prompt's cache the model answers the other question, and accuracy against this prompt's gold
 collapses whatever the format shared — 0021's near-neighbour worry does not transfer, though the probe confirms NEAR
 degrades before the full run spends its generations on it. Floor: FRESH built through float16 against FRESH in float32
-— the answer-flip rate between them under a limit fixed from the probe (the (C) analogue of the float16 floor). Identity:
-FRESH twice — zero flips, a determinism check. **Dump equivalence, once per sitting, before any cell** — the control that
-ties this tool to the one every (B) number came through: for the ten rollout prompts of 0017 the tool builds the step-0
-cache live from the step-0 weights and compares it layer by layer with the step-0 dump on the private dataset (float16,
-expected equal to the last bit; a tolerance is a finding, not a pass), and reproduces 0018's rollout (B1) at one lag
-(g = 32, 8.914e-2) by teacher-forcing the stored completions under the live caches — within the float16 floor. A
-rounding point, a layout or a scaling factor wrong in the re-implemented injection shows here, not in the verdict cells.
+— the answer-flip rate between them, halting above 1% (13 of 1,319 per reader; both probes read 0 of 64, which bounds
+the rate at 4.6% by the rule of three, so 1% is a margin ten times under the seal's 10%, not a measured ceiling; a hard
+zero would be six chances per sitting to halt on one prompt). Identity: FRESH twice — zero flips, a determinism check.
+**Dump equivalence, once per sitting, before any cell** — the control that ties this tool to the one every (B) number
+came through: for the ten rollout prompts of 0017 the tool builds the step-0 cache live from the step-0 weights and
+compares it layer by layer with the step-0 dump on the private dataset, and reproduces 0018's rollout (B1) at one lag
+(g = 32, 8.914e-2) by teacher-forcing the stored completions under the live caches. R-C21: the gap limit is **one float16
+ulp relative to the element** (2⁻¹⁰, with the float16 minimum normal as the absolute floor near zero), the (B1)
+reproduction within 1e-3 relative the material check. The probes read exactly one ulp — 2⁻⁷ absolute on elements of
+magnitude 8–16, then 2⁻⁶ on 16–32 — from a different float32 accumulation order (prompt-only forward against the dump's
+full-row forward), so the first draft's "equal to the last bit" is not what the live path gives and an absolute limit
+calibrated on one probe false-alarms on the next; (B1) reproduced to 6.4e-6 and 4.0e-6. A rounding point, a layout or a
+scaling factor wrong in the re-implemented injection shows here, not in the verdict cells.
 
-**Seal (structure; values fixed at registration after a 64-prompt probe on the run machine).** (i) NEAR and FAR
-DEGRADES_C at every g. (ii) At g = 1 the interval for Δ contains 0 and its lower end lies above −2.0 points: one step of
-lag shows no measurable cost. This is a statement about the interval's location, not the HOLDS_C band: the band's
-"inside ±2.0" is decided by the discordance — at 8–10% flips the half-width alone is 1.6–1.7 points and the band is a
-coin flip at a true Δ of zero, which the prior above (near-total path divergence from g = 1) makes likely. If the probe's
-discordance at g = 1 is low enough that HOLDS_C has power (half-width ≤ 1.0, discordance ≲ 3.5%), R-C23 may tighten (ii)
-to the band; otherwise the location clause stands. (iii) The answer-flip rate STALE vs FRESH at g = 32 ≥ 10%. Read, by
-pre-commitment, as "the greedy output is not reproducible under a stale cache", not "the task degrades": a 10% flip
-rate with Δ ≈ 0 is path divergence that reconverges to a different, equally accurate answer, and a practitioner weighs
-reproducibility and accuracy separately; the accuracy claim is (ii)'s and the descriptive Δ's. Descriptive, not sealed:
-Δ at g ∈ {2, …, 32}; the flip rate's growth with lag against (B1)'s; the no-answer rate per arm; NEAR against FAR.
+**Seal (R-C23; `ledger/predictions/ownrun-task.json`, 0025).** (i) At every g NEAR and FAR each change the answer on
+at least half the prompts. (ii) At g = 1 the STALE flip rate is ≥ 10%: the greedy output is not reproducible from the
+first optimizer step. (iii) At g = 32 the STALE flip rate is ≥ 10%. (iv) Growth: the g = 1 flip interval lies entirely
+below the g = 32 interval. Read, by pre-commitment, as "the greedy output changes under a stale cache", not "the task
+degrades": a flip with Δ ≈ 0 is path divergence that lands on a different, equally (in)accurate answer, and a
+practitioner weighs reproducibility and accuracy separately; the accuracy claim is the descriptive Δ's. The asymmetry is
+stated: both probes read g = 32 only, so (i) and (iii) at g = 32 are confirmations (55 of 64 STALE flips, twice) and
+**(ii) and (iv) are the blind predictions** — (B1) at g = 1 is an order of magnitude under g = 32 (0018), and whether a
+cache one step stale still turns the greedy answer on a tenth of the prompts is what the sitting tests. The first draft's
+(ii), a location clause on Δ at g = 1, is withdrawn with the statistic: at a 6% baseline the interval's location says
+nothing. Descriptive, not sealed: Δ at every g; FRESH accuracy; the first-`####` answer beside the registered one; the
+flip rate at g ∈ {2, …, 16} and its growth against (B1)'s; the no-answer and cap rates per arm; NEAR against FAR.
 
 **Where it runs; cost (estimate, not a record).** One A40 sitting under the GPU protocol: 1,319 × 6 × 4 ≈ 31.7k greedy
 generations of ≤ 256 tokens plus the cache forwards, batched; 3–5 h, $2–3; the probe first (it also sizes the TTL). Step 0
 and the kept weights from the private dataset; the step-0 dump of the rollout prompts for the equivalence control.
-Records: per (g, arm) a JSONL of {index, prompt_len, answer (None when no number is extractable), reached_cap, gold,
-correct, completion sha256, first divergence vs FRESH, (B1) on the fresh path}, the summary, hashes in the outcome entry.
+Records: per (g, arm) a JSONL (`task-record-v2`) of {index, prompt_len, answer (None when no number is extractable),
+the first-`####` answer, reached_cap, gold, correct, completion sha256 and the decoded completion text, first divergence
+vs FRESH, (B1) on the fresh path}, the summary, hashes in the outcome entry. The text is kept because the first probe
+stored only the hash and its three confounds (cap, loops, extraction) could not be separated offline; the second probe
+separated them.
 
-**Build (after 0022's outcome, R-C18; built 2026-10-15, unregistered).** `tools/task_swap.py` (the instrument's interpreter; imports nothing from `kvt` or
-`lag_ladder`; re-implements the injection as `score_continuation.py` does), `lag_ladder/task.py` (gate, plan, run, record,
-halting), `lag_ladder/summarize_task.py` (bootstrap, flips, bands, seal readout), `config/ownrun_task.toml` UNREGISTERED
-until its entry; TDD with a fake. Rulings to take at registration: R-C19 greedy decoding as the verdict arm (T = 1.0
-sampling not registered); R-C20 the full test set, n = 1,319; R-C21 the four arms and the dump-equivalence control;
-R-C22 the bands, restated against the probe's baseline; R-C23 the seal's values, and whether (ii) is the location clause
-or the band, from the probe's discordance.
+**Build (after 0022's outcome, R-C18; built 2026-10-15; registered by 0025).** `tools/task_swap.py` (the instrument's
+interpreter; imports nothing from `kvt` or `lag_ladder`; re-implements the injection as `score_continuation.py` does),
+`lag_ladder/task.py` (gate, plan, run, probe, record, halting), `lag_ladder/summarize_task.py` (flip and accuracy
+bootstraps, bands, seal readout), `config/ownrun_task.toml`; TDD with a fake. Two probes (2026-10-15, 64 prompts at
+reader step_32, the second storing text and running 17 prompts at a 1,024-token cap as well) fixed the values. Rulings
+taken by 0025: R-C19 greedy decoding, with the **flip rate as the verdict statistic** and accuracy descriptive (T = 1.0
+sampling not registered); R-C20 the full test set, n = 1,319, cap 256; R-C21 the four arms and the dump-equivalence
+control at one relative ulp; R-C22 the accuracy bands kept as descriptives; R-C23 the seal above, (ii) and (iv) blind.
 
 **What §15 cannot say.** Nothing about sampled generation: the trainer samples at T = 1.0, sampling adds its own floor
 of flips against which stale-cache flips may be small, and greedy divergence is a different regime — every sentence (C)
 produces is about the *greedy* task output, and the outcome entry's wording carries the word; nothing about a swap
 inside a generation; nothing beyond one seed, one 1.5B model, one task, 32
-steps; nothing about a cache older than 32 steps; nothing a reward model would compute.
+steps; nothing about a cache older than 32 steps; nothing a reward model would compute; nothing about *accuracy* beyond
+the descriptive Δ — under greedy decoding at a 256-token cap the step-32 policy answers 6% of GSM8K test and loops on
+most of the rest, so this section measures whether the answer changes, not whether it worsens.

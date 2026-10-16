@@ -13,7 +13,8 @@ registration and amendments, entry 0015 its outcome, entry 0016 its closure on t
 entry 0017 the own run's registration, entry 0018 its outcome, entry 0019 the ruling that restricts 0016's statement of
 record to the held-out texts it names, entry 0020 the registration of rollout-text controls and the sliding writer,
 entry 0021 their outcome, entry 0022 the registration of a far scrambled control on rollout text, entry 0023 its
-outcome, and entry 0024 the ruling that adds the trainer's own text to (B)'s statement of record, on one seed.
+outcome, entry 0024 the ruling that adds the trainer's own text to (B)'s statement of record, on one seed, and entry
+0025 the registration of statistic (C) on the own run with its seal.
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never
@@ -84,9 +85,9 @@ run with the trainer's interpreter, imports nothing from here or the instrument)
 `equivalence` | `cells` | `prepare`; builds prompt caches live, rounds them through float16 and injects them through
 `score_continuation.py`'s functions; greedy generation per arm; one `task-record-v2` per prompt and arm, keeping the
 decoded completion text and the first-`####` answer beside the registered last-`####` answer; run with the instrument's
-interpreter). Built 2026-10-15, UNREGISTERED: `config/ownrun_task.toml` carries a `GSM8K_TEST_PENDING` pin and a
-placeholder floor limit until the probe and the registering entry.
-`config/` — `seal.toml`, `pilot.toml`, `distance.toml`, `reader.toml`, `ownrun.toml` (0017, as run), `ownrun_controls.toml` (0020; `per_pair` controls), `ownrun_far.toml` (0022; `far_pair` + `far_min`), `ownrun_task.toml` (§15, UNREGISTERED). `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
+interpreter). Built 2026-10-15, registered by 0025 after two probes: `config/ownrun_task.toml` pins the GSM8K test
+prompts file, floor 1%, positive controls at 0.5 flips, dump equivalence at one relative float16 ulp.
+`config/` — `seal.toml`, `pilot.toml`, `distance.toml`, `reader.toml`, `ownrun.toml` (0017, as run), `ownrun_controls.toml` (0020; `per_pair` controls), `ownrun_far.toml` (0022; `far_pair` + `far_min`), `ownrun_task.toml` (0025; §15, the (C) arms and controls). `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
 `mappers/` — seal artifact roots, gitignored past their placeholders. `docs/` — the design doc.
 
 ## State
@@ -131,6 +132,11 @@ inference-only jobs). **0023 is its outcome**: one A40 sitting, no halt; far 0.4
 0.126 (far/scrambled 3.57 to 5.80, clause (i) HELD); 0018's rollout medians over far 0.010 to 0.146 (clause (ii) HELD);
 the replicate matches 0018 to 5e-5 on a second host. Records and the Hub backup (`ownrun-far/`) under the hashes 0023
 states. **0024 amends (B)'s statement of record** with the rollout reading, on one seed (the clause names the seed count,
-the controls and the two ratios; 0019's restriction stands). Open: R-C16 second seed (would strengthen 0024, not change
-it), R-C18 the build and registration of statistic (C) from §15 (whole-prompt cache swap, GSM8K test, greedy, FRESH/STALE/NEAR/FAR arms,
-Δ accuracy with a paired bootstrap, flip rate descriptive); 128-step closed.
+the controls and the two ratios; 0019's restriction stands). **0025 registers statistic (C)** (`config/ownrun_task.toml`;
+§15 as revised after two 64-prompt probes at reader step_32: whole-prompt cache swap, GSM8K test n = 1,319, greedy at
+a 256-token cap, FRESH/STALE/NEAR/FAR arms; **verdict on the STALE answer-flip rate** per lag with a bootstrap
+interval, Δ accuracy descriptive since the probes read FRESH at 4 of 64 with 48 capped in `#### N` loops; floor 1%,
+positive controls NEAR/FAR ≥ 0.5 flips, dump equivalence at one relative float16 ulp with (B1) within 1e-3; seal
+`ownrun-task`: (i) controls fire at every g, (ii) STALE flips ≥ 10% at g = 1 [blind], (iii) ≥ 10% at g = 32 [probes read
+55/64], (iv) the g = 1 interval below the g = 32 interval [blind]). Open: the (C) sitting (one A40, cap 256, v2 records,
+torch build recorded); R-C16 second seed; 128-step closed.
