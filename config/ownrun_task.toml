@@ -44,9 +44,12 @@ n_prompts = 1319
 floor_max_flip_rate = 0.01
 # Dump equivalence, once per sitting before any cell: the writer's live cache of 0017's rollout prompts against the
 # step-0 dump, and 0018's rollout (B1) at step_32 reproduced through this tool (results/ownrun/summary.json: 8.9137e-2).
-# The gap limit is relative: one float16 ulp of the element (2^-10; the two probes read one ulp, 2^-7 and 2^-6
-# absolute, from a different float32 accumulation order), the (B1) reproduction within 1e-3 is the material check.
-equivalence_max_rel_diff = 0.0009765625
+# The gap limit is absolute (0026 restating R-C21): 2^-5, one float16 ulp in the top binade the caches occupy. The two
+# probes and the sitting read 2^-7 (cu130) and 2^-6 (cu128). 0025's per-element relative limit (2^-10) halted the sitting
+# of 2026-10-16 at 0.33: the live-vs-dump discrepancy is float32 forward noise of ~1e-5 absolute, hundreds of float16 ulps
+# of a near-zero element, so no live cache could meet it. The relative gap and the share of differing elements are
+# descriptives in the record; the (B1) reproduction within 1e-3 is the material check.
+equivalence_max_abs_diff = 0.03125
 equivalence_b1_max_rel = 1e-3
 equivalence_reader = "local:step_32"
 equivalence_expect_b1 = 0.089137

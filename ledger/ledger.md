@@ -1093,3 +1093,35 @@ first-`####` answer as verdict; a cap above 256; the second seed (R-C16).
 **Consequences in this commit set:** `tools/task_swap.py`, `src/lag_ladder/{config,task,summarize_task}.py`,
 `tests/{test_task_swap,test_task,test_summarize_task,test_config,fake_task_swap}.py`, `config/ownrun_task.toml`,
 `ledger/predictions/ownrun-task.json` + `.sha256`, `docs/2026-09-19-holdover-design.md` (§15), `README.md`, `CLAUDE.md`.
+
+### 0026 — 2026-10-16 — The (C) dump-equivalence limit restated: absolute 2⁻⁵ (R-C21), after the first sitting attempt halted on the relative one
+
+prior-entries-sha256: c19cb698e8752e92a0c19bed77d661b9ac9faa8d0f41ba4f033c8ca6c2df56d5
+
+**Amends** 0025's dump-equivalence control in `config/ownrun_task.toml`: the gap limit is now `equivalence_max_abs_diff
+= 0.03125` (2⁻⁵) on the live step-0 cache rounded through float16 against the step-0 dump, replacing the per-element
+relative limit `equivalence_max_rel_diff = 2⁻¹⁰`. The (B1) reproduction within 1e-3 relative stays the material check.
+The relative gap and the share of elements that differ after the rounding are carried as descriptives. The statistic,
+the arms, the floor and identity controls, the positive controls, the seal `ownrun-task` (`3da7a50d…`) and its four
+clauses are untouched; the reader order in the config is `step_1, step_32, 2, 4, 8, 16` (run order, not a statistic).
+
+**What halted.** The sitting under 0025 (one A40, torch 2.14.1+cu130, driver 580, tree `fab88ed`) ran the equivalence
+job and refused before any cell: `max_rel_diff` 0.3263 against 2⁻¹⁰, with `max_abs_diff` 0.0078125 (2⁻⁷) and (B1) at
+step_32 reproduced at median 0.0891364 against 0.089137 (relative gap 6.4e-6) — the absolute gap and the (B1) figure
+equal to the first probe's on the same build to every digit. The worst relative gaps sit on V elements (seq 0: layer 24;
+seq 1: layer 11). Record: the attempt's `equivalence.json` and `run.json` (`halted` set), off-repository.
+
+**Why the relative limit could not be met.** 0025 took the probes' reading of exactly one float16 ulp at the max-abs
+element (2⁻⁷ at magnitude 8–16; 2⁻⁶ on another build) for a per-element property and registered the limit relative to
+the element. A read-only diagnostic on the sitting's host (same dump, same live cache; not a repository tool) read the
+discrepancy as float32 forward-to-forward noise — the prompt-only live forward against the dump's full-row forward, the
+live path itself deterministic — of order 1e-5 absolute whatever the element's size: most elements agree bit-for-bit
+after the rounding, large elements flip at most one float16 ulp, and near-zero V elements differ by hundreds of their own
+ulps. No live cache meets a per-element relative limit under such noise; the dump is itself float16-rounded. The
+absolute limit is what the noise model supports: 2⁻⁵ is one float16 ulp in the top binade the caches occupy, 4× over the
+cu130 reading and 2× over the cu128 one. The restated tool records `share_differing` so the outcome entry can state the
+share from the sitting's own record.
+
+**Consequences.** The sitting relaunches under this entry on the same pod from the commit carrying it; the equivalence
+job re-runs and the outcome entry reads it against 2⁻⁵. 0025's seal and clauses stand unchanged. Nothing below the
+equivalence control ran under 0025, so no (C) record exists under the superseded limit.
