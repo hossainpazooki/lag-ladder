@@ -1,8 +1,9 @@
-"""Statistic (C) recomputed from the task records on disk (design §15): per lag the paired accuracy difference
-STALE − FRESH in points with a seeded paired bootstrap over prompts carrying the interval, the (C) bands with the sign
-fixed, the location clause the seal may use at g = 1, and the descriptives — answer-flip rate, no-answer rate, first
-divergence, the rank correlation of per-prompt flips with (B1) on the fresh path. Pure functions first; the run-level
-summarizer refuses on any mismatch and is built with the driver."""
+"""Statistic (C) recomputed from the task records on disk (design §15, as revised 2026-10-15): per lag and arm the
+answer-flip rate against FRESH with a seeded bootstrap over prompts carrying its interval (verdict-bearing for STALE;
+the positive controls NEAR and FAR must flip at least `control_min_flip_rate`), the paired accuracy difference
+STALE − FRESH in points with its paired bootstrap and the (C) bands (descriptive since the probe read a 6% greedy
+baseline), the no-answer and cap rates, first divergence, and the rank correlation of per-prompt flips with (B1) on the
+fresh path. Pure functions first; the run-level summarizer refuses on any mismatch and is built with the driver."""
 from __future__ import annotations
 
 import numpy as np
@@ -38,16 +39,25 @@ def band(delta: float, ci_low: float, ci_high: float, rule: dict) -> str:
     return "UNRESOLVED"
 
 
-def location_ok(*, ci_low: float, ci_high: float, lower_bound: float) -> bool:
-    """The seal's location clause: the interval contains 0 and its lower end lies above lower_bound."""
-    return ci_low <= 0.0 <= ci_high and ci_low > lower_bound
-
-
 def flip_rate(stale_answers, fresh_answers) -> float:
     a, b = list(stale_answers), list(fresh_answers)
     if len(a) != len(b) or not a:
         raise ValueError("paired answer lists of equal non-zero length required")
     return float(sum(x != y for x, y in zip(a, b)) / len(a))
+
+
+def flip_rate_interval(flips, *, reps: int, seed: int) -> dict:
+    """The answer-flip rate over prompts with a seeded bootstrap (resampling prompts with replacement) giving the
+    2.5/97.5 percentile interval; the verdict-bearing statistic of §15 as revised."""
+    f = np.asarray(list(flips), dtype=np.float64)
+    if f.ndim != 1 or f.size == 0:
+        raise ValueError("a non-empty list of per-prompt flips required")
+    n = int(f.size)
+    rng = make_rng(seed)
+    idx = rng.integers(0, n, size=(reps, n))
+    boots = f[idx].mean(axis=1)
+    lo, hi = (float(x) for x in np.percentile(boots, [2.5, 97.5]))
+    return {"n": n, "rate": float(f.mean()), "ci_low": lo, "ci_high": hi, "reps": int(reps), "seed": int(seed)}
 
 
 def no_answer_rate(answers) -> float:
@@ -128,8 +138,10 @@ def _arm_stats(fresh: dict[int, dict], arm: dict[int, dict], cfg: TaskConfig) ->
     b1 = [arm[i].get("b1_fresh_path") for i in idx]
     divs = [arm[i]["first_divergence"] for i in idx if arm[i]["first_divergence"] is not None]
     rho = rank_correlation(flips, b1) if all(x is not None for x in b1) else None
+    fi = flip_rate_interval(flips, reps=int(cfg.rule["bootstrap_reps"]), seed=cfg.seed)
     return {"delta": d, "band": band(d["delta_points"], d["ci_low"], d["ci_high"], cfg.rule),
             "flip_rate": flip_rate([arm[i]["answer"] for i in idx], [fresh[i]["answer"] for i in idx]),
+            "flip_ci_low": fi["ci_low"], "flip_ci_high": fi["ci_high"],
             "no_answer_rate": no_answer_rate([arm[i]["answer"] for i in idx]),
             "cap_rate": float(sum(bool(arm[i]["reached_cap"]) for i in idx) / len(idx)),
             "mean_first_divergence": (float(np.mean(divs)) if divs else None),
@@ -177,7 +189,9 @@ def summarize(cfg: TaskConfig, root: Path | None = None, out: Path | None = None
                "arms": {}}
         for arm in ARMS:
             lag["arms"][arm] = _arm_stats(fresh, _load_jsonl(d / f"{arm}.jsonl", shas[f"{arm}.jsonl"]), cfg)
-        fire = all(lag["arms"][a]["band"] == "DEGRADES_C" for a in ("near", "far"))
+        # the instrument fires on a wrong cache when it changes the answer on at least control_min_flip_rate of the
+        # prompts (§15 as revised: the positive controls read on the registered statistic, not the accuracy band)
+        fire = all(lag["arms"][a]["flip_rate"] >= float(cfg.rule["control_min_flip_rate"]) for a in ("near", "far"))
         lag["positive_controls_fire"] = fire
         lag["evaluable"] = bool(fire and lag["controls"]["floor_passed"] and lag["controls"]["identity_passed"])
         if not lag["evaluable"]:
@@ -190,9 +204,10 @@ def summarize(cfg: TaskConfig, root: Path | None = None, out: Path | None = None
 
 
 def seal_readout(summary: dict, repo: Path, seal: str = "ownrun-task") -> dict | None:
-    """The sealed clauses of section 15 read against the recomputed statistics: (i) NEAR and FAR DEGRADES_C at every
-    named reader; (ii) at the first lag the STALE interval contains 0 with its lower end above a bound; (iii) the STALE
-    answer-flip rate at the last lag at least a value. UNREAD when an input is withheld or missing."""
+    """The sealed clauses of section 15 (as revised) read against the recomputed statistics: (i) the positive controls
+    fire at every named reader; (ii) the STALE answer-flip rate at the first lag is at least a value; (iii) the same at
+    the last lag; (iv) growth — the first lag's flip interval lies entirely below the last lag's. UNREAD when an input is
+    withheld or missing."""
     f = Path(repo) / PREDICTIONS / f"{seal}.json"
     if not f.exists():
         return None
@@ -210,29 +225,36 @@ def seal_readout(summary: dict, repo: Path, seal: str = "ownrun-task") -> dict |
     if i:
         fires = {r: (lags.get(r) or {}).get("positive_controls_fire") for r in i["readers"]}
         out["clauses"]["i"] = {"readers": list(i["readers"]), "fire": fires, "verdict": verdict(list(fires.values()))}
-    ii = P.get("ii_location_at_first_lag")
-    if ii:
-        lag = lags.get(ii["reader"]) or {}
-        d = ((lag.get("arms") or {}).get("stale") or {}).get("delta")
-        ok = (None if not lag.get("evaluable") or d is None
-              else location_ok(ci_low=d["ci_low"], ci_high=d["ci_high"], lower_bound=float(ii["lower_bound"])))
-        out["clauses"]["ii"] = {"reader": ii["reader"], "lower_bound": float(ii["lower_bound"]),
-                                "interval": None if d is None else [d["ci_low"], d["ci_high"]], "verdict": verdict([ok])}
-    iii = P.get("iii_flip_rate_at_last_lag")
-    if iii:
-        lag = lags.get(iii["reader"]) or {}
-        fr = ((lag.get("arms") or {}).get("stale") or {}).get("flip_rate")
-        ok = None if not lag.get("evaluable") or fr is None else fr >= float(iii["at_least"])
-        out["clauses"]["iii"] = {"reader": iii["reader"], "at_least": float(iii["at_least"]), "flip_rate": fr,
-                                 "verdict": verdict([ok])}
+    def stale(reader):
+        lag = lags.get(reader) or {}
+        s = ((lag.get("arms") or {}).get("stale") or {})
+        return s if lag.get("evaluable") and s.get("flip_rate") is not None else None
+
+    for key, name in (("ii_flip_rate_at_first_lag", "ii"), ("iii_flip_rate_at_last_lag", "iii")):
+        c = P.get(key)
+        if c:
+            s = stale(c["reader"])
+            ok = None if s is None else s["flip_rate"] >= float(c["at_least"])
+            out["clauses"][name] = {"reader": c["reader"], "at_least": float(c["at_least"]),
+                                    "flip_rate": None if s is None else s["flip_rate"], "verdict": verdict([ok])}
+    iv = P.get("iv_flip_growth")
+    if iv:
+        a, b = stale(iv["first"]), stale(iv["last"])
+        ok = None if a is None or b is None else a["flip_ci_high"] < b["flip_ci_low"]
+        out["clauses"]["iv"] = {"first": iv["first"], "last": iv["last"],
+                                "intervals": {r: (None if s is None else [s["flip_ci_low"], s["flip_ci_high"]])
+                                              for r, s in ((iv["first"], a), (iv["last"], b))},
+                                "verdict": verdict([ok])}
     return out
 
 
 def render(s: dict) -> str:
-    lines = [f"statistic (C) (entry {s['registered_by']}, instrument {s['upstream_sha'][:12]}): greedy final-answer "
-             "accuracy under an injected prompt cache; delta = STALE - FRESH in points, paired bootstrap interval"]
+    lines = [f"statistic (C) (entry {s['registered_by']}, instrument {s['upstream_sha'][:12]}): greedy final answer "
+             "under an injected prompt cache; verdict on the STALE answer-flip rate [bootstrap interval]; delta = "
+             "STALE - FRESH accuracy in points (descriptive)"]
     eq = s["equivalence"]
-    lines.append(f"dump equivalence: max_abs_diff {eq['max_abs_diff']:.3e} (limit {eq['limit']}), (B1) rel gap "
+    lines.append(f"dump equivalence: max_rel_diff {eq['max_rel_diff']:.3e} (limit {eq['limit']}; max_abs_diff "
+                 f"{eq['max_abs_diff']:.3e}), (B1) rel gap "
                  f"{eq['b1_rel_gap']} -> {'ok' if eq['passed'] else 'FAILED'}")
     for reader, lag in s["lags"].items():
         c = lag["controls"]
@@ -242,9 +264,9 @@ def render(s: dict) -> str:
                      + ("" if lag["evaluable"] else "  -> UNEVALUABLE"))
         for arm, a in lag["arms"].items():
             d = a["delta"]
-            lines.append(f"  {arm:6s} delta {d['delta_points']:+6.2f} [{d['ci_low']:+6.2f}, {d['ci_high']:+6.2f}]  "
-                         f"flips {a['flip_rate']:.3f}  no-answer {a['no_answer_rate']:.3f}  cap {a['cap_rate']:.3f}  "
-                         f"{a['band'] or 'UNEVALUABLE'}")
+            lines.append(f"  {arm:6s} flips {a['flip_rate']:.3f} [{a['flip_ci_low']:.3f}, {a['flip_ci_high']:.3f}]  "
+                         f"delta {d['delta_points']:+6.2f} [{d['ci_low']:+6.2f}, {d['ci_high']:+6.2f}]  "
+                         f"no-answer {a['no_answer_rate']:.3f}  cap {a['cap_rate']:.3f}  {a['band'] or 'UNEVALUABLE'}")
     ro = s.get("seal_readout")
     if ro:
         lines.append(f"sealed clauses ({ro['source']}):")

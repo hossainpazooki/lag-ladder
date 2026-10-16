@@ -34,10 +34,15 @@ def test_bands_follow_the_design_with_the_sign_fixed():
     assert st.band(-0.5, -1.0, 0.2, rule) == "HOLDS_C"
 
 
-def test_location_clause_reads_the_interval_not_the_band():
-    assert st.location_ok(ci_low=-1.2, ci_high=0.8, lower_bound=-2.0) is True
-    assert st.location_ok(ci_low=0.1, ci_high=1.0, lower_bound=-2.0) is False      # excludes 0
-    assert st.location_ok(ci_low=-2.5, ci_high=0.3, lower_bound=-2.0) is False     # lower end under the bound
+def test_flip_rate_interval_is_a_seeded_bootstrap_over_prompts():
+    flips = [1] * 55 + [0] * 9
+    r = st.flip_rate_interval(flips, reps=500, seed=0)
+    assert r["rate"] == pytest.approx(55 / 64) and r["ci_low"] <= r["rate"] <= r["ci_high"] and r["n"] == 64
+    assert r["ci_low"] > 0.7 and r["ci_high"] < 1.0
+    assert st.flip_rate_interval(flips, reps=500, seed=0) == r and st.flip_rate_interval(flips, reps=500, seed=1) != r
+    assert st.flip_rate_interval([0, 0, 0, 0], reps=50, seed=0) == {"n": 4, "rate": 0.0, "ci_low": 0.0, "ci_high": 0.0, "reps": 50, "seed": 0}
+    with pytest.raises(ValueError):
+        st.flip_rate_interval([], reps=10, seed=0)
 
 
 def test_rates_and_rank_correlation():
@@ -80,30 +85,36 @@ def test_summary_recomputes_each_lag_from_the_records(repo, seal_cfg):
     # even index never happens, so no correct answer is lost: delta 0, flips 6/12
     assert stale["delta"]["acc_fresh"] == pytest.approx(50.0) and stale["delta"]["delta_points"] == pytest.approx(0.0)
     assert stale["flip_rate"] == pytest.approx(6 / 12) and stale["band"] in ("HOLDS_C", "UNRESOLVED")
+    assert stale["flip_ci_low"] <= 6 / 12 <= stale["flip_ci_high"] and stale["flip_ci_low"] > 0.0
     assert stale["no_answer_rate"] == 0.0 and stale["cap_rate"] == pytest.approx(1 / 12)
     assert stale["rank_correlation_b1"] is not None and stale["mean_first_divergence"] is not None
     # NEAR and FAR answer 9999 everywhere: every correct FRESH answer is lost -> delta -50 on 6 of 12 discordant
     assert g32["arms"]["near"]["delta"]["delta_points"] == pytest.approx(-50.0)
     assert g32["arms"]["far"]["delta"]["delta_points"] == pytest.approx(-50.0)
     assert g32["arms"]["near"]["band"] == "DEGRADES_C" == g32["arms"]["far"]["band"]
+    assert g32["arms"]["near"]["flip_rate"] == 1.0 == g32["arms"]["far"]["flip_rate"]
     assert g32["controls"]["floor_passed"] and g32["controls"]["identity_passed"]
     assert g32["positive_controls_fire"] is True and g32["evaluable"] is True
     assert s["seal_readout"] is None or isinstance(s["seal_readout"], dict)
     assert (cfg.results_dir / "summary.json").exists()
 
 
-def test_summary_marks_a_lag_unevaluable_when_a_positive_control_does_not_degrade(repo, seal_cfg):
+def test_summary_marks_a_lag_unevaluable_when_a_positive_control_flips_too_few_answers(repo, seal_cfg):
     from tests.fake_task_swap import default_outcome
 
     def lazy_near(i, step, arm, gold):
         if arm == "near" and step == 1:
-            return default_outcome(i, step, "fresh", gold)       # NEAR reads like FRESH: the instrument did not fire
+            # NEAR flips 5 of 12 answers (under control_min_flip_rate 0.5): the instrument did not fire on the
+            # registered statistic, whatever the accuracy band reads
+            return ("9999" if i % 12 < 5 else default_outcome(i, step, "fresh", gold)[0]), False
         return default_outcome(i, step, arm, gold)
 
     cfg = _run(repo, seal_cfg, outcome=lazy_near)
     s = st.summarize(cfg)
     g1, g32 = s["lags"]["local:step_1"], s["lags"]["local:step_32"]
+    assert g1["arms"]["near"]["flip_rate"] == pytest.approx(5 / 12) and g1["positive_controls_fire"] is False
     assert g1["evaluable"] is False and g1["arms"]["stale"]["band"] is None and g1["arms"]["stale"]["delta"] is not None
+    assert g1["arms"]["stale"]["flip_rate"] is not None                    # the descriptives stay
     assert g32["evaluable"] is True
 
 
@@ -115,23 +126,28 @@ def test_summary_refuses_a_record_hash_mismatch(repo, seal_cfg):
         st.summarize(cfg)
 
 
-def test_seal_readout_reads_the_three_clauses(tmp_path):
+def test_seal_readout_reads_the_four_clauses_on_flips(tmp_path):
     from lag_ladder.summarize_reader import PREDICTIONS
     (tmp_path / PREDICTIONS).mkdir(parents=True)
     (tmp_path / PREDICTIONS / "ownrun-task.json").write_text(json.dumps({"prediction": {"predictions": {
         "i_positive_controls_fire": {"readers": ["local:step_1", "local:step_32"]},
-        "ii_location_at_first_lag": {"reader": "local:step_1", "lower_bound": -2.0},
-        "iii_flip_rate_at_last_lag": {"reader": "local:step_32", "at_least": 0.10}}}}), encoding="utf-8")
+        "ii_flip_rate_at_first_lag": {"reader": "local:step_1", "at_least": 0.10},
+        "iii_flip_rate_at_last_lag": {"reader": "local:step_32", "at_least": 0.10},
+        "iv_flip_growth": {"first": "local:step_1", "last": "local:step_32"}}}}), encoding="utf-8")
     summary = {"lags": {
         "local:step_1": {"positive_controls_fire": True, "evaluable": True,
-                         "arms": {"stale": {"delta": {"ci_low": -1.0, "ci_high": 0.5}, "flip_rate": 0.05}}},
+                         "arms": {"stale": {"flip_rate": 0.30, "flip_ci_low": 0.27, "flip_ci_high": 0.33}}},
         "local:step_32": {"positive_controls_fire": True, "evaluable": True,
-                          "arms": {"stale": {"delta": {"ci_low": -3.0, "ci_high": -0.5}, "flip_rate": 0.2}}}}}
+                          "arms": {"stale": {"flip_rate": 0.86, "flip_ci_low": 0.84, "flip_ci_high": 0.88}}}}}
     c = st.seal_readout(summary, tmp_path, "ownrun-task")["clauses"]
-    assert c["i"]["verdict"] == "HELD" and c["ii"]["verdict"] == "HELD" and c["iii"]["verdict"] == "HELD"
+    assert [c[k]["verdict"] for k in ("i", "ii", "iii", "iv")] == ["HELD"] * 4
+    assert c["iv"]["intervals"] == {"local:step_1": [0.27, 0.33], "local:step_32": [0.84, 0.88]}
+    # (ii) falls when the first lag reproduces the answer; (iv) falls when the intervals touch
+    summary["lags"]["local:step_1"]["arms"]["stale"] = {"flip_rate": 0.05, "flip_ci_low": 0.03, "flip_ci_high": 0.85}
+    c = st.seal_readout(summary, tmp_path, "ownrun-task")["clauses"]
+    assert c["ii"]["verdict"] == "FALSIFIED" and c["iv"]["verdict"] == "FALSIFIED" and c["iii"]["verdict"] == "HELD"
+    # an unevaluable lag withholds every clause that reads it
     summary["lags"]["local:step_32"]["positive_controls_fire"] = False
     summary["lags"]["local:step_32"]["evaluable"] = False
     c = st.seal_readout(summary, tmp_path, "ownrun-task")["clauses"]
-    assert c["i"]["verdict"] == "FALSIFIED" and c["iii"]["verdict"] == "UNREAD"
-    summary["lags"]["local:step_1"]["arms"]["stale"]["delta"]["ci_low"] = 0.2
-    assert st.seal_readout(summary, tmp_path, "ownrun-task")["clauses"]["ii"]["verdict"] == "FALSIFIED"
+    assert c["i"]["verdict"] == "FALSIFIED" and c["iii"]["verdict"] == "UNREAD" and c["iv"]["verdict"] == "UNREAD"
