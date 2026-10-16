@@ -58,12 +58,18 @@ def through_float16(x: np.ndarray) -> np.ndarray:
     return np.asarray(x, dtype=np.float32).astype(np.float16).astype(np.float32)
 
 
+FLOAT16_MIN_NORMAL = 2.0 ** -14  # the absolute floor of the relative gap: a one-ulp gap next to zero is not a gap of 1.0
+
+
 def compare_layers(live: list, dump: list) -> dict:
-    """Largest absolute gap between a live cache rounded through float16 and a dump, over every layer and side.
-    live/dump: lists over layers of (K, V) arrays [rows, n_kv, d_h]; the dump may be float16."""
+    """Largest absolute and relative gap between a live cache rounded through float16 and a dump, over every layer and
+    side. The relative gap is |a - b| / (max(|a|, |b|) + FLOAT16_MIN_NORMAL) per element; one float16 ulp is <= 2^-10 of
+    the element whatever its binade, so the registered limit is relative (design §15, R-C21).
+    live/dump: lists over layers of (K, V) arrays [rows, n_kv, d_h]; the dump may be float16. `worst` names the layer
+    and side of the largest relative gap."""
     if len(live) != len(dump):
         raise ValueError(f"layers differ: live {len(live)}, dump {len(dump)}")
-    worst, max_diff, rows = None, 0.0, None
+    worst, max_diff, max_rel, rows = None, 0.0, 0.0, None
     for l, ((lk, lv), (dk, dv)) in enumerate(zip(live, dump)):
         for side, a, b in (("K", lk, dk), ("V", lv, dv)):
             a = through_float16(a)
@@ -71,10 +77,14 @@ def compare_layers(live: list, dump: list) -> dict:
             if a.shape != b.shape:
                 raise ValueError(f"layer {l} {side}: shape {a.shape} vs dump {b.shape}")
             rows = a.shape[0]
-            d = float(np.abs(a - b).max()) if a.size else 0.0
-            if d > max_diff:
-                max_diff, worst = d, {"layer": l, "side": side}
-    return {"layers": len(live), "rows": rows, "max_abs_diff": max_diff, "worst": worst}
+            if not a.size:
+                continue
+            gap = np.abs(a - b)
+            max_diff = max(max_diff, float(gap.max()))
+            rel = float((gap / (np.maximum(np.abs(a), np.abs(b)) + FLOAT16_MIN_NORMAL)).max())
+            if rel > max_rel:
+                max_rel, worst = rel, {"layer": l, "side": side}
+    return {"layers": len(live), "rows": rows, "max_abs_diff": max_diff, "max_rel_diff": max_rel, "worst": worst}
 
 
 def is_correct(answer: str | None, gold: str) -> bool:
@@ -188,7 +198,7 @@ def cmd_equivalence(a) -> int:
     tokens = np.load(a.tokens)
     spans = json.loads(Path(a.spans).read_text(encoding="utf-8"))
     out = {"schema": "task-equivalence-v1", "writer": a.writer, "dump_root": a.dump_root, "per_seq": [], "b1": None}
-    worst = 0.0
+    worst, worst_rel = 0.0, 0.0
     for i in range(tokens.shape[0]):
         pl = int(spans["prefix_len"][i])
         rows = pl - 1
@@ -199,8 +209,10 @@ def cmd_equivalence(a) -> int:
         r["seq"] = i
         out["per_seq"].append(r)
         worst = max(worst, r["max_abs_diff"])
-        print(f"EQUIV seq{i} rows {rows} max_abs_diff {r['max_abs_diff']:.3e}", flush=True)
+        worst_rel = max(worst_rel, r["max_rel_diff"])
+        print(f"EQUIV seq{i} rows {rows} max_abs_diff {r['max_abs_diff']:.3e} max_rel_diff {r['max_rel_diff']:.3e}", flush=True)
     out["max_abs_diff"] = worst
+    out["max_rel_diff"] = worst_rel
     if a.reader:
         reader = sc.load_reader(a.reader, torch.float32, device)
         kls = []
@@ -218,7 +230,7 @@ def cmd_equivalence(a) -> int:
         print(f"EQUIV_B1 median {med:.4e} expected {a.expect_b1}", flush=True)
     Path(a.out).mkdir(parents=True, exist_ok=True)
     (Path(a.out) / "equivalence.json").write_text(json.dumps(out, indent=1) + "\n", encoding="utf-8")
-    print(f"EQUIV_DONE max_abs_diff {worst:.3e}", flush=True)
+    print(f"EQUIV_DONE max_abs_diff {worst:.3e} max_rel_diff {worst_rel:.3e}", flush=True)
     return 0
 
 

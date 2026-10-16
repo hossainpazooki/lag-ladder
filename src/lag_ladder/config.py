@@ -512,8 +512,9 @@ def load_distance_config(path: Path, repo_root: Path) -> DistanceConfig:
 
 # --- statistic (C): the task driver's configuration (design §15) -------------------------------------------------
 
-_TASK_RULE_KEYS = ("holds_abs_max", "holds_ci_abs_max", "degrades_max", "degrades_ci_max", "bootstrap_reps")
-_TASK_CONTROL_KEYS = ("n_prompts", "floor_max_flip_rate", "equivalence_max_abs_diff", "equivalence_b1_max_rel",
+_TASK_RULE_KEYS = ("holds_abs_max", "holds_ci_abs_max", "degrades_max", "degrades_ci_max", "bootstrap_reps",
+                   "control_min_flip_rate")
+_TASK_CONTROL_KEYS = ("n_prompts", "floor_max_flip_rate", "equivalence_max_rel_diff", "equivalence_b1_max_rel",
                       "equivalence_reader", "equivalence_expect_b1", "rollout_tokens", "rollout_tokens_sha256",
                       "rollout_spans", "rollout_spans_sha256", "rollout_dump_root")
 
@@ -584,6 +585,8 @@ def load_task_config(path: Path, repo_root: Path) -> TaskConfig:
         raise ValueError(f"{path.name} [task.rule] needs 0 < holds_abs_max <= holds_ci_abs_max < 5 (points)")
     if not (float(rule["degrades_max"]) <= float(rule["degrades_ci_max"]) < 0):
         raise ValueError(f"{path.name} [task.rule] needs degrades_max <= degrades_ci_max < 0 (points)")
+    if not (0 < float(rule["control_min_flip_rate"]) <= 1):
+        raise ValueError(f"{path.name} [task.rule] control_min_flip_rate must be in (0, 1]")
     if int(rule["bootstrap_reps"]) < 100:
         raise ValueError(f"{path.name} [task.rule] bootstrap_reps must be at least 100")
     controls = dict(c["controls"])
@@ -594,7 +597,7 @@ def load_task_config(path: Path, repo_root: Path) -> TaskConfig:
         raise ValueError(f"{path.name} [task.controls] n_prompts must be in (0, task.n_prompts]")
     if not (0 <= float(controls["floor_max_flip_rate"]) < 1):
         raise ValueError(f"{path.name} [task.controls] floor_max_flip_rate must be in [0, 1)")
-    if float(controls["equivalence_max_abs_diff"]) < 0 or not (0 < float(controls["equivalence_b1_max_rel"]) < 1):
+    if not (0 <= float(controls["equivalence_max_rel_diff"]) < 1) or not (0 < float(controls["equivalence_b1_max_rel"]) < 1):
         raise ValueError(f"{path.name} [task.controls] equivalence limits out of range")
     if float(controls["equivalence_expect_b1"]) <= 0:
         raise ValueError(f"{path.name} [task.controls] equivalence_expect_b1 must be positive")

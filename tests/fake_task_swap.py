@@ -2,7 +2,7 @@
 `[python, <tools>/task_swap.py, equivalence|cells, ...]`. It writes the files the real tool writes — `equivalence.json`,
 and one JSONL per arm (fresh, fresh32, fresh2, stale, near, far) with the task-record-v2 keys — by rules a test chooses:
 
-  * `equivalence(args) -> (max_abs_diff, b1_median)`; default (0.0, the --expect-b1 value);
+  * `equivalence(args) -> (max_abs_diff, max_rel_diff, b1_median)`; default (0.0, 0.0, the --expect-b1 value);
   * `outcome(index, step, arm) -> (answer, reached_cap)`; default: FRESH answers gold on prompts with index % 2 == 0,
     STALE flips the answer on prompts with index % max(2, 40 // step) == 1 (more flips at larger steps), NEAR and FAR answer
     a wrong number everywhere, fresh32 == fresh except index 7, fresh2 == fresh.
@@ -51,10 +51,10 @@ class FakeTaskSwap:
         if sub == "equivalence":
             out = Path(args["--out"]); out.mkdir(parents=True, exist_ok=True)
             expect = float(args["--expect-b1"]) if "--expect-b1" in args else None
-            diff, b1 = self.equivalence(args) if self.equivalence else (0.0, expect)
+            diff, rel, b1 = self.equivalence(args) if self.equivalence else (0.0, 0.0, expect)
             rec = {"schema": "task-equivalence-v1", "writer": args["--writer"], "dump_root": args["--dump-root"],
-                   "per_seq": [{"seq": s, "max_abs_diff": diff, "layers": 2, "rows": 3} for s in range(4)],
-                   "max_abs_diff": diff,
+                   "per_seq": [{"seq": s, "max_abs_diff": diff, "max_rel_diff": rel, "layers": 2, "rows": 3} for s in range(4)],
+                   "max_abs_diff": diff, "max_rel_diff": rel,
                    "b1": None if expect is None else {"reader": args.get("--reader"), "median": b1, "expected": expect,
                                                       "rel_gap": abs(b1 - expect) / expect}}
             (out / "equivalence.json").write_text(json.dumps(rec), encoding="utf-8")

@@ -160,13 +160,16 @@ def _by_index(rows: list[dict]) -> dict[int, dict]:
 
 
 def judge_equivalence(rec: dict, cfg: TaskConfig) -> dict:
-    lim = float(cfg.controls["equivalence_max_abs_diff"])
-    diff = float(rec["max_abs_diff"])
+    """The limit is on the relative gap (one float16 ulp of the element, 2^-10, is the registered value); the absolute
+    gap is carried as a descriptive, since one ulp's size depends on the element's binade."""
+    lim = float(cfg.controls["equivalence_max_rel_diff"])
+    rel_diff = float(rec["max_rel_diff"])
     b1 = rec.get("b1") or {}
     rel = b1.get("rel_gap")
     rel_lim = float(cfg.controls["equivalence_b1_max_rel"])
-    ok = diff <= lim and rel is not None and float(rel) <= rel_lim
-    return {"max_abs_diff": diff, "limit": lim, "b1_median": b1.get("median"), "b1_expected": b1.get("expected"),
+    ok = rel_diff <= lim and rel is not None and float(rel) <= rel_lim
+    return {"max_rel_diff": rel_diff, "limit": lim, "max_abs_diff": float(rec["max_abs_diff"]),
+            "b1_median": b1.get("median"), "b1_expected": b1.get("expected"),
             "b1_rel_gap": rel, "b1_rel_limit": rel_lim, "passed": ok}
 
 
@@ -220,7 +223,7 @@ def run(cfg: TaskConfig, repo_root: Path, *, runner=subprocess.run, seal_cfg=Non
                 record["jobs"].append({"kind": "equivalence", "reader": j.reader, "dir": out.relative_to(cfg.results_dir).as_posix(),
                                        "file_sha256": sha256_file_bytes(eq_path), "done": True})
                 if not record["equivalence"]["passed"]:
-                    raise _refuse(f"dump equivalence failed: max_abs_diff {record['equivalence']['max_abs_diff']:.3e} "
+                    raise _refuse(f"dump equivalence failed: max_rel_diff {record['equivalence']['max_rel_diff']:.3e} "
                                   f"(limit {record['equivalence']['limit']}), (B1) rel gap {record['equivalence']['b1_rel_gap']} "
                                   f"(limit {record['equivalence']['b1_rel_limit']}); the live cache is not the dump's")
             else:
@@ -356,7 +359,7 @@ def main(argv=None) -> int:
             rec = probe(cfg, REPO_ROOT, out=Path(a.out), n=a.n, reader=a.reader, max_new=a.max_new)
             eq, c = rec["equivalence"], rec["controls"]
             print(f"probe {rec['reader']} n {rec['n']} max_new {rec['max_new']}: equivalence {'ok' if eq['passed'] else 'FAILED'} "
-                  f"(max_abs_diff {eq['max_abs_diff']:.3e}, b1 rel gap {eq['b1_rel_gap']}); "
+                  f"(max_rel_diff {eq['max_rel_diff']:.3e}, max_abs_diff {eq['max_abs_diff']:.3e}, b1 rel gap {eq['b1_rel_gap']}); "
                   f"floor flip {c['floor_flip_rate']:.3f}; identity flips {c['identity_flips']}; acc_fresh {rec['acc_fresh']:.1f}")
             for arm, x in rec["arms"].items():
                 d = x["delta"]

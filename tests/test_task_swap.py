@@ -48,6 +48,27 @@ def test_compare_layers_reports_the_largest_gap_after_rounding_and_zero_on_equal
         task_swap.compare_layers(live, dump[:1])
 
 
+def test_compare_layers_reports_a_relative_gap_of_one_ulp_regardless_of_magnitude_with_a_floor_near_zero():
+    # One float16 ulp at |x| in [16, 32) is 2^-6 absolute but <= 2^-10 relative; the same ulp at [8, 16) is 2^-7.
+    # An absolute limit calibrated on one binade false-alarms on the next; the relative figure does not.
+    big = np.full((2, 1, 2), 20.0, dtype=np.float32)
+    live = [(big, big.copy())]
+    dump = [(big.astype(np.float16), big.astype(np.float16))]
+    dump[0][0][0, 0, 0] = np.nextafter(np.float16(20.0), np.float16(32.0))
+    r = task_swap.compare_layers(live, dump)
+    assert r["max_abs_diff"] == pytest.approx(2 ** -6)
+    assert r["max_rel_diff"] <= 2 ** -10 and r["max_rel_diff"] > 0
+    assert r["worst"] == {"layer": 0, "side": "K"}
+    # A gap at an element that is zero on one side is bounded by the absolute floor (float16 min normal, 2^-14),
+    # not reported as a relative gap of 1.0.
+    small = np.zeros((1, 1, 1), dtype=np.float32)
+    live = [(small, small)]
+    dump = [(np.array([[[2 ** -24]]], dtype=np.float16), small.astype(np.float16))]
+    r = task_swap.compare_layers(live, dump)
+    assert r["max_rel_diff"] == pytest.approx(2 ** -24 / (2 ** -24 + 2 ** -14))
+    assert r["max_rel_diff"] < 1e-3
+
+
 def test_answer_extraction_is_own_runs():
     assert task_swap.final_number("so #### 42") == "42" and task_swap.final_number("x = 1,234.5 then 7") == "7"
     assert task_swap.final_number("no digits") is None
