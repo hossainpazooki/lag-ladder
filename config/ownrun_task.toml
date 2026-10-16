@@ -12,7 +12,9 @@ upstream_sha = "5d4aa4a98b40f5ab37dd83ebb6b2ee802203994a"
 registered_by = "0025"
 seal = "ownrun-task"
 writer = "local:step_0"
-readers = ["local:step_1", "local:step_2", "local:step_4", "local:step_8", "local:step_16", "local:step_32"]
+# Run order, not a statistic: the sealed clauses (ii)-(iv) read step_1 and step_32 alone, so those two run first and the
+# middle lags (descriptive; clause (i) touches them) follow. The outcome entry reads what ran.
+readers = ["local:step_1", "local:step_32", "local:step_2", "local:step_4", "local:step_8", "local:step_16"]
 # [{index, question, gold}] for every GSM8K test row, written by `task_swap.py prepare` and pinned at registration.
 prompts = "data/tokens/gsm8k_test_prompts.json"
 prompts_sha256 = "918c7e67f051d41f7b153911f0497bc62c82b76cb04ef84f6f5ee0e66ab22450"
