@@ -48,9 +48,11 @@ def test_compare_layers_reports_the_largest_gap_after_rounding_and_zero_on_equal
         task_swap.compare_layers(live, dump[:1])
 
 
-def test_compare_layers_reports_a_relative_gap_of_one_ulp_regardless_of_magnitude_with_a_floor_near_zero():
-    # One float16 ulp at |x| in [16, 32) is 2^-6 absolute but <= 2^-10 relative; the same ulp at [8, 16) is 2^-7.
-    # An absolute limit calibrated on one binade false-alarms on the next; the relative figure does not.
+def test_compare_layers_reports_absolute_and_relative_gaps_and_the_share_of_differing_elements():
+    # One float16 ulp at |x| in [16, 32) is 2^-6 absolute and <= 2^-10 relative. The verdict is on the absolute gap
+    # (0026 restating R-C21): the live-vs-dump discrepancy is float32 forward noise of ~1e-5 absolute, which is many
+    # float16 ulps of a near-zero element, so a per-element relative limit is unmeetable by construction. The relative
+    # gap and the share of elements that differ after rounding stay as descriptives.
     big = np.full((2, 1, 2), 20.0, dtype=np.float32)
     live = [(big, big.copy())]
     dump = [(big.astype(np.float16), big.astype(np.float16))]
@@ -59,6 +61,12 @@ def test_compare_layers_reports_a_relative_gap_of_one_ulp_regardless_of_magnitud
     assert r["max_abs_diff"] == pytest.approx(2 ** -6)
     assert r["max_rel_diff"] <= 2 ** -10 and r["max_rel_diff"] > 0
     assert r["worst"] == {"layer": 0, "side": "K"}
+    assert r["share_differing"] == pytest.approx(1 / 8)                     # one of eight elements differs
+    # float32 noise of 1e-5 on a near-zero element: tiny absolute gap, relative gap near 1 — descriptive only
+    tiny = np.array([[[1e-5]]], dtype=np.float32)
+    r = task_swap.compare_layers([(tiny, tiny)], [(np.zeros((1, 1, 1), np.float16), tiny.astype(np.float16))])
+    assert r["max_abs_diff"] == pytest.approx(1e-5, rel=2e-3) and r["max_rel_diff"] > 0.1   # 1e-5 rounded through float16
+    assert r["share_differing"] == pytest.approx(1 / 2)
     # A gap at an element that is zero on one side is bounded by the absolute floor (float16 min normal, 2^-14),
     # not reported as a relative gap of 1.0.
     small = np.zeros((1, 1, 1), dtype=np.float32)

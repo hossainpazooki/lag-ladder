@@ -253,8 +253,8 @@ def render(s: dict) -> str:
              "under an injected prompt cache; verdict on the STALE answer-flip rate [bootstrap interval]; delta = "
              "STALE - FRESH accuracy in points (descriptive)"]
     eq = s["equivalence"]
-    lines.append(f"dump equivalence: max_rel_diff {eq['max_rel_diff']:.3e} (limit {eq['limit']}; max_abs_diff "
-                 f"{eq['max_abs_diff']:.3e}), (B1) rel gap "
+    lines.append(f"dump equivalence: max_abs_diff {eq['max_abs_diff']:.3e} (limit {eq['limit']}; max_rel_diff "
+                 f"{eq['max_rel_diff']:.3e}, share differing {eq.get('share_differing')}), (B1) rel gap "
                  f"{eq['b1_rel_gap']} -> {'ok' if eq['passed'] else 'FAILED'}")
     for reader, lag in s["lags"].items():
         c = lag["controls"]

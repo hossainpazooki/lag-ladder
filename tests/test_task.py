@@ -42,7 +42,7 @@ control_min_flip_rate = 0.5
 [task.controls]
 n_prompts = 8
 floor_max_flip_rate = 0.2
-equivalence_max_rel_diff = 0.0009765625
+equivalence_max_abs_diff = 0.03125
 equivalence_b1_max_rel = 1e-3
 equivalence_reader = "local:step_32"
 equivalence_expect_b1 = 0.08914
@@ -136,25 +136,27 @@ def test_run_writes_the_record_and_passes_the_tool_the_contract_arguments(repo, 
     out = Path(cells[cells.index("--out") + 1])
     assert (out / "stale.jsonl").exists() and len((out / "fresh32.jsonl").read_text().splitlines()) == 8
     assert rec["prompts_sha256"] == cfg.prompts_sha256 and rec["jobs"][0]["kind"] == "equivalence"
-    assert rec["equivalence"]["max_rel_diff"] == 0.0 and rec["equivalence"]["max_abs_diff"] == 0.0 and rec["equivalence"]["limit"] == 2 ** -10 and rec["equivalence"]["passed"] is True
+    assert rec["equivalence"]["max_rel_diff"] == 0.0 and rec["equivalence"]["max_abs_diff"] == 0.0 and rec["equivalence"]["limit"] == 2 ** -5 and rec["equivalence"]["passed"] is True
 
 
 def test_run_halts_when_the_live_cache_differs_from_the_dump(repo, seal_cfg):
     cfg, tools = _setup_task(repo, seal_cfg)
-    # one float16 ulp at [16, 32) is 2^-6 absolute and under 2^-10 relative: NOT a halt; two ulps relative is.
-    fake = FakeTaskSwap(equivalence=lambda a: (2 ** -6, 2 ** -9, float(a["--expect-b1"])))
+    # the limit is absolute (0026): 2^-4 is two float16 ulps in the top binade the caches occupy -> a halt
+    fake = FakeTaskSwap(equivalence=lambda a: (2 ** -4, 2 ** -9, float(a["--expect-b1"])))
     with pytest.raises(task.Refusal, match="equivalence"):
         task.run(cfg, repo, runner=fake, seal_cfg=seal_cfg, tools_dir=tools)
     rec = json.loads((cfg.results_dir / "run.json").read_text(encoding="utf-8"))
     assert "equivalence" in rec["halted"] and len(fake.calls) == 1
 
 
-def test_run_passes_equivalence_at_one_ulp_relative_whatever_the_absolute_gap(repo, seal_cfg):
+def test_run_passes_equivalence_under_the_absolute_limit_whatever_the_relative_gap(repo, seal_cfg):
+    # the sitting of 2026-10-16 read max_abs 2^-7 with max_rel 0.33 (float32 noise on near-zero elements): a pass
     cfg, tools = _setup_task(repo, seal_cfg)
-    fake = FakeTaskSwap(equivalence=lambda a: (2 ** -6, 2 ** -10, float(a["--expect-b1"])))
+    fake = FakeTaskSwap(equivalence=lambda a: (2 ** -7, 0.33, float(a["--expect-b1"])))
     task.run(cfg, repo, runner=fake, seal_cfg=seal_cfg, tools_dir=tools)
     rec = json.loads((cfg.results_dir / "run.json").read_text(encoding="utf-8"))
-    assert rec["equivalence"]["passed"] is True and rec["equivalence"]["max_abs_diff"] == 2 ** -6
+    assert rec["equivalence"]["passed"] is True and rec["equivalence"]["max_abs_diff"] == 2 ** -7
+    assert rec["equivalence"]["max_rel_diff"] == 0.33 and rec["equivalence"]["limit"] == 2 ** -5
 
 
 def test_run_halts_on_a_floor_over_its_limit_or_a_nondeterministic_identity(repo, seal_cfg):

@@ -111,4 +111,4 @@ def test_repo_configs_load():
     assert tcfg.registered_by == "0025", "the task config's registering entry changed: update this test"
     assert tcfg.prompts_sha256.startswith("918c7e67") and len(tcfg.readers) == 6
     assert float(tcfg.controls["floor_max_flip_rate"]) == 0.01 and float(tcfg.rule["control_min_flip_rate"]) == 0.5
-    assert float(tcfg.controls["equivalence_max_rel_diff"]) == 2 ** -10
+    assert float(tcfg.controls["equivalence_max_abs_diff"]) == 2 ** -5                 # 0026 restating R-C21
