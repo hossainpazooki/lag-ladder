@@ -1,0 +1,64 @@
+{
+  "pair": "ownrun-task",
+  "prediction": {
+    "controls": "per reader, before its cells: float16 floor (FRESH in float32 vs through float16) flip rate <= 0.01, identity (FRESH twice) zero flips, positive controls NEAR and FAR each flip >= 0.5 of the answers; once per sitting: dump equivalence, live step-0 cache vs the step-0 dump of 0017's ten rollout prompts, relative gap <= 2^-10 per element (one float16 ulp) and 0018's rollout (B1) at step_32 reproduced within 1e-3 relative",
+    "descriptive_not_sealed": [
+      "the accuracy difference STALE - FRESH per lag with its interval and the section 4 bands",
+      "FRESH accuracy per reader (both probes: 4 of 64 at step_32, 48 of 64 at the cap)",
+      "the first-#### answer beside the registered one; the cap and no-answer rates per arm",
+      "the first-divergence position; the rank correlation of per-prompt flips with (B1) on the fresh path",
+      "flip rates at g in {2, 4, 8, 16}; NEAR against FAR"
+    ],
+    "predictions": {
+      "i_positive_controls_fire": {
+        "note": "clause (i) of entry 0025; confirmation at g = 32: both probes read NEAR 58/64, FAR 64/64",
+        "readers": [
+          "local:step_1",
+          "local:step_2",
+          "local:step_4",
+          "local:step_8",
+          "local:step_16",
+          "local:step_32"
+        ],
+        "statement": "at every kept step NEAR and FAR each change the greedy final answer on at least half the prompts"
+      },
+      "ii_flip_rate_at_first_lag": {
+        "at_least": 0.1,
+        "note": "clause (ii) of entry 0025; BLIND: neither probe read g = 1",
+        "reader": "local:step_1",
+        "statement": "at g = 1 the step-0 cache changes the greedy final answer on at least 10% of the prompts: the output is not reproducible from the first optimizer step"
+      },
+      "iii_flip_rate_at_last_lag": {
+        "at_least": 0.1,
+        "note": "clause (iii) of entry 0025; confirmation: both probes read 55/64 at g = 32",
+        "reader": "local:step_32",
+        "statement": "at g = 32 the step-0 cache changes the greedy final answer on at least 10% of the prompts"
+      },
+      "iv_flip_growth": {
+        "first": "local:step_1",
+        "last": "local:step_32",
+        "note": "clause (iv) of entry 0025; BLIND; the prior is (B1) at g = 1 an order of magnitude under g = 32 (0018)",
+        "statement": "the flip rate grows with lag: the g = 1 bootstrap interval lies entirely below the g = 32 interval"
+      }
+    },
+    "probes": {
+      "first_results_tar_sha256": "a007049e9209dca81b8d463a0d97e50ec2c3001fe1aa46157bb4154132d68b8c",
+      "prompts_sha256": "918c7e67f051d41f7b153911f0497bc62c82b76cb04ef84f6f5ee0e66ab22450",
+      "second_results_tar_sha256": "5bd9e076d6b3b544481bfb809aff7e522aa79fdffc81909bb6c35d297d9bdf75"
+    },
+    "registering_entry": "0025",
+    "rule": {
+      "bootstrap_reps": 2000,
+      "control_min_flip_rate": 0.5,
+      "equivalence_b1_max_rel": 0.001,
+      "equivalence_max_rel_diff": 0.0009765625,
+      "floor_max_flip_rate": 0.01,
+      "max_new": 256,
+      "n_prompts": 1319
+    },
+    "ruled": "2026-10-15",
+    "statistic": "per reader at kept step g, the answer-flip rate between the STALE arm (the step-0 writer's prompt cache) and FRESH (the reader's own) over the 1,319 GSM8K test prompts, greedy, 256 new tokens; the answer is the run's reward extraction (the number after the last #### marker, else the last number; None when none); a seeded bootstrap over prompts (2,000 reps) carries the interval. The accuracy difference STALE - FRESH in points is descriptive."
+  },
+  "prior_artifacts": [],
+  "sealed_pre_fit": true
+}

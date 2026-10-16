@@ -1042,3 +1042,54 @@ registration (R-C18, §15); rollout sliding.
 
 **Consequences in this commit set:** `README.md` (the (B) paragraph's closing sentences and the citing line),
 `CLAUDE.md` (the entry list and State).
+
+### 0025 — 2026-10-15 — Statistic (C) registered: the greedy answer-flip rate under the step-0 cache, lags 1–32 (design §15)
+
+prior-entries-sha256: 0c63f4278f58aaa119d622f712f9dcfe5c3ce04ffe2448e43fbd175402ac7436
+
+**Registers** `config/ownrun_task.toml`, now `registered_by = "0025"`, as design §15 defines (C) after two 64-prompt
+probes on the run machine (2026-10-15, pre-registration, outside `results/`; records off-repository, results tars
+`a007049e…` and `5bd9e076…`). Rulings R-C19–R-C23 taken as the design records them. Instrument `5d4aa4a`, float32, seed 0.
+
+**The statistic.** Reader at kept step g ∈ {1, 2, 4, 8, 16, 32}; writer step 0. Per prompt of GSM8K test (all 1,319;
+prompts file `918c7e67…`) four greedy generations of ≤ 256 new tokens under an injected prompt cache — FRESH, STALE,
+NEAR, FAR — built live and rounded through float16. The answer is the run's reward extraction (the number after the
+last `####`, else the last number). **Verdict-bearing: the STALE answer-flip rate against FRESH per g**, with a seeded
+bootstrap interval over prompts. The accuracy difference STALE − FRESH, with its paired bootstrap and §4's bands, is
+descriptive: both probes read the step-32 policy at 4 of 64 correct, 48 of 64 at the cap, 40 of those a repeated
+`#### N` line (the same at a 1,024-token cap on 17 prompts, where every capped completion was the 256-token text's
+exact prefix), so a one-point accuracy band has no power on this baseline and the cap is not what limits it.
+
+**Controls and limits.** Per reader, halting: float16 floor (FRESH in float32 against FRESH through float16) flip rate
+≤ 0.01 — both probes read 0 of 64, which bounds the rate at 4.6% (rule of three); 1% is a margin ten times under the
+seal's 10%, not a measured ceiling; identity (FRESH twice) zero flips. Positive, per reader, the cell UNEVALUABLE
+without them: NEAR and FAR each flip ≥ 0.5 of the answers (probes at g = 32: 58 and 64 of 64). Once per sitting, before
+any cell: dump equivalence — the live step-0 cache of 0017's ten rollout prompts against the step-0 dump, relative gap
+≤ 2⁻¹⁰ per element (one float16 ulp; the probes read exactly one ulp, 2⁻⁷ then 2⁻⁶ absolute on elements of different
+magnitude, so the limit is relative), and 0018's rollout (B1) at step_32 reproduced within 1e-3 relative (probes:
+6.4e-6, 4.0e-6).
+
+**Seal** (`ledger/predictions/ownrun-task.json`, sidecar `3da7a50d…`, pre-fit). (i) At every g NEAR and FAR each change
+the answer on at least half the prompts. (ii) At g = 1 the STALE flip rate is ≥ 10%: the greedy output is not
+reproducible from the first optimizer step. (iii) At g = 32 the STALE flip rate is ≥ 10%. (iv) Growth: the g = 1 flip
+interval lies entirely below the g = 32 interval. Read, by pre-commitment, as reproducibility — "the greedy output
+changes under a stale cache" — not as task degradation; the accuracy claim is the descriptive Δ's. **(ii) and (iv)
+are blind**: no probe read g = 1. **(i) and (iii) at g = 32 are confirmations**: both probes read 55 of 64 STALE flips
+there. Descriptive, not sealed: Δ per g; FRESH accuracy; the first-`####` answer beside the registered one; cap and
+no-answer rates per arm; first divergence; the rank correlation of flips with (B1) on the fresh path; g ∈ {2, …, 16}.
+
+**What the probes also fixed.** The 256-token pass reproduced the first probe's completions on 255 of 256 across two
+torch builds (2.14.1+cu130, 2.11.0+cu128); the one difference is a STALE completion that diverges at token 0 on both
+builds and lands on a different wrong answer — the flip count is unchanged, so a replicate's one-in-64 STALE hash
+mismatch is expected jitter, not a defect. Records are `task-record-v2` and keep the completion text.
+
+**Run.** One A40 sitting under the GPU protocol at the 256-token cap: six readers × 1,319 prompts × (four arms + two
+control arms), inference only; the torch build, CUDA flag and host driver recorded in the sitting's runbook; one log per
+stage and attempt. Halting as above; the outcome entry reads what ran.
+
+**Not registered here.** Sampled generation (the trainer samples at T = 1.0; every (C) sentence says *greedy*); the
+first-`####` answer as verdict; a cap above 256; the second seed (R-C16).
+
+**Consequences in this commit set:** `tools/task_swap.py`, `src/lag_ladder/{config,task,summarize_task}.py`,
+`tests/{test_task_swap,test_task,test_summarize_task,test_config,fake_task_swap}.py`, `config/ownrun_task.toml`,
+`ledger/predictions/ownrun-task.json` + `.sha256`, `docs/2026-09-19-holdover-design.md` (§15), `README.md`, `CLAUDE.md`.
