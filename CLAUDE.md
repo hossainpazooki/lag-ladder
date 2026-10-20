@@ -15,7 +15,8 @@ record to the held-out texts it names, entry 0020 the registration of rollout-te
 entry 0021 their outcome, entry 0022 the registration of a far scrambled control on rollout text, entry 0023 its
 outcome, entry 0024 the ruling that adds the trainer's own text to (B)'s statement of record, on one seed, and entry
 0025 the registration of statistic (C) on the own run with its seal, entry 0026 the restatement of its
-dump-equivalence limit (absolute 2⁻⁵) after the sitting halted on the relative one.
+dump-equivalence limit (absolute 2⁻⁵) after the sitting halted on the relative one, and entry 0027 the outcome of the
+(C) sitting.
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never
@@ -142,5 +143,8 @@ positive controls NEAR/FAR ≥ 0.5 flips, dump equivalence at an absolute 2⁻�
 R-C21 after the 2026-10-16 sitting halted at 0.33 relative with 2⁻⁷ absolute: float32 forward noise on near-zero
 elements, not rounding); seal
 `ownrun-task`: (i) controls fire at every g, (ii) STALE flips ≥ 10% at g = 1 [blind], (iii) ≥ 10% at g = 32 [probes read
-55/64], (iv) the g = 1 interval below the g = 32 interval [blind]). Open: the (C) sitting (one A40, cap 256, v2 records,
-torch build recorded; readers step_1, step_32 first); R-C16 second seed; 128-step closed.
+55/64], (iv) the g = 1 interval below the g = 32 interval [blind]). **0027 reads the (C) sitting** (one A40, 57.8 h,
+torch 2.14.1+cu130): all four clauses HELD — STALE flips 0.710 [0.686, 0.735] at g = 1, 0.869 [0.851, 0.886] at g = 32,
+peak 0.895 at g = 4 (not monotone); controls fire at all six readers; floor 2–7 of 1,319, identity 0; FRESH accuracy
+4.5–5.7% at g ≤ 16 and 12.3% at g = 32, Δ descriptive (DEGRADES_C only at g = 32). Hub `ownrun-task/`. Open: R-C16
+second seed; 128-step closed.

@@ -42,8 +42,8 @@ the ladder (0015, 0016): the reader's KL grows as the square of weight distance 
 leaves HOLDS_B between 3e-3 and 1e-2, an order of magnitude inside (A)'s edge; trained directions read one to
 three orders of magnitude above noise at matched distance. The own run (0017, 0018) read (B) along a 32-step GRPO
 trajectory of Qwen2.5-1.5B: HOLDS_B at every lag on held-out text, four orders of magnitude higher on the policy's
-own prompts. (C) is built and registered with its seal committed (0025, design §15; 0026 restates the dump-equivalence limit
-after the first sitting attempt halted on it); its sitting is running.
+own prompts. (C) ran (0025 registered, 0026 restated the dump-equivalence limit, 0027 read): the step-0 cache changes the greedy
+answer on 71% of prompts at g = 1 and 87% at g = 32; all four sealed clauses held.
 
 ## How a rung is measured
 
