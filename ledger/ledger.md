@@ -1125,3 +1125,51 @@ share from the sitting's own record.
 **Consequences.** The sitting relaunches under this entry on the same pod from the commit carrying it; the equivalence
 job re-runs and the outcome entry reads it against 2⁻⁵. 0025's seal and clauses stand unchanged. Nothing below the
 equivalence control ran under 0025, so no (C) record exists under the superseded limit.
+
+### 0027 — 2026-10-20 — Statistic (C) read on the own run: the step-0 cache changes the greedy answer on 71% of prompts at g = 1 and 87% at g = 32; all four clauses held
+
+prior-entries-sha256: 0f53cb5048a60cad3c398cce7392d012ac4d2f9543eb2887a214ab051e39b43b
+
+**Reads** the sitting registered by 0025 under the equivalence limit of 0026 (`config/ownrun_task.toml` at `152dbd0`;
+instrument `5d4aa4a`, float32, seed 0; one A40, torch 2.14.1+cu130, driver 580; records off-repository, results tar
+`8e0c2381…`, Hub `ownrun-task/`). Six readers × 1,319 GSM8K test prompts × six arms, greedy at the 256-token cap, in
+57.8 h of cells; the dump-equivalence control once before any cell; no halt. `summarize_task` at home recomputed every
+figure below from the records and matched the pod's summary on all of them.
+
+**Controls.** Equivalence: `max_abs_diff` 0.0078125 (limit 0.03125), (B1) at step_32 reproduced at 0.0891364 against
+0.089137 (relative gap 6.4e-6, limit 1e-3); descriptive, `max_rel_diff` 0.3263 and 3.6% of elements differing after the
+float16 rounding. Floor (FRESH in float32 against FRESH through float16), flips of 1,319 per reader: 6, 7, 5, 5, 3, 2 at
+g = 1, 2, 4, 8, 16, 32 (0.0015–0.0053; limit 0.01). Identity: 0 flips at every reader. Positive controls, flip rate of
+NEAR / FAR (limit 0.5 each): 0.961/0.979, 0.916/0.981, 0.879/0.985, 0.873/0.984, 0.890/0.991, 0.929/0.989. Every reader
+evaluable.
+
+**The statistic.** STALE answer-flip rate against FRESH, with the seeded bootstrap interval over prompts (2,000
+resamples):
+
+| g | 1 | 2 | 4 | 8 | 16 | 32 |
+|---|---|---|---|---|---|---|
+| flips | 0.710 [0.686, 0.735] | 0.837 [0.817, 0.857] | 0.895 [0.878, 0.911] | 0.892 [0.875, 0.909] | 0.864 [0.844, 0.882] | 0.869 [0.851, 0.886] |
+
+**Seal `ownrun-task` (`3da7a50d…`), read by the summarizer.** (i) HELD — the positive controls fire at all six readers.
+(ii) HELD — 0.710 ≥ 0.10 at g = 1 (blind at registration). (iii) HELD — 0.869 ≥ 0.10 at g = 32 (the probes read 55/64).
+(iv) HELD — g = 1's interval [0.686, 0.735] lies entirely below g = 32's [0.851, 0.886] (blind). (iv) is the comparison of
+the two ends and says nothing about the lags between: the flip rate rises to 0.895 at g = 4 and sits at 0.86–0.89 from
+there, so "g = 1 below g = 32" holds and "the flip rate grows with lag" does not.
+
+**Descriptives (R-C22).** FRESH greedy accuracy at the cap: 5.5, 5.5, 4.5, 4.5, 5.7 and 12.3% at g = 1 … 32. Δ accuracy
+STALE − FRESH in points with the paired interval: −0.76 [−2.05, +0.53], −0.99 [−2.35, +0.38], +1.06 [−0.45, +2.58],
++1.36 [−0.23, +2.96], +0.15 [−1.52, +1.82], −6.22 [−8.26, −4.25]; bands UNRESOLVED at g = 1–8, HOLDS_C at g = 16,
+DEGRADES_C at g = 32. STALE cap rates 0.92, 0.87, 0.85, 0.82, 0.84, 0.86; STALE no-answer 0.016–0.037; FAR no-answer
+0.52–0.54 at every reader. The accuracy baseline moved with training only at g = 32, where the stale cache also costs
+accuracy; at g ≤ 16 the two arms are equally bad at the task while answering differently on 71–90% of prompts.
+
+**What (C) says and does not say.** One GRPO step is enough for the step-0 prompt cache to change the reader's greedy
+final answer on seven prompts in ten; by four steps it is nine in ten and stays there. The reader does notice; what it
+notices is not, at g ≤ 16, a loss of accuracy under this greedy protocol. §15's limits stand: every sentence here is
+about the *greedy* task output (the trainer samples at T = 1.0); one seed, one 1.5B model, one task, 32 steps; nothing
+about a swap inside a generation, a cache older than 32 steps, a reward model, or accuracy beyond the descriptive Δ.
+
+**Record.** `results/ownrun_task` pulled 14:12Z 2026-10-18 (results tar `8e0c2381…`, aux `46003246…`, prompts
+`918c7e67…`; digests equal both ends); Hub `ownrun-task/` with `SHA256SUMS`, LFS digests equal; receipt bound to the pod;
+pod terminated through the interlock. Attempt 1 (`fab88ed`) halted at the equivalence gate under 0025's relative limit
+and wrote no cell — the record behind 0026.
