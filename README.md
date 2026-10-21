@@ -43,7 +43,8 @@ leaves HOLDS_B between 3e-3 and 1e-2, an order of magnitude inside (A)'s edge; t
 three orders of magnitude above noise at matched distance. The own run (0017, 0018) read (B) along a 32-step GRPO
 trajectory of Qwen2.5-1.5B: HOLDS_B at every lag on held-out text, four orders of magnitude higher on the policy's
 own prompts. (C) ran (0025 registered, 0026 restated the dump-equivalence limit, 0027 read): the step-0 cache changes the greedy
-answer on 71% of prompts at g = 1 and 87% at g = 32; all four sealed clauses held.
+answer on 71% of prompts at g = 1 and 87% at g = 32; all four sealed clauses held. A second trainer seed of the own run
+is registered (0028; design §14.3) with agreement clauses against the first seed's readings; it has not run.
 
 ## How a rung is measured
 

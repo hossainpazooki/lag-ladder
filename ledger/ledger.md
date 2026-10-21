@@ -1173,3 +1173,62 @@ about a swap inside a generation, a cache older than 32 steps, a reward model, o
 `918c7e67…`; digests equal both ends); Hub `ownrun-task/` with `SHA256SUMS`, LFS digests equal; receipt bound to the pod;
 pod terminated through the interlock. Attempt 1 (`fab88ed`) halted at the equivalence gate under 0025's relative limit
 and wrote no cell — the record behind 0026.
+
+### 0028 — 2026-10-20 — The own run's second trainer seed registered: statistic (B) at lags 1–32, agreement clauses against 0018 (design §14.3)
+
+prior-entries-sha256: 42cd7b55218ddc0f03a926ab80bfe2d8c9fde404d448d55706e3f085bd52b82b
+
+**Registers** `config/ownrun_seed2.toml`, now `registered_by = "0028"`, as design §14.3 defines after R-C16 was ruled on
+2026-10-20: a second GRPO trajectory of Qwen2.5-1.5B (`8faed761…`) under 0017's recipe unchanged — `tools/own_run.py` at
+this commit with the same arguments, TRL 1.15.0 (`dae7b6ad…`), learning rate 1e-6, no reference-KL term, 16 prompts × 8
+completions per step, temperature 1.0, 256-token completions, fp32 master weights, 32 optimizer steps, weights kept at
+{0, 1, 2, 4, 8, 16, 32}, both token sets dumped from every step — with the trainer seed 1 in place of 0. Instrument
+`5d4aa4a`, float32, reader seed 0; rule, bands and limits 0012's as amended by 0013 and 0014. 0024's qualifier "on one
+seed" is what this entry addresses; a second bootstrap seed on seed 1's records was not taken (it moves interval edges and
+says nothing about the trajectory).
+
+**What is the same.** The held-out pair (`01bd7698…`, sequences 40–49, corpus and on-path) and 0017's rollout pair
+(`7d6dec47…`, spans `e631fd84…`): the rollout rows are the step-0 policy's samples and step 0 is the same released
+checkpoint under both seeds, so the same text is read under both trajectories and the comparison is on the trajectory
+alone; the ten rollout prompts stay excluded from the batches. Cells: writer cache at step 0, reader at step g ∈ {1, 2, 4,
+8, 16, 32}, twelve rungs `ownrun-seed2-lag-<g>` and `ownrun-seed2-rollout-lag-<g>`. Controls per (reader, pair) on the
+pair's own texts as 0020 (`per_pair`): float16 floor, identity, scrambled; the rollout pair also carries 0022's far control
+(`far_pair` the held-out pair, `far_min` 0.1) as evaluability insurance, with the rule pre-committed by
+`evaluable_under_far = true`: a reader whose rollout scrambled misses 0.1 but whose far clears it is EVALUABLE under the far
+control — the driver runs its rungs and the summarizer judges them, the unit marked `evaluable_under = "far"` — and a reader
+that misses both is UNEVALUABLE as before (seed 1 cleared scrambled by 15–26%). 660 jobs. Not registered on this seed: the
+sliding writer and statistic (C) (ruled deferred past the reviewer round).
+
+**Seal** (`ledger/predictions/ownrun-seed2.json`, sidecar `7c3e74a7…`, pre-fit, committed before any score). The clauses
+are agreement clauses against seed 1's readings (0018; `results/ownrun/summary.json` `f3b8f00f…`, whose medians the seal
+carries), not 0017's bands re-tested; the summarizer reads all four. (i) Held-out text HOLDS_B (median (B1) ≤ 1e-3) at
+every lag on corpus and on-path, every rung above 2× its reader's floor, and the slope of log median (B1) on log distance
+over the six held-out lag rungs in [1.5, 2.5] on both texts (seed 1: 2.26 / 2.19). (ii) At every lag the rollout median
+(B1) lies within a factor of three of seed 1's at the same lag — 4.679e-3, 1.303e-2, 2.937e-2, 6.380e-2, 8.882e-2,
+8.914e-2 at g = 1 … 32 — and at g = 1 it is at least 1e-3: HOLDS_B is lost at the first optimizer step on this seed too,
+its own half because it is the paper's sentence. (iii) At every lag the rollout median is at least 1e3× the same reader's
+median on corpus and on on-path text (seed 1: 1.3e4× to 2.5e4× on corpus, 2.5e4× to 4.5e4× on on-path). (iv) Every
+(reader, pair) unit passes its controls under 0014's limits or is EVALUABLE under far as pre-committed; no unit
+UNEVALUABLE; the readout names the units far carried. Descriptive, not sealed: the per-step distance curve against seed
+1's (2.29e-5 at step 1, 1.049e-4 at step 32, flat from step 20) — expected to agree closely and uninformative, since
+Adam's first step has a magnitude nearly independent of the batch (seed 1's two-prompt smoke read a step-1 distance within
+1.1% of the registered run's) while the seed acts on the update's direction, which the rollout KL sees; the reward and
+entropy trajectories against 0018's; rollout over scrambled and over far per lag against 0021's and 0023's; the per-lag
+ratio seed 2 / seed 1 on every text.
+
+**Halting and reading.** The step-0 weights the trainer saves must hash to seed 1's (`3779c0b9…`) before the first
+optimizer step — the same checkpoint under the same libraries writes the same bytes; a different digest is an environment
+drift, not a seed, and the sitting stops before it bills the trajectory. A step-1 distance under 1e-6 stops the sitting
+before the reader run (0017). A floor over 1e-4 halts the reader run (0014). A unit that misses scrambled and far makes
+clauses (ii) and (iii) UNREAD at that lag. The trainer is smoke-tested for two steps on the run machine first, through the
+same step-0 gate; its outputs are discarded.
+
+**Run.** One A100 sitting under the GPU protocol: setup, smoke, the 32-step trajectory with per-step dumps, the 660-job
+reader run, summary, pull with digests both ends; kept weights, every step's dumps, the token files and the pulled tars
+to the private dataset under `ownrun-seed2/` with a manifest (R-C7); the results tar and summary off-repository with
+hashes. Budget from seed 1's measured stages (trainer 4 h 18 min, 11.6 s per reader job): ≈ 8 pod-hours.
+
+**Consequences in this commit set:** `config/ownrun_seed2.toml`, `ledger/predictions/ownrun-seed2.json` + `.sha256`,
+`src/lag_ladder/config.py`, `src/lag_ladder/reader.py`, `src/lag_ladder/summarize_reader.py` (`evaluable_under_far`; the
+replication readout `i-holds`, `ii`, `iii`, `iv`), `tests/test_reader.py`, `tests/test_summarize_reader.py`,
+`docs/2026-09-19-holdover-design.md` (§14 R-C16 as ruled, §14.3), `README.md`, `CLAUDE.md`.

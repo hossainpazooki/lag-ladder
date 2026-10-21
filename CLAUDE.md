@@ -15,8 +15,8 @@ record to the held-out texts it names, entry 0020 the registration of rollout-te
 entry 0021 their outcome, entry 0022 the registration of a far scrambled control on rollout text, entry 0023 its
 outcome, entry 0024 the ruling that adds the trainer's own text to (B)'s statement of record, on one seed, and entry
 0025 the registration of statistic (C) on the own run with its seal, entry 0026 the restatement of its
-dump-equivalence limit (absolute 2⁻⁵) after the sitting halted on the relative one, and entry 0027 the outcome of the
-(C) sitting.
+dump-equivalence limit (absolute 2⁻⁵) after the sitting halted on the relative one, entry 0027 the outcome of the
+(C) sitting, and entry 0028 the registration of the own run's second trainer seed (§14.3).
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never
@@ -90,7 +90,7 @@ decoded completion text and the first-`####` answer beside the registered last-`
 interpreter). Built 2026-10-15, registered by 0025 after two probes: `config/ownrun_task.toml` pins the GSM8K test
 prompts file, floor 1%, positive controls at 0.5 flips, dump equivalence at an absolute 2⁻⁵ (0026; the relative
 gap and the share of differing elements descriptive).
-`config/` — `seal.toml`, `pilot.toml`, `distance.toml`, `reader.toml`, `ownrun.toml` (0017, as run), `ownrun_controls.toml` (0020; `per_pair` controls), `ownrun_far.toml` (0022; `far_pair` + `far_min`), `ownrun_task.toml` (0025; §15, the (C) arms and controls). `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
+`config/` — `seal.toml`, `pilot.toml`, `distance.toml`, `reader.toml`, `ownrun.toml` (0017, as run), `ownrun_controls.toml` (0020; `per_pair` controls), `ownrun_far.toml` (0022; `far_pair` + `far_min`), `ownrun_task.toml` (0025; §15, the (C) arms and controls), `ownrun_seed2.toml` (0028; §14.3, the second trainer seed: `per_pair`, `far_pair`, `evaluable_under_far`). `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
 `mappers/` — seal artifact roots, gitignored past their placeholders. `docs/` — the design doc.
 
 ## State
@@ -146,5 +146,11 @@ elements, not rounding); seal
 55/64], (iv) the g = 1 interval below the g = 32 interval [blind]). **0027 reads the (C) sitting** (one A40, 57.8 h,
 torch 2.14.1+cu130): all four clauses HELD — STALE flips 0.710 [0.686, 0.735] at g = 1, 0.869 [0.851, 0.886] at g = 32,
 peak 0.895 at g = 4 (not monotone); controls fire at all six readers; floor 2–7 of 1,319, identity 0; FRESH accuracy
-4.5–5.7% at g ≤ 16 and 12.3% at g = 32, Δ descriptive (DEGRADES_C only at g = 32). Hub `ownrun-task/`. Open: R-C16
-second seed; 128-step closed.
+4.5–5.7% at g ≤ 16 and 12.3% at g = 32, Δ descriptive (DEGRADES_C only at g = 32). Hub `ownrun-task/`. **0028 registers
+the second trainer seed** (R-C16 ruled 2026-10-20; `config/ownrun_seed2.toml`, seal `ownrun-seed2`): 0017's recipe with
+trainer seed 1, the same rollout rows, controls per (reader, pair) with the far control as evaluability insurance
+(`evaluable_under_far`: a scrambled miss carried by a passing far is EVALUABLE, pre-committed), 660 jobs on one A100
+sitting; agreement clauses against 0018's medians, which the seal carries — (i) held-out HOLDS_B + slope, (ii) rollout
+within 3× of seed 1 per lag and ≥ 1e-3 at g = 1, (iii) rollout ≥ 1e3× held-out, (iv) all control units pass; the
+summarizer reads all four. Halting: the saved step-0 weights must hash to seed 1's. Not yet run. 128-step closed; (C) on
+seed 2 deferred.

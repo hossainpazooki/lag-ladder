@@ -601,7 +601,7 @@ neighbour — the 0.77 stale-over-scrambled reading at lag 16 has a denominator 
 |---|---|
 | R-C14 | the statement-of-record amendment for the rollout reading: **not taken** — too soon; the direction and size of the gap are on record through 0019, the magnitudes and the 0.77 ratio wait for R-C15 and a second seed |
 | R-C15 | a far scrambled control on rollout text: **registered now (0022, §14.2)** — a held-out web prefix of the rollout prompt's length under the same completion, an information-free cache; the near control stays and both must pass |
-| R-C16 | a second seed: deferred until the paper's sentence is needed (a trainer sitting; the only thing that addresses one-seed) |
+| R-C16 | a second seed: deferred until the paper's sentence is needed (a trainer sitting; the only thing that addresses one-seed). **Ruled 2026-10-20: a second trainer seed; its (B) half before the submission (§14.3, registered by 0028); (C) on the second seed deferred past the reviewer round** |
 | R-C17 | the 128-step extension: **closed** (nothing in 0021 reopened its trigger) |
 | R-C18 | statistic (C): **§15 designed now**, built and registered after 0022's outcome; the scorer stays unbuilt until registered |
 
@@ -636,6 +636,38 @@ at least twice as far as the near neighbour; (ii) median (B1) over far ≤ 0.5 o
 to 32. Falsified (i): the format is most of the distance and 0021's 0.77 stands as read. Falsified (ii): by sixteen steps the
 stale cache is as bad as no prompt. Not registered: a chat-formatted non-GSM8K prompt (same system line, other task) as an
 intermediate control — a later registration if far reads large and near small.
+
+### 14.3 The second trainer seed (R-C16 as ruled 2026-10-20; 0028)
+
+0024's statement of record for the trainer's own text carries the qualifier "on one seed". The second seed is a second
+trajectory under 0017's recipe — the same `tools/own_run.py` at the same commit with the same arguments, the trainer seed
+1 in place of 0 — with per-step dumps, kept steps {0, 1, 2, 4, 8, 16, 32} and the (B) reader run; not a second bootstrap
+seed on seed 1's records, which moves interval edges and says nothing about the trajectory. `config/ownrun_seed2.toml`:
+the same instrument, pins, pairs, bands and limits as `ownrun.toml`, which stays as run; `per_pair = true` so 0017's and
+0020's controls run in the one sitting; the rollout pair names the held-out pair as `far_pair` with 0022's `far_min`, as
+evaluability insurance rather than as a replication of 0023: `evaluable_under_far = true` pre-commits that a reader whose
+rollout scrambled misses 0.1 but whose far clears it is EVALUABLE under the far control (seed 1 cleared scrambled by
+15–26%), the driver running its rungs and the summarizer judging them, with the unit marked `evaluable_under = "far"`;
+a reader that misses both is UNEVALUABLE as before. The rollout rows are 0017's: the step-0 policy's samples under the
+same step-0 checkpoint, so the same text is read under both trajectories and the comparison is on the trajectory alone.
+Twelve rungs `ownrun-seed2-lag-<g>` and `ownrun-seed2-rollout-lag-<g>`; 660 jobs.
+
+The clauses are agreement clauses against seed 1's readings (0018), whose medians the seal carries, not 0017's bands
+re-tested. Seal `ownrun-seed2` (pre-fit): (i) held-out text HOLDS_B at every lag on both texts, above 2× floor, and the
+slope of log median (B1) on log distance over the six held-out lag rungs in [1.5, 2.5], both texts; (ii) at every lag the
+rollout median (B1) within a factor of three of seed 1's at the same lag, and at g = 1 at least 1e-3 — HOLDS_B is lost at
+the first optimizer step on this seed too, kept as its own half because it is the paper's sentence; (iii) at every lag the
+rollout median at least 1e3× the same reader's median on corpus and on on-path text (seed 1: 1.3e4× at the weakest point);
+(iv) every (reader, pair) unit passes its controls under 0014's limits, no unit UNEVALUABLE. The summarizer reads all four
+(`i-holds`, `i` for the slope, `ii`, `iii`, `iv`). Descriptive: the per-step distance curve against seed 1's thirty-two
+values — expected to agree closely and uninformative, since Adam's first step has a magnitude nearly independent of the
+batch (seed 1's two-prompt smoke read a step-1 distance within 1.1% of the registered run's) while the seed acts on the
+update's direction, which the rollout KL sees; the reward and entropy trajectories; rollout over scrambled per lag.
+
+Halting: the step-0 weights the trainer saves must hash to seed 1's `3779c0b9…` before the first optimizer step — the
+same checkpoint under the same libraries writes the same bytes, so a different digest is an environment drift, not a
+seed, and the sitting stops before it bills the trajectory; a step-1 distance under 1e-6 stops the sitting before the
+reader run (0017); a floor over 1e-4 halts the reader run (0014). Not registered on this seed: the sliding writer, (C).
 
 ## 15. Statistic (C), "does the task notice", on the own run (designed 2026-10-15, revised after review the same day and after two probes; built 2026-10-15; registered by 0025)
 
