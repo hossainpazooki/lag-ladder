@@ -242,8 +242,13 @@ def _controls(reader: str, jobs: dict, cfg: ReaderConfig) -> dict:
         out["far"] = {"median_kl": med, "passed": med >= float(cfg.controls["far_min"])}
         if out["scrambled"] and out["scrambled"]["median_kl"] > 0:
             out["far_over_scrambled"] = med / out["scrambled"]["median_kl"]
-    out["passed"] = (all(c is not None and c["passed"] for c in (out["floor"], out["identity"], out["scrambled"]))
-                     and (out["far"] is None or out["far"]["passed"]))
+    # 0028: with evaluable_under_far, a scrambled miss is carried by a passing far control, and the unit says so.
+    scr_ok = out["scrambled"] is not None and out["scrambled"]["passed"]
+    far_ok = out["far"] is not None and out["far"]["passed"]
+    rescued = (not scr_ok and out["scrambled"] is not None and far_ok and bool(cfg.controls.get("evaluable_under_far")))
+    out["evaluable_under"] = "far" if rescued else None
+    out["passed"] = (all(c is not None and c["passed"] for c in (out["floor"], out["identity"]))
+                     and (scr_ok or rescued) and (out["far"] is None or far_ok))
     return out
 
 
@@ -471,6 +476,65 @@ def seal_readout(summary: dict, repo: Path, seal: str = "reader") -> dict | None
             vals[label] = None if e is None or e.get("withheld") else e["texts"].get(text, {}).get("over_far")
         out["clauses"]["ii"] = {"rungs": list(fii["rungs"]), "text": text, "at_most": hi, "over_far": vals,
                                 "verdict": verdict([None if v is None else v <= hi for v in vals.values()])}
+    # 0028: the second seed's replication clauses, read against the comparators the seal itself carries.
+    def _entry(label):
+        e = next((e for e in summary["rungs"] if e["label"] == label), None)
+        return None if e is None or e.get("withheld") else e
+
+    ih = P.get("i_heldout_holds_at_every_lag")
+    if ih:
+        hm = float(rule.get("holds_max", summary["rule"]["holds_max"]))
+        meds, checks = {}, []
+        for label in ih["rungs"]:
+            e = _entry(label)
+            meds[label] = {}
+            for t in ih["texts"]:
+                st = (e or {}).get("texts", {}).get(t)
+                m = st["b1"]["median_kl"] if st else None
+                meds[label][t] = m
+                checks.append(None if m is None or st.get("at_floor") is None else (m <= hm and not st["at_floor"]))
+        out["clauses"]["i-holds"] = {"rungs": list(ih["rungs"]), "texts": list(ih["texts"]), "holds_max": hm,
+                                     "median_kl": meds, "verdict": verdict(checks)}
+    rr = P.get("ii_rollout_replicates_seed1")
+    if rr:
+        f, text = float(rr["within_factor"]), str(rr["text"])
+        floor1 = rr.get("and_at_lag_1_at_least")
+        meds, accept, checks = {}, {}, []
+        for g, label in rr["rungs"].items():
+            ref = float(rr["reference"][g])
+            accept[g] = [ref / f, ref * f]
+            e = _entry(label)
+            m = e["texts"].get(text, {}).get("b1", {}).get("median_kl") if e else None
+            meds[g] = m
+            ok = None if m is None else (accept[g][0] <= m <= accept[g][1])
+            if ok is not None and g == "1" and floor1 is not None:
+                ok = ok and m >= float(floor1)
+            checks.append(ok)
+        out["clauses"]["ii"] = {"rungs": dict(rr["rungs"]), "text": text, "within_factor": f, "accept": accept,
+                                "at_lag_1_at_least": floor1, "median_kl": meds, "verdict": verdict(checks)}
+    ro = P.get("iii_rollout_over_heldout")
+    if ro:
+        k, text = float(ro["at_least_factor"]), str(ro["text"])
+        ratios, checks = {}, []
+        for g, (rl, hl) in ro["pairs_of_rungs"].items():
+            re_, he = _entry(rl), _entry(hl)
+            ratios[g] = {}
+            for t in ro["heldout_texts"]:
+                a = re_["texts"].get(text, {}).get("b1", {}).get("median_kl") if re_ else None
+                b = he["texts"].get(t, {}).get("b1", {}).get("median_kl") if he else None
+                r = (a / b) if (a is not None and b) else None
+                ratios[g][t] = r
+                checks.append(None if r is None else r >= k)
+        out["clauses"]["iii"] = {"pairs_of_rungs": dict(ro["pairs_of_rungs"]), "text": text, "heldout_texts": list(ro["heldout_texts"]),
+                                 "at_least_factor": k, "ratio": ratios, "verdict": verdict(checks)}
+    cu = P.get("iv_controls_as_0020")
+    if cu:
+        units, checks = {}, []
+        for u in cu["units"]:
+            c = summary.get("controls", {}).get(u)
+            units[u] = None if c is None else {"passed": c.get("passed"), "evaluable_under": c.get("evaluable_under")}
+            checks.append(None if c is None or c.get("passed") is None else bool(c["passed"]))
+        out["clauses"]["iv"] = {"units": units, "verdict": verdict(checks)}
     return out
 
 

@@ -282,3 +282,101 @@ def test_seal_readout_reads_the_far_clauses_from_the_control_units_and_the_rungs
     summary["rungs"][1]["withheld"] = True
     c = seal_readout(summary, tmp_path, "x")["clauses"]
     assert c["i"]["verdict"] == "UNREAD" and c["ii"]["verdict"] == "UNREAD"
+
+
+# --- 0028: the second seed's replication clauses, read against the comparators the seal carries -------------------
+
+def test_summary_marks_a_unit_evaluable_under_far_when_its_scrambled_misses(repo, seal_cfg):
+    from tests.test_reader import _setup_evaluable_under_far, near_misses_far_clears
+    cfg, tools = _setup_evaluable_under_far(repo, seal_cfg)
+    reader.run(cfg, repo, runner=FakeInstrument(kl=near_misses_far_clears), seal_cfg=seal_cfg, tools_dir=tools)
+    s = summarize(cfg)
+    c = s["controls"]["local:noise-0.001 @ ownrun-rollout"]
+    assert c["scrambled"]["passed"] is False and c["far"]["passed"] is True
+    assert c["passed"] is True and c["evaluable_under"] == "far"
+    e = {x["label"]: x for x in s["rungs"]}["rollout-1e-3"]
+    assert e["withheld"] is False and e["texts"]["rollout"]["b1"]["median_kl"] is not None
+    held = [k for k in s["controls"] if "olmo2-1b-rlvr1" in k][0]
+    assert s["controls"][held]["evaluable_under"] is None and s["controls"][held]["passed"]
+
+
+def _replication_fixture(tmp_path, reference_at_1=4.0e-3):
+    from lag_ladder.summarize_reader import PREDICTIONS
+    (tmp_path / PREDICTIONS).mkdir(parents=True, exist_ok=True)
+    pred = {"texts": ["corpus", "on-path", "rollout"], "rule": {"holds_max": 1e-3},
+            "predictions": {
+                "i_heldout_holds_at_every_lag": {"rungs": ["lag-1", "lag-2"], "texts": ["corpus", "on-path"]},
+                "ii_rollout_replicates_seed1": {"rungs": {"1": "roll-1", "2": "roll-2"}, "text": "rollout",
+                                                "within_factor": 3.0, "reference": {"1": reference_at_1, "2": 1.2e-2},
+                                                "and_at_lag_1_at_least": 1e-3},
+                "iii_rollout_over_heldout": {"pairs_of_rungs": {"1": ["roll-1", "lag-1"], "2": ["roll-2", "lag-2"]},
+                                             "text": "rollout", "heldout_texts": ["corpus", "on-path"], "at_least_factor": 1000.0},
+                "iv_controls_as_0020": {"units": ["r1 @ held", "r1 @ roll", "r2 @ held", "r2 @ roll"]}}}
+    (tmp_path / PREDICTIONS / "x.json").write_text(json.dumps({"prediction": pred}), encoding="utf-8")
+
+    def held(c, o):
+        return {"corpus": {"b1": {"median_kl": c}, "band": "HOLDS_B", "at_floor": False},
+                "on-path": {"b1": {"median_kl": o}, "band": "HOLDS_B", "at_floor": False}}
+
+    def roll(m):
+        return {"rollout": {"b1": {"median_kl": m}, "band": "UNRESOLVED", "at_floor": False}}
+
+    return {"rule": {"texts": ["corpus", "on-path"], "holds_max": 1e-3},
+            "controls": {"r1 @ held": {"passed": True, "evaluable_under": None},
+                         "r1 @ roll": {"passed": True, "evaluable_under": "far"},
+                         "r2 @ held": {"passed": True, "evaluable_under": None},
+                         "r2 @ roll": {"passed": True, "evaluable_under": None}},
+            "rungs": [{"label": "lag-1", "withheld": False, "texts": held(2e-7, 1e-7)},
+                      {"label": "lag-2", "withheld": False, "texts": held(5e-7, 3e-7)},
+                      {"label": "roll-1", "withheld": False, "texts": roll(5e-3)},
+                      {"label": "roll-2", "withheld": False, "texts": roll(1.5e-2)}],
+            "slope_fit": {}}
+
+
+def test_seal_readout_reads_the_replication_clauses_against_the_seals_stored_comparators(tmp_path):
+    """0028: (i-holds) HOLDS_B and off the floor on the named rungs and texts; (ii) each rollout median within a
+    factor of the reference the seal carries, and a floor at one lag; (iii) rollout over each held-out text at
+    least a factor; (iv) every named control unit passed, with the far rescue reported."""
+    from lag_ladder.summarize_reader import seal_readout
+    summary = _replication_fixture(tmp_path)
+    c = seal_readout(summary, tmp_path, "x")["clauses"]
+    assert {k: v["verdict"] for k, v in c.items()} == {"i-holds": "HELD", "ii": "HELD", "iii": "HELD", "iv": "HELD"}
+    assert c["i-holds"]["holds_max"] == 1e-3 and c["i-holds"]["median_kl"]["lag-2"]["on-path"] == 3e-7
+    assert c["ii"]["median_kl"] == {"1": 5e-3, "2": 1.5e-2}
+    assert c["ii"]["accept"]["1"] == pytest.approx([4e-3 / 3, 4e-3 * 3]) and c["ii"]["at_lag_1_at_least"] == 1e-3
+    assert c["iii"]["ratio"]["1"]["corpus"] == pytest.approx(5e-3 / 2e-7) and c["iii"]["at_least_factor"] == 1000.0
+    assert c["iv"]["units"]["r1 @ roll"] == {"passed": True, "evaluable_under": "far"}
+
+
+def test_each_replication_clause_falsifies_on_its_own_input_and_reads_unread_when_withheld(tmp_path):
+    import copy
+    from lag_ladder.summarize_reader import seal_readout
+
+    def verdicts(s):
+        return {k: v["verdict"] for k, v in seal_readout(s, tmp_path, "x")["clauses"].items()}
+
+    base = _replication_fixture(tmp_path)
+    s = copy.deepcopy(base); s["rungs"][0]["texts"]["corpus"]["b1"]["median_kl"] = 2e-3
+    assert verdicts(s)["i-holds"] == "FALSIFIED"
+    s = copy.deepcopy(base); s["rungs"][1]["texts"]["on-path"]["at_floor"] = True
+    assert verdicts(s)["i-holds"] == "FALSIFIED"
+    s = copy.deepcopy(base); s["rungs"][2]["texts"]["rollout"]["b1"]["median_kl"] = 1.3e-2     # above 3x 4e-3
+    v = verdicts(s); assert v["ii"] == "FALSIFIED" and v["iii"] == "HELD"
+    s = copy.deepcopy(base); s["rungs"][3]["texts"]["rollout"]["b1"]["median_kl"] = 3.9e-3     # under 1.2e-2 / 3
+    assert verdicts(s)["ii"] == "FALSIFIED"
+    s = copy.deepcopy(base); s["rungs"][2]["texts"]["rollout"]["b1"]["median_kl"] = 1.9e-4     # 950x corpus at lag 1
+    v = verdicts(s); assert v["iii"] == "FALSIFIED"
+    s = copy.deepcopy(base); s["controls"]["r2 @ roll"]["passed"] = False
+    assert verdicts(s)["iv"] == "FALSIFIED"
+    s = copy.deepcopy(base); del s["controls"]["r2 @ held"]
+    assert verdicts(s)["iv"] == "UNREAD"
+    s = copy.deepcopy(base); s["rungs"][3]["withheld"] = True
+    v = verdicts(s); assert v["ii"] == "UNREAD" and v["iii"] == "UNREAD" and v["i-holds"] == "HELD"
+    s = copy.deepcopy(base); s["rungs"][1]["withheld"] = True
+    assert verdicts(s)["i-holds"] == "UNREAD"
+    # the g = 1 floor is its own half: within the band but under 1e-3 falsifies (ii)
+    base2 = _replication_fixture(tmp_path, reference_at_1=2.4e-3)
+    s = copy.deepcopy(base2); s["rungs"][2]["texts"]["rollout"]["b1"]["median_kl"] = 9e-4          # in [8e-4, 7.2e-3]
+    assert verdicts(s)["ii"] == "FALSIFIED"
+    s["rungs"][2]["texts"]["rollout"]["b1"]["median_kl"] = 1.1e-3
+    assert verdicts(s)["ii"] == "HELD"

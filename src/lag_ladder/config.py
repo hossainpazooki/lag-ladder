@@ -318,6 +318,12 @@ def load_reader_config(path: Path, repo_root: Path) -> ReaderConfig:
     # 0022: the far control's limit; required when any pair names a far_pair (validated after the pairs are read).
     if "far_min" in controls and not (float(controls["far_min"]) > 0):
         raise ValueError(f"{path.name} [reader.controls] far_min must be positive")
+    # 0028: a unit whose scrambled misses but whose far clears is EVALUABLE under the far control — only when the
+    # configuration pre-commits to it; the default keeps 0020-0023's judgment (a scrambled miss is UNEVALUABLE).
+    euf = controls.get("evaluable_under_far", False)
+    if not isinstance(euf, bool):
+        raise ValueError(f"{path.name} [reader.controls] evaluable_under_far must be a bool when set")
+    controls["evaluable_under_far"] = euf
     for k in _READER_FLOOR_KEYS:
         # Empty-able: 0012 fixes them from the floor probe; `run` refuses while they are unset.
         if k not in controls:
@@ -377,6 +383,8 @@ def load_reader_config(path: Path, repo_root: Path) -> ReaderConfig:
             raise ValueError(f"{path.name} [[reader.pairs]] {pt.name}: far_pair needs [reader.controls] per_pair = true")
         if "far_min" not in controls:
             raise ValueError(f"{path.name} [reader.controls] far_min is required when a pair names a far_pair")
+    if euf and not any(pt.far_pair is not None for pt in pairs.values()):
+        raise ValueError(f"{path.name} [reader.controls] evaluable_under_far needs a pair that names a far_pair")
     rungs, labels = [], set()
     for i, r in enumerate(c["rungs"]):
         where = f"{path.name} [[reader.rungs]] #{i}"

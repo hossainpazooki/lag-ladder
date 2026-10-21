@@ -529,3 +529,83 @@ def test_far_pair_must_name_another_pair_and_needs_far_min(repo, seal_cfg):
     cpath.write_text(text.replace('heldout = [0, 4]\n', 'heldout = [0, 4]\nfar_pair = "ownrun-rollout"\n', 1), encoding="utf-8")
     with pytest.raises(ValueError, match="far_pair"):
         load_reader_config(cpath, repo)
+
+
+# --- 0028: a scrambled miss is EVALUABLE under the far control when the configuration pre-commits to it ----------
+
+def _setup_evaluable_under_far(repo, seal_cfg):
+    """The far fixture with `evaluable_under_far = true`, the rollout dumps' metadata naming their pair."""
+    cfg, tools = _setup_far(repo, seal_cfg)
+    cpath = repo / "config" / "reader.toml"
+    text = cpath.read_text(encoding="utf-8").replace("far_min = 1e-1\n", "far_min = 1e-1\nevaluable_under_far = true\n", 1)
+    cpath.write_text(text, encoding="utf-8")
+    commit_all(repo, "evaluable under far")
+    _name_rollout_dumps(repo)
+    return load_reader_config(cpath, repo), tools
+
+
+def _name_rollout_dumps(repo):
+    for meta in (repo / "results" / "distance" / "pairs" / "ownrun-rollout" / "dumps").rglob("meta.json"):
+        m = json.loads(meta.read_text(encoding="utf-8"))
+        m["pair"] = "ownrun-rollout"
+        meta.write_text(json.dumps(m), encoding="utf-8")
+
+
+def near_misses_far_clears(fm, sm, fs, ss, live):
+    """The rollout pair's scrambled cell (another rollout sequence's cache, same pair) reads under scrambled_min;
+    its far cell (another pair's dump) and everything else read as default."""
+    if not live and fm.get("pair") == "ownrun-rollout" and sm.get("pair") == "ownrun-rollout" and fs != ss:
+        return 0.05, 0.5
+    return default_kl(fm, sm, fs, ss, live)
+
+
+def test_scrambled_miss_is_evaluable_under_far_when_the_config_says_so(repo, seal_cfg):
+    cfg, tools = _setup_evaluable_under_far(repo, seal_cfg)
+    assert cfg.controls["evaluable_under_far"] is True
+    rec = reader.run(cfg, repo, runner=FakeInstrument(kl=near_misses_far_clears), seal_cfg=seal_cfg, tools_dir=tools)
+    assert rec["finished"] and rec["halted"] is None
+    ran = {(j["label"], j["pair"]) for j in rec["jobs"] if j["kind"] == "rung"}
+    assert ("rollout-1e-3", "ownrun-rollout") in ran, "the rollout rung runs: the unit is EVALUABLE under far"
+    assert rec["unevaluable_readers"] == {}
+    unit = "local:noise-0.001 @ ownrun-rollout"
+    assert unit in rec["evaluable_under_far"]
+    note = rec["evaluable_under_far"][unit]
+    assert "scrambled" in note and "far" in note and "EVALUABLE" in note
+
+
+def test_scrambled_miss_stays_unevaluable_when_far_misses_too(repo, seal_cfg):
+    cfg, tools = _setup_evaluable_under_far(repo, seal_cfg)
+
+    def both_miss(fm, sm, fs, ss, live):
+        if not live and fm.get("pair") == "ownrun-rollout" and fs != ss:    # scrambled (same pair) and far (other pair)
+            return 0.05, 0.5
+        return default_kl(fm, sm, fs, ss, live)
+
+    rec = reader.run(cfg, repo, runner=FakeInstrument(kl=both_miss), seal_cfg=seal_cfg, tools_dir=tools)
+    assert rec["finished"] and rec["halted"] is None
+    assert ("rollout-1e-3", "ownrun-rollout") not in {(j["label"], j["pair"]) for j in rec["jobs"] if j["kind"] == "rung"}
+    note = json.dumps(rec["unevaluable_readers"])
+    assert "UNEVALUABLE" in note and "scrambled" in note and "far" in note
+    assert rec["evaluable_under_far"] == {}
+
+
+def test_without_the_flag_a_scrambled_miss_is_unevaluable_even_when_far_clears(repo, seal_cfg):
+    cfg, tools = _setup_far(repo, seal_cfg)
+    assert cfg.controls["evaluable_under_far"] is False
+    _name_rollout_dumps(repo)
+    rec = reader.run(cfg, repo, runner=FakeInstrument(kl=near_misses_far_clears), seal_cfg=seal_cfg, tools_dir=tools)
+    assert ("rollout-1e-3", "ownrun-rollout") not in {(j["label"], j["pair"]) for j in rec["jobs"] if j["kind"] == "rung"}
+    assert "UNEVALUABLE" in json.dumps(rec["unevaluable_readers"])
+
+
+def test_evaluable_under_far_needs_a_far_pair_and_a_bool(repo, seal_cfg):
+    cfg, _ = _setup_per_pair(repo, seal_cfg)
+    cpath = repo / "config" / "reader.toml"
+    base = cpath.read_text(encoding="utf-8")
+    cpath.write_text(base.replace("per_pair = true\n", "per_pair = true\nevaluable_under_far = true\n", 1), encoding="utf-8")
+    with pytest.raises(ValueError, match="evaluable_under_far"):
+        load_reader_config(cpath, repo)
+    text = base.replace("per_pair = true\n", "per_pair = true\nfar_min = 1e-1\nevaluable_under_far = 1\n", 1)
+    cpath.write_text(text.replace('heldout = [0, 4]\n', 'heldout = [0, 4]\nfar_pair = "olmo2-1b-rlvr1"\n', 1), encoding="utf-8")
+    with pytest.raises(ValueError, match="evaluable_under_far"):
+        load_reader_config(cpath, repo)

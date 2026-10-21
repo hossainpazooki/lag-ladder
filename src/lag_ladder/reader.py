@@ -355,7 +355,7 @@ def run(cfg: ReaderConfig, repo_root: Path, *, runner=subprocess.run, limit: int
               "spans_sha256": {name: cfg.pairs[name].spans_sha256 for name in used_pairs(cfg)
                                if cfg.pairs[name].spans is not None},
               "started": datetime.now(timezone.utc).isoformat(timespec="seconds"), "finished": None,
-              "halted": None, "unevaluable_readers": {}, "jobs": []}
+              "halted": None, "unevaluable_readers": {}, "evaluable_under_far": {}, "jobs": []}
 
     def save():
         rec_path.write_text(json.dumps(record, indent=1), encoding="utf-8")
@@ -363,6 +363,7 @@ def run(cfg: ReaderConfig, repo_root: Path, *, runner=subprocess.run, limit: int
     floor_kls: dict[tuple[str, str], list[float]] = {}     # (reader, text) -> mean KL per sequence
     scrambled_kls: dict[str, list[float]] = {}             # reader -> mean KL per sequence
     far_kls: dict[str, list[float]] = {}                   # 0022: control unit -> mean KL per sequence
+    scrambled_missed: dict[str, float] = {}                # 0028: unit -> scrambled median under the limit, far pending
     unevaluable: set[str] = set()
     done = 0
     try:
@@ -404,21 +405,33 @@ def run(cfg: ReaderConfig, repo_root: Path, *, runner=subprocess.run, limit: int
                 if len(scrambled_kls[ck]) == n_of[j.pair]:
                     med = float(np.median(scrambled_kls[ck]))
                     if med < float(cfg.controls["scrambled_min"]):
-                        # Not a halt: the reader's rungs are UNEVALUABLE (design §13) and are skipped.
-                        unevaluable.add(ck)
-                        record["unevaluable_readers"][ck] = (
-                            f"UNEVALUABLE: median scrambled mean-KL {med:.3e} < scrambled_min "
-                            f"{cfg.controls['scrambled_min']}; its rungs are skipped")
+                        if cfg.controls.get("evaluable_under_far") and cfg.pairs[j.pair].far_pair is not None:
+                            # 0028: the far control decides; its jobs follow scrambled and precede the rungs.
+                            scrambled_missed[ck] = med
+                        else:
+                            # Not a halt: the reader's rungs are UNEVALUABLE (design §13) and are skipped.
+                            unevaluable.add(ck)
+                            record["unevaluable_readers"][ck] = (
+                                f"UNEVALUABLE: median scrambled mean-KL {med:.3e} < scrambled_min "
+                                f"{cfg.controls['scrambled_min']}; its rungs are skipped")
             elif j.kind == "far":
                 ck = control_key(j, cfg)
                 far_kls.setdefault(ck, []).append(mkl)
                 if len(far_kls[ck]) == n_of[j.pair]:
                     med = float(np.median(far_kls[ck]))
+                    missed = scrambled_missed.pop(ck, None)
                     if med < float(cfg.controls["far_min"]):
                         unevaluable.add(ck)
+                        also = (f" (its scrambled median {missed:.3e} missed scrambled_min {cfg.controls['scrambled_min']} too)"
+                                if missed is not None else "")
                         record["unevaluable_readers"][ck] = (
                             f"UNEVALUABLE: median far mean-KL {med:.3e} < far_min "
-                            f"{cfg.controls['far_min']}; its rungs are skipped")
+                            f"{cfg.controls['far_min']}{also}; its rungs are skipped")
+                    elif missed is not None:
+                        record["evaluable_under_far"][ck] = (
+                            f"EVALUABLE under far: median scrambled mean-KL {missed:.3e} < scrambled_min "
+                            f"{cfg.controls['scrambled_min']}, median far mean-KL {med:.3e} >= far_min "
+                            f"{cfg.controls['far_min']} (evaluable_under_far, pre-committed by the configuration)")
             save()
     except Refusal as e:
         record["halted"] = str(e)
