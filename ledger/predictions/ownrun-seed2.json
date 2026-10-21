@@ -1,0 +1,225 @@
+{
+  "pair": "ownrun-seed2",
+  "prediction": {
+    "controls": "per (reader, pair) as 0020: float16 floor on the pair's texts, identity and scrambled on the pair's first text (rollout for the rollout pair); the rollout pair also carries 0022's far control (the reader's own dump of held-out sequence 40 + i cut to the prompt's length, far_min 0.1) as evaluability insurance, pre-committed by evaluable_under_far = true: a reader whose rollout scrambled misses 0.1 but whose far clears it is EVALUABLE under the far control (unit marked evaluable_under = \"far\"); a reader that misses both is UNEVALUABLE and its rollout rungs read UNREAD in clauses (ii) and (iii)",
+    "descriptive_not_sealed": [
+      "the per-step distance curve against seed 1's thirty-two values (seed1_reference.rel_delta_all at the kept steps): expected to agree closely and uninformative \u2014 Adam's first step is batch-insensitive (seed 1's two-prompt smoke read a step-1 distance within 1.1% of the registered run's); the seed acts on the update's direction, which the rollout KL sees",
+      "the step-32 distance against 1.0494e-4",
+      "the reward and entropy trajectories against 0018's (exact-match mean 0.030 over steps 1-8 and 0.148 over 25-32)",
+      "rollout over scrambled and over far per lag against 0021's and 0023's (0.037 at g = 1 to 0.77 at g = 16; over far 0.010 to 0.146)",
+      "far over scrambled per reader against 0023's 3.6x to 5.8x",
+      "the per-lag ratio seed 2 / seed 1 on every text"
+    ],
+    "halting": "the step-0 weights the trainer saves must hash to seed 1's 3779c0b9... before the first optimizer step (the same checkpoint under the same libraries writes the same bytes; a different digest is an environment drift, not a seed, and the sitting stops before it bills the trajectory); a step-1 distance under 1e-6 stops the sitting before the reader run (0017); a floor over 1e-4 halts the reader run (0014); scrambled missed and far cleared = EVALUABLE under far; both missed = UNEVALUABLE, clauses (ii) and (iii) UNREAD at that lag",
+    "kind": "replication of the own run (0017, 0018) on a second trainer seed; the clauses are agreement clauses against seed 1's readings, which this seal carries, not 0017's bands re-tested",
+    "predictions": {
+      "i_backbone_quadratic": {
+        "fit": "least squares of log median (B1) on log rel_delta_all, per text",
+        "note": "clause (i), second half: the quadratic law along the second trajectory; the key name is the one summarize_reader reads (printed as i)",
+        "rungs": [
+          "ownrun-seed2-lag-1",
+          "ownrun-seed2-lag-2",
+          "ownrun-seed2-lag-4",
+          "ownrun-seed2-lag-8",
+          "ownrun-seed2-lag-16",
+          "ownrun-seed2-lag-32"
+        ],
+        "slope_in": [
+          1.5,
+          2.5
+        ],
+        "texts": [
+          "corpus",
+          "on-path"
+        ]
+      },
+      "i_heldout_holds_at_every_lag": {
+        "rungs": [
+          "ownrun-seed2-lag-1",
+          "ownrun-seed2-lag-2",
+          "ownrun-seed2-lag-4",
+          "ownrun-seed2-lag-8",
+          "ownrun-seed2-lag-16",
+          "ownrun-seed2-lag-32"
+        ],
+        "statement": "clause (i), first half: median (B1) <= 1e-3 (HOLDS_B) at every lag rung on both held-out texts, every rung above 2x its reader's floor; read by the summarizer as i-holds",
+        "texts": [
+          "corpus",
+          "on-path"
+        ]
+      },
+      "ii_rollout_replicates_seed1": {
+        "and_at_lag_1_at_least": 0.001,
+        "reference": {
+          "1": 0.004679106903489593,
+          "16": 0.08881501903335705,
+          "2": 0.013029200757240154,
+          "32": 0.08914039763956683,
+          "4": 0.029369849307680232,
+          "8": 0.06379572466746403
+        },
+        "rungs": {
+          "1": "ownrun-seed2-rollout-lag-1",
+          "16": "ownrun-seed2-rollout-lag-16",
+          "2": "ownrun-seed2-rollout-lag-2",
+          "32": "ownrun-seed2-rollout-lag-32",
+          "4": "ownrun-seed2-rollout-lag-4",
+          "8": "ownrun-seed2-rollout-lag-8"
+        },
+        "statement": "clause (ii): at every lag the rollout median (B1) lies within a factor of three of seed 1's median at the same lag (reference = seed1_reference.rollout_median_b1), and at g = 1 it is at least 1e-3 (UNRESOLVED or worse: HOLDS_B is lost at the first optimizer step on this seed too); the g = 1 floor is its own half because it is the paper's sentence",
+        "text": "rollout",
+        "within_factor": 3.0
+      },
+      "iii_rollout_over_heldout": {
+        "at_least_factor": 1000.0,
+        "heldout_texts": [
+          "corpus",
+          "on-path"
+        ],
+        "pairs_of_rungs": {
+          "1": [
+            "ownrun-seed2-rollout-lag-1",
+            "ownrun-seed2-lag-1"
+          ],
+          "16": [
+            "ownrun-seed2-rollout-lag-16",
+            "ownrun-seed2-lag-16"
+          ],
+          "2": [
+            "ownrun-seed2-rollout-lag-2",
+            "ownrun-seed2-lag-2"
+          ],
+          "32": [
+            "ownrun-seed2-rollout-lag-32",
+            "ownrun-seed2-lag-32"
+          ],
+          "4": [
+            "ownrun-seed2-rollout-lag-4",
+            "ownrun-seed2-lag-4"
+          ],
+          "8": [
+            "ownrun-seed2-rollout-lag-8",
+            "ownrun-seed2-lag-8"
+          ]
+        },
+        "statement": "clause (iii): at every lag the rollout median (B1) is at least 1e3x the same reader's median on corpus and on on-path text (seed 1: 1.3e4x to 2.5e4x on corpus, 2.5e4x to 4.5e4x on on-path)",
+        "text": "rollout"
+      },
+      "iv_controls_as_0020": {
+        "statement": "clause (iv): every (reader, pair) unit passes its controls under 0014's limits (float16 floor <= 1e-4, identity <= 1e-5, scrambled >= 0.1, far >= 0.1 on the rollout pair) or is EVALUABLE under far as pre-committed; no unit UNEVALUABLE. The readout reports which units were carried by far",
+        "units": [
+          "local:step_1 @ qwen2.5-1.5b-to-instruct",
+          "local:step_1 @ qwen2.5-1.5b-ownrun-rollout",
+          "local:step_2 @ qwen2.5-1.5b-to-instruct",
+          "local:step_2 @ qwen2.5-1.5b-ownrun-rollout",
+          "local:step_4 @ qwen2.5-1.5b-to-instruct",
+          "local:step_4 @ qwen2.5-1.5b-ownrun-rollout",
+          "local:step_8 @ qwen2.5-1.5b-to-instruct",
+          "local:step_8 @ qwen2.5-1.5b-ownrun-rollout",
+          "local:step_16 @ qwen2.5-1.5b-to-instruct",
+          "local:step_16 @ qwen2.5-1.5b-ownrun-rollout",
+          "local:step_32 @ qwen2.5-1.5b-to-instruct",
+          "local:step_32 @ qwen2.5-1.5b-ownrun-rollout"
+        ]
+      }
+    },
+    "registering_entry": "0028",
+    "rollouts": {
+      "reused_from": "0017: the step-0 policy's samples; step 0 is the same checkpoint under both seeds, so the same text is read under both trajectories and the comparison is on the trajectory alone",
+      "spans_sha256": "e631fd845aa7838186f5feebda66f13bb725b59d0cc7e8841e1a23639a977f15",
+      "tokens_sha256": "7d6dec47ad87a6860094287f736ebbe44582864c2ba2918a927e5851025e80de"
+    },
+    "rule": {
+      "at_floor_factor": 2.0,
+      "degrades_min": 0.1,
+      "far_min": 0.1,
+      "floor_max_median_kl": 0.0001,
+      "holds_max": 0.001,
+      "identity_max_logit_diff": 1e-05,
+      "scrambled_min": 0.1
+    },
+    "ruled": "2026-10-20",
+    "seed1_reference": {
+      "corpus_median_b1": {
+        "1": 2.043284212239864e-07,
+        "16": 4.852626956028394e-06,
+        "2": 5.177699016860327e-07,
+        "32": 6.646009999125568e-06,
+        "4": 1.4422700613386796e-06,
+        "8": 2.837407038588924e-06
+      },
+      "onpath_median_b1": {
+        "1": 1.2232949612826782e-07,
+        "16": 2.5305786890608e-06,
+        "2": 2.896229355309546e-07,
+        "32": 3.5423387226979353e-06,
+        "4": 7.159629660342601e-07,
+        "8": 1.6132963392145871e-06
+      },
+      "rel_delta_all": {
+        "1": 2.2895683763734974e-05,
+        "16": 9.547494899946862e-05,
+        "2": 3.518530054413405e-05,
+        "32": 0.00010494302565318275,
+        "4": 5.267686242230837e-05,
+        "8": 7.476090097973842e-05
+      },
+      "rollout_median_b1": {
+        "1": 0.004679106903489593,
+        "16": 0.08881501903335705,
+        "2": 0.013029200757240154,
+        "32": 0.08914039763956683,
+        "4": 0.029369849307680232,
+        "8": 0.06379572466746403
+      },
+      "rollout_scrambled_median": {
+        "1": 0.12615886255101572,
+        "16": 0.11536239097594087,
+        "2": 0.12403275607280051,
+        "32": 0.12007687446323236,
+        "4": 0.122,
+        "8": 0.1191
+      },
+      "slope": {
+        "corpus": 2.258083704337708,
+        "on-path": 2.1931602889190396
+      },
+      "source": "results/ownrun/summary.json sha256 f3b8f00ff6ed2f94... (entry 0018, re-made at home with the readout fix; identical to the pod's on every rung)"
+    },
+    "statistic": "per rung and text, median over held-out sequences of the mean per-token KL(pi_fresh || pi_stale) over the continuation (B1), nats/token; x = whole-vector relative L2 weight distance of the reader (step g) to the writer (step 0), tools/weight_distance.py",
+    "texts": [
+      "corpus",
+      "on-path",
+      "rollout"
+    ],
+    "trajectory": {
+      "beta": 0.0,
+      "keep": [
+        0,
+        1,
+        2,
+        4,
+        8,
+        16,
+        32
+      ],
+      "lr": 1e-06,
+      "master_dtype": "float32",
+      "max_completion_length": 256,
+      "model": "Qwen/Qwen2.5-1.5B@8faed761d45a263340a0528343f099c05c9a4323",
+      "prompts_x_completions": [
+        16,
+        8
+      ],
+      "seed": 1,
+      "seed1_trainer_seed": 0,
+      "step0_weights_sha256_must_equal": "3779c0b921974e757c528419644d9282326939985a73692ec6d03a3d26794c7d",
+      "steps": 32,
+      "temperature": 1.0,
+      "tool": "tools/own_run.py train, the same arguments as 0017 but --seed 1",
+      "trainer": "trl==1.15.0@dae7b6adc8d2729cfa8d21bc8480656ede769240"
+    }
+  },
+  "prior_artifacts": [],
+  "sealed_pre_fit": true
+}

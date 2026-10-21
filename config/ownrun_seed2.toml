@@ -1,0 +1,159 @@
+# Statistic (B) at the operating lag — the own run, SECOND TRAINER SEED (design §14.3, R-C16 as ruled 2026-10-20).
+# UNREGISTERED until a numbered entry fixes every value below; `reader run` refuses while registered_by is empty.
+#
+# The recipe is 0017's unchanged — the same tools/own_run.py, the same arguments — with ONE difference: the trainer
+# seed is 1 (0017: 0). Trainer: trl==1.15.0 (dae7b6adc8d2729cfa8d21bc8480656ede769240), lr 1e-6, beta 0, 16 prompts
+# x 8 completions per step, T 1.0, fp32 master weights, 32 steps, keep {0, 1, 2, 4, 8, 16, 32}, dumps every step.
+# The trainer seed is run_config.json's `seed` and the seal payload's trajectory.seed; `seed` below is the reader's
+# (the scorer's), 0 as in every (B) configuration.
+#
+# Pairs, token files and hashes are 0017's: the rollout text is the STEP-0 policy's sample, and step 0 is the same
+# released checkpoint for both seeds, so the same rows are read under both trajectories (the comparison is on the
+# trajectory alone). The excluded train indices (the rollout prompts) are excluded from this run's batches as before.
+#
+# Controls per (reader, pair) on the pair's own texts (0020's `per_pair`): float16 floor, identity, scrambled on
+# held-out text for the held-out pair and on rollout text for the rollout pair, plus 0022's far control on the rollout
+# pair (the reader's own dump of held-out sequence 40 + i cut to the prompt's length, far_min 0.1) as evaluability
+# insurance: `evaluable_under_far = true` pre-commits that a reader whose rollout scrambled misses 0.1 but whose far
+# clears it is EVALUABLE under the far control (seed 1's scrambled margin was 15-26%). No sliding writer, no (C) on
+# this seed (ruled 2026-10-20; deferred past the reviewer round).
+#
+# Labels carry `seed2` so results/distance/rungs/<label> never collides with 0017's at home; the trainer hook writes
+# results/distance/ownrun/step_<g>.json on the pod — at home those files are placed under results/distance/ownrun_seed2/.
+
+[reader]
+results_dir = "results/ownrun_seed2"
+upstream_path = "../kv-transfer-replication"
+upstream_sha = "5d4aa4a98b40f5ab37dd83ebb6b2ee802203994a"
+heldout = [40, 50]
+prefix_len = 768
+dtype = "float32"
+seed = 0
+registered_by = "0028"
+seal = "ownrun-seed2"
+
+[reader.rule]
+statistic = "median over held-out sequences of the mean per-token KL(pi_fresh || pi_stale) over the continuation, per rung and text (design S13, ledger 0011)"
+holds_max = 1e-3
+degrades_min = 1e-1
+texts = ["corpus", "on-path"]
+generate_under = "stale"
+
+[reader.controls]
+per_pair = true
+identity_max_logit_diff = 1e-5
+scrambled_min = 1e-1
+floor_max_median_kl = 1e-4
+# 0022's far limit, and 0028's pre-committed rule: scrambled missed + far cleared = EVALUABLE under far.
+far_min = 1e-1
+evaluable_under_far = true
+
+# The held-out corpus sequences: 0008's Qwen token file (0012's pin), sequences 40..49.
+[[reader.pairs]]
+name = "qwen2.5-1.5b-to-instruct"
+tokens = "data/tokens/qwen2.5-1.5b-to-instruct_n50_len1024_seed0.npy"
+tokens_sha256 = "01bd7698f7413ab9a3b6958991487bbba626f5a8cc4f24142cd22091d96af747"
+
+# The rollout sequences of 0017 (R-C6): the step-0 policy's samples; the same rows under the second trajectory.
+[[reader.pairs]]
+name = "qwen2.5-1.5b-ownrun-rollout"
+tokens = "data/tokens/qwen2.5-1.5b-ownrun_rollout_n10_seed0.npy"
+tokens_sha256 = "7d6dec47ad87a6860094287f736ebbe44582864c2ba2918a927e5851025e80de"
+spans = "data/tokens/qwen2.5-1.5b-ownrun_rollout_n10_seed0.spans.json"
+spans_sha256 = "e631fd845aa7838186f5feebda66f13bb725b59d0cc7e8841e1a23639a977f15"
+heldout = [0, 10]
+# 0022: rollout sequence i's far prefix is the held-out pair's reader dump of sequence 40 + i (this run's own dumps).
+far_pair = "qwen2.5-1.5b-to-instruct"
+
+# Lag rungs on the held-out corpus: writer step 0, reader step g. Labels fix the distance-file names.
+[[reader.rungs]]
+label = "ownrun-seed2-lag-1"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:step_1"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_1"
+
+[[reader.rungs]]
+label = "ownrun-seed2-lag-2"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:step_2"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_2"
+
+[[reader.rungs]]
+label = "ownrun-seed2-lag-4"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:step_4"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_4"
+
+[[reader.rungs]]
+label = "ownrun-seed2-lag-8"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:step_8"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_8"
+
+[[reader.rungs]]
+label = "ownrun-seed2-lag-16"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:step_16"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_16"
+
+[[reader.rungs]]
+label = "ownrun-seed2-lag-32"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:step_32"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_32"
+
+# The same lags on the rollout text (R-C4): the reader scores the step-0 sample under its own prompt cache and
+# under step 0's. The rollout pair's controls run per reader on rollout text (per_pair).
+[[reader.rungs]]
+label = "ownrun-seed2-rollout-lag-1"
+pair = "qwen2.5-1.5b-ownrun-rollout"
+reader = "local:step_1"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_1"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-seed2-rollout-lag-2"
+pair = "qwen2.5-1.5b-ownrun-rollout"
+reader = "local:step_2"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_2"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-seed2-rollout-lag-4"
+pair = "qwen2.5-1.5b-ownrun-rollout"
+reader = "local:step_4"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_4"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-seed2-rollout-lag-8"
+pair = "qwen2.5-1.5b-ownrun-rollout"
+reader = "local:step_8"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_8"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-seed2-rollout-lag-16"
+pair = "qwen2.5-1.5b-ownrun-rollout"
+reader = "local:step_16"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_16"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-seed2-rollout-lag-32"
+pair = "qwen2.5-1.5b-ownrun-rollout"
+reader = "local:step_32"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_32"
+texts = ["rollout"]
