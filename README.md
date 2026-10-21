@@ -44,7 +44,8 @@ three orders of magnitude above noise at matched distance. The own run (0017, 00
 trajectory of Qwen2.5-1.5B: HOLDS_B at every lag on held-out text, four orders of magnitude higher on the policy's
 own prompts. (C) ran (0025 registered, 0026 restated the dump-equivalence limit, 0027 read): the step-0 cache changes the greedy
 answer on 71% of prompts at g = 1 and 87% at g = 32; all four sealed clauses held. A second trainer seed of the own run
-is registered (0028; design §14.3) with agreement clauses against the first seed's readings; it has not run.
+ran (0028 registered, 0029 read): all five agreement clauses against the first seed held — distances within 1.3%,
+held-out medians 0.62–0.91 of seed 1's, rollout medians 0.80–1.05, slopes 2.13 / 2.05, every control passed.
 
 ## How a rung is measured
 

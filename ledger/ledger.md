@@ -1232,3 +1232,53 @@ hashes. Budget from seed 1's measured stages (trainer 4 h 18 min, 11.6 s per rea
 `src/lag_ladder/config.py`, `src/lag_ladder/reader.py`, `src/lag_ladder/summarize_reader.py` (`evaluable_under_far`; the
 replication readout `i-holds`, `ii`, `iii`, `iv`), `tests/test_reader.py`, `tests/test_summarize_reader.py`,
 `docs/2026-09-19-holdover-design.md` (§14 R-C16 as ruled, §14.3), `README.md`, `CLAUDE.md`.
+
+### 0029 — 2026-10-21 — Outcome: the own run's second trainer seed (0028); all five sealed clauses HELD
+
+prior-entries-sha256: 642c2c3bf8fcce78a71dfbc17b30f4c31eee71b5d12f4c901a59eb61d1819d89
+
+**Run.** The trajectory and the 660 jobs of 0028 (`config/ownrun_seed2.toml`, instrument `5d4aa4a`, this repository at
+`4f12ecb`) ran on one A100-SXM4-80GB under torch 2.14.1+cu130, transformers 5.20.2, TRL 1.15.0, without a halt. The step-0
+weights hashed to seed 1's (`3779c0b9…`) in the smoke and in the run, so the environment is the same checkpoint and not a
+drift; step-1 distance 2.29e-5 (the stop rule did not fire). Every unit's controls passed under 0014's limits, none
+carried by far: held-out pair, float16 floors 3.6e-8 to 5.1e-8 nats/token on corpus, 2.0e-8 to 3.4e-8 on on-path,
+identity 0, scrambled 0.553 to 0.555; rollout pair, floors 1.5e-7 to 1.9e-7, identity 0, scrambled 0.114 to 0.124, far
+0.433 (g = 1), 0.439, 0.464, 0.559, 0.622, 0.630 (g = 32) — 3.5× to 5.3× scrambled (0023 read 3.6× to 5.8× on seed 1).
+Records: `seed2-results-final.tgz` `962eabe6…` (660 reports, `run.json`, the pod's summary), `seed2-aux-final.tgz`
+`1fc3a4ef…` (7 provenances, 32 step distances, 12 rung placements, trainer and pod logs), digests equal both ends; the home
+summarizer's reading equals the pod's on every rung, control and clause. kept weights {0, 1, 2, 4, 8, 16, 32} and every step's dumps backed up to the private
+dataset under `ownrun-seed2/` (manifest `SHA256SUMS`, 20,527 files, 0 missing, 0 LFS-sha mismatches); all off-repository.
+
+**Trajectory.** Whole-vector relative distance to step 0: 2.29e-5 (step 1), 3.53e-5 (2), 5.25e-5 (4), 7.47e-5 (8),
+9.62e-5 (16), 1.063e-4 (32) — within 1.3% of seed 1's at every kept step (ratios 0.998 to 1.013), concave and flat after
+step 20, as 0028 expected of Adam's first steps. Exact-match reward mean 0.023 over steps 1–8, 0.138 over 25–32 (seed 1:
+0.030, 0.148); the format term 0.146 → 0.197 (0.150 → 0.191); completion entropy 2.22 → 0.84 (2.51 → 0.98). The same
+distance, a similar sharpening.
+
+**Reading** — median (B1), nats/token, at distance x; bands HOLDS_B ≤ 1e-3, DEGRADES_B ≥ 1e-1. *Held-out text* (corpus /
+on-path): lag 1 (x 2.29e-5) 1.78e-7 / 1.00e-7; 2 (3.53e-5) 4.73e-7 / 2.21e-7; 4 (5.25e-5) 1.13e-6 / 5.61e-7; 8 (7.47e-5)
+2.44e-6 / 1.19e-6; 16 (9.62e-5) 3.90e-6 / 1.84e-6; 32 (1.063e-4) 4.63e-6 / 2.20e-6 — HOLDS_B at every lag, every rung
+3.5× to 110× its reader's floor; slope of log median on log x over the six rungs 2.13 (corpus), 2.05 (on-path). Against
+seed 1 the held-out medians run 0.70 to 0.91 (corpus) and 0.62 to 0.82 (on-path) of 0018's at the same lag, the gap
+widest at lag 32. *Rollout text*: lag 1 3.75e-3; 2 1.12e-2; 4 2.35e-2; 8 5.64e-2; 16 8.71e-2; 32 9.32e-2 — UNRESOLVED at
+every lag, 0.80, 0.86, 0.80, 0.88, 0.98, 1.05 of seed 1's; argmax agreement with the fresh cache 98% (lag 1) to 91% (lag
+32) (seed 1: 98% to 90%); rollout over the same reader's far 0.009, 0.025, 0.051, 0.101, 0.140, 0.148 (0023: 0.010 to
+0.146); over scrambled 0.030 to 0.78.
+
+**The seal (`ownrun-seed2`, 7c3e74a7…), read by the summarizer.** (i) HELD: HOLDS_B on both texts at all six lags; slopes
+2.13 / 2.05 in [1.5, 2.5]. (ii) HELD: every rollout median within a factor of three of 0018's at the same lag (the
+widest ratio 0.80), and 3.75e-3 ≥ 1e-3 at g = 1 — HOLDS_B is lost at the first optimizer step on this seed too. (iii)
+HELD: rollout over corpus 2.0e4× to 2.4e4×, over on-path 3.7e4× to 5.1e4× (seed 1: 1.3e4× to 2.5e4×, 2.5e4× to 4.5e4×),
+every one above 1e3×. (iv) HELD: all twelve (reader, pair) units passed their controls; `evaluable_under` null everywhere.
+
+**What the reading says.** 0024's qualifier "on one seed" is answered for the trajectory: a second GRPO seed under the same
+recipe reproduces 0018's distances to 1%, its held-out medians to within a factor of 1.6, its rollout medians to within
+a factor of 1.25, the quadratic slope, the four orders of magnitude between the policy's own text and the held-out texts,
+and the loss of HOLDS_B at the first step. The one systematic difference — seed 2's held-out medians sit 10–40% below
+seed 1's at equal distance while its rollout medians sit within ±20% — is descriptive here; the clauses were agreement
+clauses with a factor of three, and nothing in them resolves it.
+
+**Not ruled here.** Whether 0024's sentence drops its qualifier; the sliding writer and statistic (C) on this seed (deferred
+past the reviewer round); a third seed.
+
+**Consequences in this commit set:** `README.md`, `CLAUDE.md`.

@@ -16,7 +16,8 @@ entry 0021 their outcome, entry 0022 the registration of a far scrambled control
 outcome, entry 0024 the ruling that adds the trainer's own text to (B)'s statement of record, on one seed, and entry
 0025 the registration of statistic (C) on the own run with its seal, entry 0026 the restatement of its
 dump-equivalence limit (absolute 2⁻⁵) after the sitting halted on the relative one, entry 0027 the outcome of the
-(C) sitting, and entry 0028 the registration of the own run's second trainer seed (§14.3).
+(C) sitting, entry 0028 the registration of the own run's second trainer seed (§14.3), and entry 0029 its outcome
+(all five clauses held).
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never
@@ -152,5 +153,7 @@ trainer seed 1, the same rollout rows, controls per (reader, pair) with the far 
 (`evaluable_under_far`: a scrambled miss carried by a passing far is EVALUABLE, pre-committed), 660 jobs on one A100
 sitting; agreement clauses against 0018's medians, which the seal carries — (i) held-out HOLDS_B + slope, (ii) rollout
 within 3× of seed 1 per lag and ≥ 1e-3 at g = 1, (iii) rollout ≥ 1e3× held-out, (iv) all control units pass; the
-summarizer reads all four. Halting: the saved step-0 weights must hash to seed 1's. Not yet run. 128-step closed; (C) on
-seed 2 deferred.
+summarizer reads all four. Halting: the saved step-0 weights must hash to seed 1's. **0029 reads it**: step-0 digest equal
+to seed 1's, no halt, all twelve control units passed (none carried by far), all five clauses HELD — distances within 1.3%
+of seed 1's, held-out medians 0.62–0.91 of 0018's at equal lag, rollout medians 0.80–1.05, slopes 2.13 / 2.05, rollout
+over held-out 2.0e4×–5.1e4×. Hub `ownrun-seed2/` (20,527 files). 128-step closed; (C) on seed 2 deferred.
