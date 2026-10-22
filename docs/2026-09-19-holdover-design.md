@@ -783,3 +783,150 @@ inside a generation; nothing beyond one seed, one 1.5B model, one task, 32
 steps; nothing about a cache older than 32 steps; nothing a reward model would compute; nothing about *accuracy* beyond
 the descriptive Δ — under greedy decoding at a 256-token cap the step-32 policy answers 6% of GSM8K test and loops on
 most of the rest, so this section measures whether the answer changes, not whether it worsens.
+
+## 16. Hybrid state: carryover decomposed by state kind (Kimi Linear 48B-A3B) (seeded 2026-10-22; R-K1–R-K8 PROPOSED, none taken; probe pending; nothing registered)
+
+**Why.** Every rung so far reads one state kind: K and V at every layer of a dense or GQA transformer, so a stale cache
+is stale everywhere at once and nothing in (B) can say *which* part of the carried state the reader notices. A hybrid
+model separates the kinds. Kimi Linear (`moonshotai/Kimi-Linear-48B-A3B-Base` and `-Instruct`, arXiv 2510.26692;
+27 layers, 7 multi-head latent attention (MLA) layers at one-based `[4, 8, 12, 16, 20, 24, 27]`, 20 Kimi Delta
+Attention (KDA) layers; 48B total, 3B active, 256 experts, bf16 on the Hub) keeps three state kinds in one cache, and a
+serving engine that holds "the prefix cache" across a weight sync holds all three. The carryover definition (§13) extends
+verbatim — the change in the reader's next-token distribution from consuming state written under a different
+computation — and the question this section adds is where the injury sits: in the seven attention layers' K/V, in the
+twenty recurrent layers' states, or in both. It is the same ladder (the text fixed, the model varied) with a new
+species of reader, not a linear-ceiling cell (R-K6). The MLPerf-named Kimi K3 (2.8T, multi-node) is out of reach; Kimi
+Linear is the same recipe at one-node scale with a Base and an Instruct checkpoint released.
+
+**The cache (verified from `modeling_kimi.py` and flash-linear-attention `main` on 2026-10-22; digests in the private
+seed brief).** `KimiDynamicCache` is its own class with four lists, one slot per layer. MLA layers: materialized
+per-head K `[B, 32, T, 192]` (128 nope + 64 rope dims) and V `[B, 32, T, 128]`, bf16, concatenated along the sequence
+— not the latent; 20 KB per token per layer, ≈ 143 MB per 1,024-token sequence over the 7 layers. KDA layers: the
+delta-rule recurrent state `[B, 32, 128, 128]` in **float32** (the chunk kernel allocates it in float32, the fused
+kernel asserts it) — 2 MiB per layer, 40 MiB per sequence over 20 layers, independent of prefix length — plus three
+short-convolution windows (q, k, v) of `[B, 4096, 4]` in the activation dtype bf16, whose last three inputs carry into
+the next forward. Three facts shape the design. (1) *Kernel path:* `mode = 'fused_recurrent' if q_len <= 64 else
+'chunk'`, so the 768-token prefill and the 256-token continuation both run the chunk kernel; the floor is one 1,024-token
+chunk pass against a 768-token chunk pass followed by a 256-token chunk pass from its float32 state and conv windows —
+the same kernel at a different tiling plus the state hand-off, not chunk-vs-fused. (2) *Length and positions:*
+`get_seq_length` reads the first MLA layer's key cache and the model derives `cache_position` from it, so **every arm
+carries an MLA cache of the full prefix**; a KDA-only stale arm injects the reader's own K/V, never an empty one.
+(3) *No re-rotation:* Base and Instruct share `rope_theta` and the rope dims; the driver asserts the two configs' rope
+fields equal and otherwise refuses. A `state_v_first` layout flag exists in FLA (`[N, HV, V, K]`); K = V = 128 hides a
+transposition, so the dump records the flag read on the machine.
+
+**The pinned instrument does not apply (R-K1).** `kvt` builds a `transformers.DynamicCache` from arrays, expects K and
+V of one width at every layer, registers an `sdpa` attention, derives `kv_shape` from `num_key_value_heads × head_dim`
+(32 × 72 here; the cache is 32 × 192 / 128) and runs float32 (192 GB for this model). Kimi Linear forces
+`flash_attention_2` at construction and 20 of its 27 layers have no K/V. Under 0002 ("the instrument serves (A) only;
+the (B) and (C) scorers are built here") this is a second dump-and-inject driver in this repository, not a new pair in
+`kvt/pairs.py`; `kv-transfer-replication` stays read-only. Statistic (A), f*(τ_K) on a K read-out, has no meaning for a
+recurrent state and stays closed (0010).
+
+**Construction.** Rungs (R-K4, R-K8): the isotropic-noise backbone on Base at the rungs bf16 can carry — target
+relative norms 1e-2, 3e-2, 1e-1, each placed on the x-axis by the distance measured on the weights as the reader loads
+them (below) — written by `tools/perturb_checkpoint.py`, dumped and pruned per rung as 0008 did; then Base → Instruct,
+the one real direction available (the analogue of 0008's `qwen-base-to-instruct`). Instruct → Base is run on the same dumps with the reader swapped and reported descriptively,
+not as a second sealed rung. No own run: a GRPO trajectory on a 48B MoE is outside this programme's compute; the
+per-step dump hook is what a partner would get. Texts: §13's held-out FineWeb windows re-tokenized under Kimi's
+163,840-vocabulary tokenizer (a new token file, prepared after the probe asserts the Base and Instruct tokenizer files
+byte-identical), P = 768, C = 256, held-out rows as §13; the MLPerf `agentic` windows if that text has been registered
+by then. Dtype (R-K2): bf16 weights and activations as the Hub serves them, the recurrent state float32 as the kernels
+keep it. Per rung and reader, four arms over the same prefix, each a 256-token teacher-forced continuation under an
+injected cache:
+
+| arm | MLA K/V | KDA recurrent + conv states |
+|---|---|---|
+| FRESH | reader's own | reader's own |
+| FULL-STALE | writer's | writer's |
+| MLA-STALE | writer's | reader's own |
+| KDA-STALE | reader's own | writer's |
+
+**R-K8 (proposed) — the backbone under bf16.** `tools/perturb_checkpoint.py` writes, today, one float32
+`model.safetensors` with `torch_dtype` float32 in the copied config, because bf16's mantissa step (2⁻⁸ ≈ 3.9e-3
+relative per element) cannot carry a 1e-4 relative perturbation; `config/distance.toml` registers the seven rungs
+1e-4 … 1e-1 on that float32 path, and the OLMo and Qwen readers of record loaded float32. Under R-K2 this reader loads
+bf16, so a float32 checkpoint at 1e-4, 3e-4 or 1e-3 rounds back to the anchor at load, element by element, and those
+rungs would measure the floor, not the noise. Three options. (a) *Restrict* the backbone to the rungs bf16 carries,
+1e-2, 3e-2, 1e-1 (per-element steps 2.5 to 25 mantissa units), and name the x-axis gap under 1e-2 as this family's
+limit. (b) *Place by measured distance:* write float32 at any target, then compute the rung's x-coordinate with
+`tools/weight_distance.py` on the two checkpoints **as the reader loads them** (both cast to bf16), so a rung sits
+where it really is and a rung that collapses onto the anchor is dropped by rule (measured distance under half its
+target). (c) *Float32 anchors:* load the reader in float32 — 192 GB of weights, two H200s or four A100s, with FLA's
+Triton kernels unverified in float32 — a different design and a different cost. **Recommend (a) with (b)'s
+placement**: targets 1e-2, 3e-2, 1e-1 only, each rung's distance measured on the bf16-loaded pair and recorded as its
+x-coordinate; 3e-3 attempted once at the probe and kept only if its measured distance is within 2× of target,
+otherwise the family's backbone starts at 1e-2 and the section says so. Two consequences the probe must read before
+the run: the tool holds every tensor and its noise in host memory (≈ 480 GB for 48B parameters: the bf16 source, a
+float32 noise draw and the float32 output) and writes 192 GB per rung, so it needs a streaming rewrite for this model
+(tensor by tensor, per-tensor seeds, the same rule) and the volume plan is two 96 GB checkpoints plus one 192 GB
+perturbed anchor plus dumps, ≈ 500 GB, not 350 GB; and whether a float32 write of a bf16 MoE checkpoint reloads
+under `KimiLinearForCausalLM` with the expert layout intact — the probe perturbs one rung at 1e-2, reloads it in
+bf16, measures its distance against the anchor as loaded, and runs one FRESH forward, or the backbone is out.
+
+**Statistic (R-K3).** (B1) as registered — median over held-out sequences of the mean per-token KL(π_fresh ‖ π_stale)
+over the continuation, bands HOLDS_B ≤ 1e-3 / DEGRADES_B ≥ 1e-1 — read on each of the three stale arms against FRESH.
+The arms are worded on the **state the reader consumes**, not on the layers whose weights changed: a writer whose MLA
+weights moved writes different hidden states into its KDA layers, so its recurrent and conv states differ too, and
+KDA-STALE reads above zero with no KDA weight moved (the offline fake reproduces this; only a change confined to the
+last layer kind gives a clean split). So the decomposition says where the injury *enters* the reader, which is the
+serving question, and FULL-STALE is not an identity in the two partial arms: the ratio FULL / (MLA + KDA) is reported
+per rung as a descriptive, never sealed.
+
+**Controls, per reader, halting (R-K2, R-K5).** *bf16 floor:* on the reader's own weights and its own cache, one pass
+over P + C against the cached FRESH continuation — median (B1), limit 1e-4 as 0014 set it; a reading above the limit
+makes HOLDS_B UNEVALUABLE for this family and ends the design, written up as such. *Dump equivalence:* the FRESH cache
+written through the dump layout, read back and injected, against the live FRESH cache — an absolute limit per 0026's
+lesson, its value fixed at the probe. *Identity:* FULL-STALE from the reader's own dump, max logit difference on a
+tolerance (R-B10), the float32 state round trip the only expected source. *Scrambled:* the next held-out sequence's
+prefix under the reader's weights in every state kind, ≥ 0.1 (DEGRADES_B), or the reader is UNEVALUABLE. The probe
+also asserts the shapes above on the machine, per layer, and halts on any mismatch: the dump layout would be wrong.
+
+**Seal (to be committed at registration; values blind until then).** (i) Floor, dump equivalence, identity and
+scrambled pass on every reader. (ii) At every rung FULL-STALE ≥ max(MLA-STALE, KDA-STALE): consuming more stale state
+never reads less — a sanity clause, falsifiable. (iii) **Direction, picked blind (R-K3's recommendation,
+proposed 2026-10-22): at Base → Instruct, median (B1) under KDA-STALE ≥ under MLA-STALE** — 20 of 27 layers, and the recurrent
+state integrates the whole prefix while K/V is positional and partly recoverable by attention over fresh tokens. The
+probe's two-sequence arm readings are taken after this direction is on record, so they size the bands without
+informing the clause. Descriptive, not sealed: the ratio FULL / (MLA + KDA) per rung; the backbone's slope of log median
+(B1) on log relative norm per arm against §13's x² (0015); Instruct → Base on all arms; the bf16 floor against the
+float16 floors of record; the (B1) on the `agentic` text if run.
+
+**Where it runs; cost (estimates of 2026-10-22; nothing measured).** One H200 NVL 143 GB (RunPod secure, $3.79/h on
+2026-10-22; re-read on the day), ≈ 500 GB volume (two 96 GB checkpoints, one 192 GB float32 perturbed anchor, dumps;
+R-K8); two A100-80GB
+with `device_map` the fallback. Probe (R-K5, the 0015 pattern, outside `results/`, halting order fixed): install
+(torch for the host driver, `fla-core` pinned, flash-attn — the model forces it and the wheel is the named risk; no wheel
+in 20 min stops the probe, since falling back to sdpa changes the MLA kernel and is a design change) → load → tokenizer
+byte-identity → shape asserts → floor and dump equivalence → identity → one inject per arm on two sequences →
+timing (prefill, cached continuation, dump write) → the backbone check of R-K8 (one float32 rung at 1e-2, reloaded in
+bf16, its measured distance and one FRESH forward, or the backbone is out). Spend (R-K7): probe cap $15, run cap $40,
+campaign cap $55; the watchdog line written into the runbook with the day's price. Probe 2–3 h ≈ $10; run 6–8 h, $25–30 (4 arms ×
+50 sequences × 8 rungs ≈ 2,000 cached forwards plus controls, per-rung perturb-write-dump-prune, two Hub downloads).
+Records: one `hybrid-dump-v1` directory per (model, sequence, prefix) — `meta.json` with per-file sha256,
+`mla_layerNN.npz` K/V, `kda_layerNN.npz` recurrent + conv_q/k/v — and reader reports keeping the reader-report keys plus
+`arm`, `sources` and `state_v_first`, so the per-rung reading can reuse `summarize_reader` with an arm axis; whether it
+does, or gets its own summarizer, is decided after the probe shows the report shape.
+
+**Build.** *Built (c770838, 2026-10-22, tests first):* `src/lag_ladder/hybrid_state.py` — the dump layout and its
+validation (refuses a moved sha256, a non-float32 recurrent state, a shape that disagrees with `meta.json`, a dump with
+no MLA layer), the four arms and their sources, `compose`/`fill` into a cache-shaped object, `kl_per_token`; numpy only,
+so the suite stays offline. `tests/fake_hybrid.py` — a two-layer stand-in (softmax attention with dk ≠ dv, then a gated
+delta rule over a width-4 causal conv with a float32 state) whose cache mirrors `KimiDynamicCache` field for field;
+`tests/test_hybrid_state.py`, 14 tests, including the clean split under a last-kind-only change and the upstream leak
+under an MLA-only change. *Planned:* `tools/score_hybrid.py` (torch + fla, the pod's interpreter, imports nothing from
+`kvt` or `lag_ladder`, as `score_continuation.py`'s rule) — dump a `KimiDynamicCache` through the layout, fill one from a
+composed arm, teacher-force the continuation, write the report; the probe scripts; the token file; the registration
+entry with the seal and a config under `config/`; the streaming rewrite of `perturb_checkpoint.py` if R-K8 keeps the
+backbone. Rulings PROPOSED 2026-10-22, none taken; the recommendations are: R-K1 a second driver here; R-K2 bf16, floor
+band-relative at 1e-4; R-K3 three arms on consumed state, (ii)–(iii) as above, additivity descriptive; R-K4 backbone
+then Base → Instruct, Instruct → Base descriptive, no own run; R-K5 probe first, outside `results/`, allowed to end the
+design; R-K6 this section; R-K7 the caps above; R-K8 the bf16-carried rungs placed by measured distance. Nothing below
+the probe is built until they are taken.
+
+**What §16 cannot say.** Nothing about a trained direction on this family — Base → Instruct is one post-training
+step of unknown composition, and the backbone is noise; nothing about which *layers* carry the injury, only which
+*state kind* the reader consumes it through; nothing about decoding (the fused kernel is never on the path (B) reads);
+nothing about float16 or float32 for this model (bf16 is the registered dtype and its floor is its own); nothing
+beyond one hybrid model at one scale and one prefix length; nothing until the probe's floor is read — a floor above
+1e-4 closes this section as UNEVALUABLE at HOLDS_B, and that is a result the record keeps.
