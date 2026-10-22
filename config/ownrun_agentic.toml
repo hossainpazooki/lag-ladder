@@ -1,6 +1,5 @@
-# Statistic (B) on the own run, fourth text `agentic` (the 2026-10-22 plan, cell 1b). UNREGISTERED until a numbered
-# entry fixes every value below; `reader check` / `reader run` refuse while registered_by is empty or the
-# tokens_sha256 placeholder remains. Nothing here trains: the readers are the kept weights of the seed-1 run
+# Statistic (B) on the own run, fourth text `agentic` (the 2026-10-22 plan, cell 1b), registered by entry 0030; every
+# value below is fixed there and the seal ledger/predictions/ownrun-agentic.json was written before any dump. Nothing here trains: the readers are the kept weights of the seed-1 run
 # (config/ownrun.toml, entry 0017; local checkpoints step_<g> under results/distance/checkpoints/), restored from
 # the private Hub backup (R-C7) on the sitting machine. A seed-2 sibling would follow config/ownrun_seed2.toml's shape.
 #
@@ -33,7 +32,7 @@ heldout = [0, 50]
 prefix_len = 768
 dtype = "float32"
 seed = 0
-registered_by = ""
+registered_by = "0030"
 seal = "ownrun-agentic"
 
 [reader.rule]
@@ -50,11 +49,11 @@ scrambled_min = 1e-1
 floor_max_median_kl = 1e-4
 
 # The agentic sequences: tools/agentic_tokens.py's file (seed 8, = linear-ceiling's data/e8m/agent_n50_len1024_seed8.npy
-# id for id), every row held out; the registering entry pins the hash.
+# id for id), every row held out; 0030 pins the hash.
 [[reader.pairs]]
 name = "qwen2.5-1.5b-mlperf"
 tokens = "data/tokens/qwen2.5-1.5b-mlperf_n50_len1024_seed8.npy"
-tokens_sha256 = "SHA256_PENDING"
+tokens_sha256 = "9dce6082d057fb739a17b0c5454ecc57cf2ec0476a902bf1609d563de9221351"
 
 # Lag rungs on the agentic text: writer step 0, reader step g (R-C3); labels fix the distance-file names.
 [[reader.rungs]]

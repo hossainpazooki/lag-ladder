@@ -1,6 +1,5 @@
 """tools/agentic_tokens.py (the 2026-10-22 plan, cell 1b): the window rule restated from linear-ceiling's entry
-0016 §4 over the rendered export, the manifest sidecar, and config/ownrun_agentic.toml, which must load and must
-refuse to run while unregistered."""
+0016 §4 over the rendered export, the manifest sidecar, and config/ownrun_agentic.toml (registered by 0030)."""
 import importlib.util
 import json
 
@@ -89,11 +88,13 @@ def test_write_tokens_manifest_pins_the_input_and_the_file(tmp_path):
     assert man["equal_to"] is None and man["seed"] == 0
 
 
-def test_ownrun_agentic_config_loads_names_the_agentic_text_per_rung_and_refuses_unregistered():
+def test_ownrun_agentic_config_loads_names_the_agentic_text_per_rung_and_is_registered_by_0030():
     cfg = load_reader_config(REPO_ROOT / "config" / "ownrun_agentic.toml", REPO_ROOT)
     base = load_reader_config(REPO_ROOT / "config" / "ownrun.toml", REPO_ROOT)
-    assert cfg.registered_by == "" and cfg.seal == "ownrun-agentic"
-    assert cfg.pairs["qwen2.5-1.5b-mlperf"].tokens_sha256.endswith("_PENDING") and cfg.pairs["qwen2.5-1.5b-mlperf"].spans is None
+    assert cfg.registered_by == "0030" and cfg.seal == "ownrun-agentic"
+    # the one sha: linear-ceiling's data/e8m/agent_n50_len1024_seed8.npy, byte-identical to the file the builder writes
+    assert cfg.pairs["qwen2.5-1.5b-mlperf"].tokens_sha256 == "9dce6082d057fb739a17b0c5454ecc57cf2ec0476a902bf1609d563de9221351"
+    assert cfg.pairs["qwen2.5-1.5b-mlperf"].spans is None
     assert [r.label for r in cfg.rungs] == [f"ownrun-agentic-lag-{g}" for g in (1, 2, 4, 8, 16, 32)]
     assert tuple(cfg.pairs["qwen2.5-1.5b-mlperf"].heldout or cfg.heldout) == (0, 50)     # every window is held out (ruled 2026-10-22)
     assert all(r.texts == ("agentic",) and r.pair == "qwen2.5-1.5b-mlperf" and r.writer_dump == "source@local-step_0"
@@ -102,8 +103,6 @@ def test_ownrun_agentic_config_loads_names_the_agentic_text_per_rung_and_refuses
     assert (cfg.prefix_len, cfg.dtype, cfg.rule, cfg.upstream_sha) == (base.prefix_len, base.dtype, base.rule, base.upstream_sha)
     assert tuple(base.heldout) == (40, 50) and tuple(cfg.heldout) == (0, 50)
     assert cfg.controls["per_pair"] is True and cfg.controls["floor_max_median_kl"] == base.controls["floor_max_median_kl"]
-    with pytest.raises(reader.Refusal, match="UNREGISTERED"):
-        reader.assert_ready(cfg, REPO_ROOT)
     # the plan puts every control of a reader on the agentic text (per_pair), then its rung
     jobs = reader.plan(cfg).jobs
     assert {j.text for j in jobs} == {"agentic"} and {j.kind for j in jobs} >= {"identity", "scrambled", "floor", "rung"}
