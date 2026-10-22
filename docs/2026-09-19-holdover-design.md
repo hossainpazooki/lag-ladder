@@ -800,7 +800,7 @@ Linear is the same recipe at one-node scale with a Base and an Instruct checkpoi
 
 **The cache (verified from `modeling_kimi.py` and flash-linear-attention `main` on 2026-10-22; digests in the private
 seed brief).** `KimiDynamicCache` is its own class with four lists, one slot per layer. MLA layers: materialized
-per-head K `[B, 32, T, 192]` (128 nope + 64 rope dims) and V `[B, 32, T, 128]`, bf16, concatenated along the sequence
+per-head K `[B, 32, T, 192]` (128 + 64 dims, none rotated) and V `[B, 32, T, 128]`, bf16, concatenated along the sequence
 — not the latent; 20 KB per token per layer, ≈ 143 MB per 1,024-token sequence over the 7 layers. KDA layers: the
 delta-rule recurrent state `[B, 32, 128, 128]` in **float32** (the chunk kernel allocates it in float32, the fused
 kernel asserts it) — 2 MiB per layer, 40 MiB per sequence over 20 layers, independent of prefix length — plus three
@@ -811,8 +811,11 @@ chunk pass against a 768-token chunk pass followed by a 256-token chunk pass fro
 the same kernel at a different tiling plus the state hand-off, not chunk-vs-fused. (2) *Length and positions:*
 `get_seq_length` reads the first MLA layer's key cache and the model derives `cache_position` from it, so **every arm
 carries an MLA cache of the full prefix**; a KDA-only stale arm injects the reader's own K/V, never an empty one.
-(3) *No re-rotation:* Base and Instruct share `rope_theta` and the rope dims; the driver asserts the two configs' rope
-fields equal and otherwise refuses. A `state_v_first` layout flag exists in FLA (`[N, HV, V, K]`); K = V = 128 hides a
+(3) *No positions in the cache:* `mla_use_nope` is true and the MLA forward asserts it — no rotary embedding is applied
+to Q or K anywhere in the modeling file (the 64 "rope" dims are plain extra key dims), so positions enter only through
+the causal mask and the recurrence's order; a stale K/V is injected as is, and the driver asserts the two configs equal
+on every cache-shaping field (the rope fields among them, since a difference would mean another family) and otherwise
+refuses. (The seed brief of the morning said K carries RoPE; corrected from `modeling_kimi.py` 378 the same day.) A `state_v_first` layout flag exists in FLA (`[N, HV, V, K]`); K = V = 128 hides a
 transposition, so the dump records the flag read on the machine.
 
 **The pinned instrument does not apply (R-K1).** `kvt` builds a `transformers.DynamicCache` from arrays, expects K and
@@ -886,7 +889,8 @@ also asserts the shapes above on the machine, per layer, and halts on any mismat
 scrambled pass on every reader. (ii) At every rung FULL-STALE ≥ max(MLA-STALE, KDA-STALE): consuming more stale state
 never reads less — a sanity clause, falsifiable. (iii) **Direction, picked blind (R-K3's recommendation,
 proposed 2026-10-22): at Base → Instruct, median (B1) under KDA-STALE ≥ under MLA-STALE** — 20 of 27 layers, and the recurrent
-state integrates the whole prefix while K/V is positional and partly recoverable by attention over fresh tokens. The
+state integrates the whole prefix while K/V is a per-token store, each row partly recoverable by attention over fresh
+tokens. The
 probe's two-sequence arm readings are taken after this direction is on record, so they size the bands without
 informing the clause. Descriptive, not sealed: the ratio FULL / (MLA + KDA) per rung; the backbone's slope of log median
 (B1) on log relative norm per arm against §13's x² (0015); Instruct → Base on all arms; the bf16 floor against the
