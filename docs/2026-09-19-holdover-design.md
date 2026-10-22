@@ -669,6 +669,33 @@ same checkpoint under the same libraries writes the same bytes, so a different d
 seed, and the sitting stops before it bills the trajectory; a step-1 distance under 1e-6 stops the sitting before the
 reader run (0017); a floor over 1e-4 halts the reader run (0014). Not registered on this seed: the sliding writer, (C).
 
+### 14.4 The fourth text, `agentic`: the MLPerf Agentic Inference windows under the own run's readers (ruled 2026-10-22; 0030)
+
+The same readers, not a new ladder: the kept seed-1 checkpoints of §14 (steps 1, 2, 4, 8, 16, 32, restored from the private
+backup) read a fourth text under 0012–0017's convention — P = tokens[:768], C = tokens[768:1024], float32, the writer's cache
+at step 0 and the reader's at step g (R-C3) — on fifty windows of the MLPerf Agentic Inference dataset (MLCommons; 25 DeepSWE
+coding traces, 25 Workato workflow conversations; the first 1,024 tokens of each drawn trajectory, rendered by linear-ceiling's
+adapter with the reasoning kept and the shared system prefix left out). One bridge with linear-ceiling: these are the same
+fifty windows its cell e8m reads under the mapper — the same seed, rule and row order, the token file byte-identical and the
+ids asserted equal row by row by `tools/agentic_tokens.py` — so every window carries a mapper reading there and a reader
+reading here, and the per-window join of the two is a descriptive figure with no verdict. `config/ownrun_agentic.toml`:
+six rungs `ownrun-agentic-lag-<g>` on the pair `qwen2.5-1.5b-mlperf`, `texts = ["agentic"]` per rung (the rule's texts stay
+corpus and on-path; `agentic` is a per-rung text only), `heldout = [0, 50)` because nothing in the own run trained on this
+text and every window is held out; 1,200 jobs. Controls per (reader, pair) as 0020 on the agentic text itself; no far
+control. The scrambled control takes the next row's prefix with the wrap 49 → 0, so under the suite-blocked rows it pairs
+within suite for every row but the seam (24 under 25's workflow prefix) and the wrap (49 under 0's coding prefix): the
+weaker form of that control, stated rather than adjusted for. Statistic (C) is not registered on this text: no gold.
+
+The question is which of 0018's two readings an agent-serving benchmark's own text draws — the injury on the trainer's
+prompts (rollout, UNRESOLVED) or the near-silence on held-out text (corpus, on-path, HOLDS_B). Seal `ownrun-agentic`
+(pre-fit) takes a side: (i) every unit passes its controls; (ii) median (B1) on `agentic` ≤ 1e-3 at every lag, above 2×
+floor — lands with held-out text; (iii) at every lag the agentic median is nearer in log10 to seed 1's corpus median than
+to its rollout median by at least one decade, the summarizer's `lands` readout naming the side; (iv) slope of log median
+(B1) on log distance over the six rungs in [1.5, 2.5]. Descriptive: the two suites over their twenty-five rows each, the
+ratios against seed 1 and seed 2, the scrambled medians, the per-window join. Halting: the restored weights must hash to
+the backup manifest; the six re-derived distance files must equal 0018's `rel_delta_all` within 1e-9 relative
+(`assert_distance_pins`, from the seal's `distance_must_equal`); a floor over 1e-4 halts the reader run (0014).
+
 ## 15. Statistic (C), "does the task notice", on the own run (designed 2026-10-15, revised after review the same day and after two probes; built 2026-10-15; registered by 0025)
 
 **Why.** (B) at the operating lag on the trainer's own prompts: the reader notices from the first optimizer step (0018),
