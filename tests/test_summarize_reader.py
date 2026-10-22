@@ -2,6 +2,7 @@
 refuses on any disagreement; it withholds rungs whose reader's controls failed and marks rungs at the float16
 floor. The fake scorer's cells are known functions of the stand-in distance, so (B1)-(B4) are checkable."""
 import json
+import math
 
 import pytest
 
@@ -380,3 +381,63 @@ def test_each_replication_clause_falsifies_on_its_own_input_and_reads_unread_whe
     assert verdicts(s)["ii"] == "FALSIFIED"
     s["rungs"][2]["texts"]["rollout"]["b1"]["median_kl"] = 1.1e-3
     assert verdicts(s)["ii"] == "HELD"
+
+
+# --- 0030: a fourth text's reading placed against two earlier readings; rungs pinned to an earlier placement -----
+
+def _lands_fixture(tmp_path, margin=1.0):
+    from lag_ladder.summarize_reader import PREDICTIONS
+    (tmp_path / PREDICTIONS).mkdir(parents=True, exist_ok=True)
+    pred = {"texts": ["agentic"], "rule": {"holds_max": 1e-3},
+            "predictions": {
+                "iii_lands_with": {"rungs": {"1": "ag-1", "32": "ag-32"}, "text": "agentic", "margin_log10": margin,
+                                   "reference_corpus": {"1": 2e-7, "32": 6.6e-6},
+                                   "reference_rollout": {"1": 4.7e-3, "32": 8.9e-2}},
+                "distance_must_equal": {"rungs": {"1": "ag-1", "32": "ag-32"},
+                                        "reference": {"1": 2.2895683763734974e-05, "32": 1.0494302565318275e-04},
+                                        "rel_tol": 1e-9}}}
+    (tmp_path / PREDICTIONS / "x.json").write_text(json.dumps({"prediction": pred}), encoding="utf-8")
+
+    def ag(m):
+        return {"agentic": {"b1": {"median_kl": m}, "band": "HOLDS_B", "at_floor": False}}
+
+    return {"rule": {"texts": ["corpus", "on-path"], "holds_max": 1e-3}, "controls": {},
+            "rungs": [{"label": "ag-1", "withheld": False, "rel_delta_all": 2.2895683763734974e-05, "texts": ag(3e-7)},
+                      {"label": "ag-32", "withheld": False, "rel_delta_all": 1.0494302565318275e-04, "texts": ag(9e-6)}],
+            "slope_fit": {}}
+
+
+def test_lands_clause_names_which_reference_each_lag_lands_with_and_judges_the_margin(tmp_path):
+    import copy
+    from lag_ladder.summarize_reader import seal_readout
+    s = _lands_fixture(tmp_path)
+    c = seal_readout(s, tmp_path, "x")["clauses"]["lands"]
+    assert c["verdict"] == "HELD" and c["lands_with"] == {"1": "corpus", "32": "corpus"}
+    assert c["distance"]["1"]["to_corpus_log10"] == pytest.approx(math.log10(3e-7 / 2e-7))
+    assert c["distance"]["1"]["to_rollout_log10"] == pytest.approx(math.log10(4.7e-3 / 3e-7))
+    # closer to corpus but by under a decade: FALSIFIED, and the side it lands with is still named
+    t = copy.deepcopy(s); t["rungs"][1]["texts"]["agentic"]["b1"]["median_kl"] = 1.5e-3      # corpus 2.36 dec, rollout 1.77
+    c = seal_readout(t, tmp_path, "x")["clauses"]["lands"]
+    assert c["verdict"] == "FALSIFIED" and c["lands_with"]["32"] == "rollout"
+    t = copy.deepcopy(s); t["rungs"][1]["texts"]["agentic"]["b1"]["median_kl"] = 4e-4        # corpus 1.78 dec, rollout 2.35
+    c = seal_readout(t, tmp_path, "x")["clauses"]["lands"]
+    assert c["verdict"] == "FALSIFIED" and c["lands_with"]["32"] == "corpus"
+    t = copy.deepcopy(s); t["rungs"][0]["withheld"] = True
+    assert seal_readout(t, tmp_path, "x")["clauses"]["lands"]["verdict"] == "UNREAD"
+
+
+def test_distance_pin_refuses_a_missing_or_moved_rung_and_passes_the_sealed_placement(tmp_path):
+    import copy
+    from lag_ladder.summarize_reader import assert_distance_pins
+    s = _lands_fixture(tmp_path)
+    assert_distance_pins(s, tmp_path, "x")                       # equal: no refusal
+    assert_distance_pins(s, tmp_path, "nosuchseal")              # no seal: nothing to pin
+    t = copy.deepcopy(s); t["rungs"][1]["rel_delta_all"] = 1.0494302565318275e-04 * (1 + 1e-7)
+    with pytest.raises(ValueError, match="differs from the sealed reference"):
+        assert_distance_pins(t, tmp_path, "x")
+    t = copy.deepcopy(s); t["rungs"][1]["rel_delta_all"] = None
+    with pytest.raises(ValueError, match="has no position"):
+        assert_distance_pins(t, tmp_path, "x")
+    t = copy.deepcopy(s); t["rungs"] = t["rungs"][:1]
+    with pytest.raises(ValueError, match="is not in this summary"):
+        assert_distance_pins(t, tmp_path, "x")

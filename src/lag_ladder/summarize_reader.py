@@ -17,6 +17,7 @@ degrades_min, UNRESOLVED between.
 import argparse
 import hashlib
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -373,6 +374,7 @@ def summarize(cfg: ReaderConfig, root: Path | None = None, out: Path | None = No
             if cands:
                 e["matched_backbone"] = min(cands)[1]
     summary["rungs"].sort(key=lambda e: (e["kind"], float(e["rel_delta_all"] or e["rel_norm"] or 0.0), e["label"]))
+    assert_distance_pins(summary, repo, cfg.seal)
     summary["seal_readout"] = seal_readout(summary, repo, cfg.seal)
     target = Path(out) if out is not None else root / SUMMARY
     target.write_text(json.dumps(summary, indent=1), encoding="utf-8")
@@ -384,6 +386,34 @@ def _b1(summary: dict, label: str, text: str):
         if e["label"] == label and not e["withheld"]:
             return e["texts"][text]["b1"]["median_kl"]
     return None
+
+
+def assert_distance_pins(summary: dict, repo: Path, seal: str = "reader") -> None:
+    """A seal may carry `distance_must_equal` ({rungs: {g: label}, reference: {g: rel_delta_all}, rel_tol}): rungs
+    that re-read weights another entry already placed on the axis (0030: the same step-0 / step-g checkpoints as
+    0018 under new labels) must sit where that entry put them. A rung without a position, or one whose re-derived
+    `rel_delta_all` differs from the reference by more than rel_tol relative, REFUSES the summary: same weights and
+    the same tool give the same number, so a different one is a wrong checkpoint, not a finding."""
+    f = repo / PREDICTIONS / f"{seal}.json"
+    if not f.exists():
+        return
+    pin = json.loads(f.read_text(encoding="utf-8")).get("prediction", {}).get("predictions", {}).get("distance_must_equal")
+    if not pin:
+        return
+    tol = float(pin["rel_tol"])
+    by_label = {e["label"]: e for e in summary["rungs"]}
+    for g, label in pin["rungs"].items():
+        ref = float(pin["reference"][g])
+        e = by_label.get(label)
+        if e is None:
+            raise _refuse(f"distance pin: rung {label} is not in this summary")
+        v = e.get("rel_delta_all")
+        if v is None:
+            raise _refuse(f"distance pin: rung {label} has no position (no results/distance/rungs/{label}/distance.json); "
+                          f"the seal requires rel_delta_all = {ref:.6e} for it")
+        if abs(float(v) - ref) > tol * abs(ref):
+            raise _refuse(f"distance pin: rung {label} re-derived rel_delta_all {float(v):.9e} differs from the sealed "
+                          f"reference {ref:.9e} by more than {tol:g} relative; the weights are not the ones that entry placed")
 
 
 def seal_readout(summary: dict, repo: Path, seal: str = "reader") -> dict | None:
@@ -527,6 +557,26 @@ def seal_readout(summary: dict, repo: Path, seal: str = "reader") -> dict | None
                 checks.append(None if r is None else r >= k)
         out["clauses"]["iii"] = {"pairs_of_rungs": dict(ro["pairs_of_rungs"]), "text": text, "heldout_texts": list(ro["heldout_texts"]),
                                  "at_least_factor": k, "ratio": ratios, "verdict": verdict(checks)}
+    lw = P.get("iii_lands_with")       # 0030: which of two earlier readings a new text's median lands with, per lag
+    if lw:
+        margin, text = float(lw["margin_log10"]), str(lw["text"])
+        meds, dist, lands, checks = {}, {}, {}, []
+        for g, label in lw["rungs"].items():
+            e = _entry(label)
+            st = (e or {}).get("texts", {}).get(text)
+            m = st["b1"]["median_kl"] if st else None
+            meds[g] = m
+            c, r = float(lw["reference_corpus"][g]), float(lw["reference_rollout"][g])
+            if m is None or m <= 0 or c <= 0 or r <= 0:
+                dist[g], lands[g] = None, None
+                checks.append(None)
+                continue
+            dc, dr = abs(math.log10(m) - math.log10(c)), abs(math.log10(m) - math.log10(r))
+            dist[g] = {"to_corpus_log10": dc, "to_rollout_log10": dr}
+            lands[g] = "corpus" if dc < dr else ("rollout" if dr < dc else "neither")
+            checks.append(dr - dc >= margin)
+        out["clauses"]["lands"] = {"rungs": dict(lw["rungs"]), "text": text, "margin_log10": margin, "median_kl": meds,
+                                   "distance": dist, "lands_with": lands, "verdict": verdict(checks)}
     cu = P.get("iv_controls_as_0020")
     if cu:
         units, checks = {}, []
