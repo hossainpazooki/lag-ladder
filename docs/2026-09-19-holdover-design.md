@@ -800,7 +800,9 @@ Linear is the same recipe at one-node scale with a Base and an Instruct checkpoi
 
 **The cache (verified from `modeling_kimi.py` and flash-linear-attention `main` on 2026-10-22; digests in the private
 seed brief).** `KimiDynamicCache` is its own class with four lists, one slot per layer. MLA layers: materialized
-per-head K `[B, 32, T, 192]` (128 + 64 dims, none rotated) and V `[B, 32, T, 128]`, bf16, concatenated along the sequence
+per-head K `[B, 32, T, 192]` (128 + 64 dims, none rotated; the 64 come from one shared head expanded across the 32, so a
+third of every K row is identical across heads — nothing for the arms, a smaller dump if wanted) and V `[B, 32, T, 128]`,
+bf16, concatenated along the sequence
 — not the latent; 20 KB per token per layer, ≈ 143 MB per 1,024-token sequence over the 7 layers. KDA layers: the
 delta-rule recurrent state `[B, 32, 128, 128]` in **float32** (the chunk kernel allocates it in float32, the fused
 kernel asserts it) — 2 MiB per layer, 40 MiB per sequence over 20 layers, independent of prefix length — plus three

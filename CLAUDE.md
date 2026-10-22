@@ -85,6 +85,10 @@ fire; reads the sealed clauses out). `tools/` — `perturb_checkpoint.py`,
 `convert_bin_checkpoint.py`, `weight_distance.py`, `score_continuation.py` (the (B) scorer: injects a stale vs fresh
 cache, scores the continuation; `--text rollout` teacher-forces a stored continuation cut at `--length`; `--text agentic`
 scores a stored continuation exactly as `corpus`): run with the instrument's interpreter, import nothing from it.
+`score_hybrid.py` (§16, PROPOSED, nothing registered: the hybrid-state scorer for Kimi Linear — `shapes` | `dump` | `score`;
+the `hybrid-dump-v1` layout that `lag_ladder.hybrid_state` reads, arms FRESH / FULL-STALE / MLA-STALE / KDA-STALE on the
+consumed state plus ONE-PASS as the bf16 floor; torch, transformers and fla imported inside the functions so the layout and
+report test offline; run with the pod's interpreter, imports nothing from here or the instrument).
 `agentic_tokens.py` (the 2026-10-22 plan, cell 1b: the MLPerf Agentic Inference windows as a held-out token file, built
 from linear-ceiling's rendered export under the instrument pair's tokenizer by the 0016 §4 window rule restated there;
 writes the .npy and a manifest sidecar; needs `tokenizers`, imports only `lag_ladder.rng`). `own_run.py` (§14: the GRPO trajectory with its save hook;
