@@ -1,0 +1,99 @@
+# Statistic (B) on the own run, fourth text `agentic` (the 2026-10-22 plan, cell 1b). UNREGISTERED until a numbered
+# entry fixes every value below; `reader check` / `reader run` refuse while registered_by is empty or the
+# tokens_sha256 placeholder remains. Nothing here trains: the readers are the kept weights of the seed-1 run
+# (config/ownrun.toml, entry 0017; local checkpoints step_<g> under results/distance/checkpoints/), restored from
+# the private Hub backup (R-C7) on the sitting machine. A seed-2 sibling would follow config/ownrun_seed2.toml's shape.
+#
+# The text: 50 windows of the MLPerf Agentic Inference dataset (MLCommons; DeepSWE coding traces and Workato
+# workflow conversations), 25 per suite, the FIRST 1024 tokens of each drawn trajectory under the instrument
+# pair's Qwen2.5 tokenizer, built by tools/agentic_tokens.py from linear-ceiling's rendered export (reasoning
+# kept, the shared system prefix not rendered; the window rule and the rendering are stated in those two files).
+# P = tokens[:768], C = tokens[768:1024], held-out rows [40, 50): the registered convention of 0012-0017, so the
+# reader scores a stored continuation exactly as it scores `corpus`; no spans sidecar, nothing is padded. The
+# builder interleaves the rows by suite (even rows coding, odd rows workflow), so [40, 50) reads 5 + 5 windows and
+# not ten of one suite; whether the cell reads ten rows or all fifty is a registration ruling (job count x5).
+#
+# New dumps are needed on the pod: the step-0 writer's cache and each kept reader's own cache ON THIS TEXT, dumped
+# through the pinned instrument from the Hub weights, filed as source@local-step_<g> under this pair (R-C3).
+# Controls per (reader, pair) on the pair's own text (0020's per_pair): identity, scrambled at >= 0.1, the float16
+# floor at <= 1e-4 (0014). The seal (proposed in the plan, ruled at registration) reads the lag-32 `agentic` median
+# mean-KL against the same seed's `rollout` and `corpus` readings and states which of the two it lands with.
+
+[reader]
+results_dir = "results/ownrun_agentic"
+upstream_path = "../kv-transfer-replication"
+upstream_sha = "5d4aa4a98b40f5ab37dd83ebb6b2ee802203994a"
+heldout = [40, 50]
+prefix_len = 768
+dtype = "float32"
+seed = 0
+registered_by = ""
+seal = "ownrun-agentic"
+
+[reader.rule]
+statistic = "median over held-out sequences of the mean per-token KL(pi_fresh || pi_stale) over the continuation, per rung and text (design S13, ledger 0011)"
+holds_max = 1e-3
+degrades_min = 1e-1
+texts = ["corpus", "on-path"]     # the rule's texts; every rung below overrides with the per-rung text `agentic`
+generate_under = "stale"
+
+[reader.controls]
+per_pair = true
+identity_max_logit_diff = 1e-5
+scrambled_min = 1e-1
+floor_max_median_kl = 1e-4
+
+# The agentic sequences: tools/agentic_tokens.py's file, rows 40..49 held out; the registering entry pins the hash.
+[[reader.pairs]]
+name = "qwen2.5-1.5b-mlperf"
+tokens = "data/tokens/qwen2.5-1.5b-mlperf_n50_len1024_seed0.npy"
+tokens_sha256 = "SHA256_PENDING"
+
+# Lag rungs on the agentic text: writer step 0, reader step g (R-C3); labels fix the distance-file names.
+[[reader.rungs]]
+label = "ownrun-agentic-lag-1"
+pair = "qwen2.5-1.5b-mlperf"
+reader = "local:step_1"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_1"
+texts = ["agentic"]
+
+[[reader.rungs]]
+label = "ownrun-agentic-lag-2"
+pair = "qwen2.5-1.5b-mlperf"
+reader = "local:step_2"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_2"
+texts = ["agentic"]
+
+[[reader.rungs]]
+label = "ownrun-agentic-lag-4"
+pair = "qwen2.5-1.5b-mlperf"
+reader = "local:step_4"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_4"
+texts = ["agentic"]
+
+[[reader.rungs]]
+label = "ownrun-agentic-lag-8"
+pair = "qwen2.5-1.5b-mlperf"
+reader = "local:step_8"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_8"
+texts = ["agentic"]
+
+[[reader.rungs]]
+label = "ownrun-agentic-lag-16"
+pair = "qwen2.5-1.5b-mlperf"
+reader = "local:step_16"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_16"
+texts = ["agentic"]
+
+[[reader.rungs]]
+label = "ownrun-agentic-lag-32"
+pair = "qwen2.5-1.5b-mlperf"
+reader = "local:step_32"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_32"
+texts = ["agentic"]
