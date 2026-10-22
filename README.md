@@ -45,7 +45,9 @@ trajectory of Qwen2.5-1.5B: HOLDS_B at every lag on held-out text, four orders o
 own prompts. (C) ran (0025 registered, 0026 restated the dump-equivalence limit, 0027 read): the step-0 cache changes the greedy
 answer on 71% of prompts at g = 1 and 87% at g = 32; all four sealed clauses held. A second trainer seed of the own run
 ran (0028 registered, 0029 read): all five agreement clauses against the first seed held — distances within 1.3%,
-held-out medians 0.62–0.91 of seed 1's, rollout medians 0.80–1.05, slopes 2.13 / 2.05, every control passed.
+held-out medians 0.62–0.91 of seed 1's, rollout medians 0.80–1.05, slopes 2.13 / 2.05, every control passed. A fourth
+text is registered on seed 1's readers (0030, not yet run): fifty windows of the MLPerf Agentic Inference trajectories, the
+same fifty linear-ceiling reads under its mapper, sealed to land with held-out text rather than with the trainer's prompts.
 
 ## How a rung is measured
 
