@@ -8,13 +8,16 @@
 # workflow conversations), 25 per suite, the FIRST 1024 tokens of each drawn trajectory under the instrument
 # pair's Qwen2.5 tokenizer, built by tools/agentic_tokens.py from linear-ceiling's rendered export (reasoning
 # kept, the shared system prefix not rendered; the window rule and the rendering are stated in those two files).
-# P = tokens[:768], C = tokens[768:1024], held-out rows [40, 50): the registered convention of 0012-0017, so the
-# reader scores a stored continuation exactly as it scores `corpus`; no spans sidecar, nothing is padded. The
-# builder interleaves the rows by suite (even rows coding, odd rows workflow), so [40, 50) reads 5 + 5 windows and
-# not ten of one suite. Ruled 2026-10-22: the first sitting reads these ten rows, not all fifty. A side effect
-# worth stating in the entry: the scrambled control takes the NEXT held-out row's prefix (reader.plan), so under
-# the interleaving every scrambled pair crosses suites (a coding prefix under a workflow continuation and the
-# reverse), which only makes that control harder to pass, never easier.
+# THE SAME FIFTY WINDOWS AS linear-ceiling's cell (ruled 2026-10-22, one bridge: every window gets a mapper reading
+# there and a reader reading here): seed 8, linear-ceiling's 0016 section 4 rule, rows written suite by suite
+# (coding 0-24, workflow 25-49), and the builder asserts the ids equal linear-ceiling's token file row by row (the
+# Qwen2.5 and Qwen3 tokenizers give identical ids on this text; the assert is the proof, the entry pins both shas).
+# P = tokens[:768], C = tokens[768:1024], the registered convention of 0012-0017, so the reader scores a stored
+# continuation exactly as it scores `corpus`; no spans sidecar, nothing is padded. heldout = [0, 50): nothing in the
+# own run trained on this text, so every window is held out and the reader reads all fifty rows (1,200 jobs). A
+# side effect worth stating in the entry: the scrambled control takes the NEXT row's prefix (reader.plan), so under
+# this layout it pairs WITHIN suite for every row but the seam row 24 (under row 25's workflow prefix) and the wrap,
+# which pairs row 49 with row 0 -- the weaker form of that control than the interleaved layout gave.
 #
 # New dumps are needed on the pod: the step-0 writer's cache and each kept reader's own cache ON THIS TEXT, dumped
 # through the pinned instrument from the Hub weights, filed as source@local-step_<g> under this pair (R-C3).
@@ -26,7 +29,7 @@
 results_dir = "results/ownrun_agentic"
 upstream_path = "../kv-transfer-replication"
 upstream_sha = "5d4aa4a98b40f5ab37dd83ebb6b2ee802203994a"
-heldout = [40, 50]
+heldout = [0, 50]
 prefix_len = 768
 dtype = "float32"
 seed = 0
@@ -46,10 +49,11 @@ identity_max_logit_diff = 1e-5
 scrambled_min = 1e-1
 floor_max_median_kl = 1e-4
 
-# The agentic sequences: tools/agentic_tokens.py's file, rows 40..49 held out; the registering entry pins the hash.
+# The agentic sequences: tools/agentic_tokens.py's file (seed 8, = linear-ceiling's data/e8m/agent_n50_len1024_seed8.npy
+# id for id), every row held out; the registering entry pins the hash.
 [[reader.pairs]]
 name = "qwen2.5-1.5b-mlperf"
-tokens = "data/tokens/qwen2.5-1.5b-mlperf_n50_len1024_seed0.npy"
+tokens = "data/tokens/qwen2.5-1.5b-mlperf_n50_len1024_seed8.npy"
 tokens_sha256 = "SHA256_PENDING"
 
 # Lag rungs on the agentic text: writer step 0, reader step g (R-C3); labels fix the distance-file names.

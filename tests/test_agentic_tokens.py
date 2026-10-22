@@ -33,7 +33,7 @@ def test_draw_is_stratified_skips_short_and_is_a_pure_function_of_seed():
     items = _items(short=("deepswe_0", "sim_2"))
     tok, rows = agentic.sample_windows(items, words, SUITES, n=4, seq_len=8, seed=0)
     assert tok.shape == (4, 8) and tok.dtype == np.int64
-    assert [r["suite"] for r in rows] == ["mlperf-coding", "mlperf-workflow"] * 2     # interleaved, not blocked
+    assert [r["suite"] for r in rows] == ["mlperf-coding"] * 2 + ["mlperf-workflow"] * 2     # suite by suite, as linear-ceiling
     assert {r["traj_id"] for r in rows} <= {"deepswe_1", "deepswe_2", "sim_0", "sim_1"}
     assert agentic.sample_windows(list(reversed(items)), words, SUITES, n=4, seq_len=8, seed=0)[1] == rows
     many = _items(n_coding=12, n_workflow=12)      # a pool larger than the share, so the seed can matter
@@ -58,6 +58,26 @@ def test_read_rendered_refuses_a_malformed_line(tmp_path):
     assert agentic.read_rendered(p) == [{"suite": "mlperf-coding", "traj_id": "a", "text": "x y"}]
 
 
+def test_assert_equal_ids_passes_the_same_file_and_names_the_first_differing_row(tmp_path):
+    tok = np.arange(8, dtype=np.int64).reshape(2, 4)
+    rows = [{"suite": "s", "traj_id": "a"}, {"suite": "s", "traj_id": "b"}]
+    other = tmp_path / "lc" / "agent.npy"
+    other.parent.mkdir()
+    np.save(other, tok)
+    got = agentic.assert_equal_ids(tok, rows, other)
+    assert got["rows_compared"] == 2 and got["manifest_sha256"] is None and len(got["sha256"]) == 64
+    other.with_suffix(".manifest.json").write_text(json.dumps({"rows": rows}), encoding="utf-8")
+    assert len(agentic.assert_equal_ids(tok, rows, other)["manifest_sha256"]) == 64
+    with pytest.raises(AssertionError, match="manifest row 1"):
+        agentic.assert_equal_ids(tok, [rows[0], {"suite": "s", "traj_id": "c"}], other)
+    bad = tok.copy()
+    bad[1, 2] = 99
+    with pytest.raises(AssertionError, match="row 1 differs .* at position 2: 99 here, 6 there"):
+        agentic.assert_equal_ids(bad, rows, other)
+    with pytest.raises(AssertionError, match="shape"):
+        agentic.assert_equal_ids(tok[:1], rows[:1], other)
+
+
 def test_write_tokens_manifest_pins_the_input_and_the_file(tmp_path):
     tok = np.arange(8, dtype=np.int64).reshape(2, 4)
     out = agentic.write_tokens(tmp_path / "t" / "x.npy", tok, [{"suite": "s", "traj_id": "a"}, {"suite": "s", "traj_id": "b"}],
@@ -66,6 +86,7 @@ def test_write_tokens_manifest_pins_the_input_and_the_file(tmp_path):
     assert np.array_equal(np.load(out), tok)
     assert man["rendered_sha256"] == "ab" * 32 and man["shape"] == [2, 4] and len(man["sha256"]) == 64
     assert man["rule"].startswith("linear-ceiling ledger entry 0016") and man["rows"][1]["traj_id"] == "b"
+    assert man["equal_to"] is None and man["seed"] == 0
 
 
 def test_ownrun_agentic_config_loads_names_the_agentic_text_per_rung_and_refuses_unregistered():
@@ -74,18 +95,24 @@ def test_ownrun_agentic_config_loads_names_the_agentic_text_per_rung_and_refuses
     assert cfg.registered_by == "" and cfg.seal == "ownrun-agentic"
     assert cfg.pairs["qwen2.5-1.5b-mlperf"].tokens_sha256.endswith("_PENDING") and cfg.pairs["qwen2.5-1.5b-mlperf"].spans is None
     assert [r.label for r in cfg.rungs] == [f"ownrun-agentic-lag-{g}" for g in (1, 2, 4, 8, 16, 32)]
-    lo, hi = cfg.pairs["qwen2.5-1.5b-mlperf"].heldout or cfg.heldout
-    assert (hi - lo) % 2 == 0           # an even range reads the interleaved file's two suites equally
+    assert tuple(cfg.pairs["qwen2.5-1.5b-mlperf"].heldout or cfg.heldout) == (0, 50)     # every window is held out (ruled 2026-10-22)
     assert all(r.texts == ("agentic",) and r.pair == "qwen2.5-1.5b-mlperf" and r.writer_dump == "source@local-step_0"
                and r.reader == f"local:{r.reader_dump.split('@local-')[1]}" for r in cfg.rungs)
-    # the registered convention of 0017, unchanged: prefix, held-out rows, dtype, rule, limits, the instrument pin
-    assert (cfg.prefix_len, cfg.heldout, cfg.dtype, cfg.rule, cfg.upstream_sha) == (base.prefix_len, base.heldout, base.dtype, base.rule, base.upstream_sha)
+    # the registered convention of 0017, unchanged: prefix, dtype, rule, limits, the instrument pin; only the rows differ
+    assert (cfg.prefix_len, cfg.dtype, cfg.rule, cfg.upstream_sha) == (base.prefix_len, base.dtype, base.rule, base.upstream_sha)
+    assert tuple(base.heldout) == (40, 50) and tuple(cfg.heldout) == (0, 50)
     assert cfg.controls["per_pair"] is True and cfg.controls["floor_max_median_kl"] == base.controls["floor_max_median_kl"]
     with pytest.raises(reader.Refusal, match="UNREGISTERED"):
         reader.assert_ready(cfg, REPO_ROOT)
     # the plan puts every control of a reader on the agentic text (per_pair), then its rung
     jobs = reader.plan(cfg).jobs
     assert {j.text for j in jobs} == {"agentic"} and {j.kind for j in jobs} >= {"identity", "scrambled", "floor", "rung"}
+    assert len(jobs) == 6 * 3 * 50 + 6 * 50     # six readers x (floor, identity, scrambled) x fifty rows, plus six rungs x fifty
+    # the scrambled control pairs row i with row i + 1 (wrap 49 -> 0): within suite everywhere but the seam (24 -> 25) and the wrap
+    pairs = [(j.seq, j.stale_seq) for j in jobs if j.kind == "scrambled" and j.reader == "local:step_1"]
+    assert pairs == [(i, (i + 1) % 50) for i in range(50)]
+    suite = lambda i: "coding" if i < 25 else "workflow"
+    assert [p for p in pairs if suite(p[0]) != suite(p[1])] == [(24, 25), (49, 0)]
 
 
 def test_agentic_is_a_per_rung_text_never_a_rule_text(tmp_path):
