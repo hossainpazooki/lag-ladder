@@ -784,7 +784,7 @@ steps; nothing about a cache older than 32 steps; nothing a reward model would c
 the descriptive Δ — under greedy decoding at a 256-token cap the step-32 policy answers 6% of GSM8K test and loops on
 most of the rest, so this section measures whether the answer changes, not whether it worsens.
 
-## 16. Hybrid state: carryover decomposed by state kind (Kimi Linear 48B-A3B) (seeded 2026-10-22; R-K1–R-K8 TAKEN 2026-10-22 as proposed at 8995105; probe pending; nothing registered)
+## 16. Hybrid state: carryover decomposed by state kind (Kimi Linear 48B-A3B) (seeded 2026-10-22; R-K1–R-K8 TAKEN 2026-10-22 as proposed at 8995105; probe RUN 2026-10-22: floor above the limit, HOLDS_B UNEVALUABLE; nothing registered)
 
 **Why.** Every rung so far reads one state kind: K and V at every layer of a dense or GQA transformer, so a stale cache
 is stale everywhere at once and nothing in (B) can say *which* part of the carried state the reader notices. A hybrid
@@ -938,3 +938,27 @@ step of unknown composition, and the backbone is noise; nothing about which *lay
 nothing about float16 or float32 for this model (bf16 is the registered dtype and its floor is its own); nothing
 beyond one hybrid model at one scale and one prefix length; nothing until the probe's floor is read — a floor above
 1e-4 closes this section as UNEVALUABLE at HOLDS_B, and that is a result the record keeps.
+
+**Probe outcome (2026-10-22, one H200 SXM sitting under the probe cap; records in the private evidence folder
+`2026-10-22-pod-kimi-probe/`, tar sha256 2b474698…677e9, every number below recomputed at home from its `report.json`).**
+The §16 shapes hold on the machine for all 27 layers (recurrent state float32 `[1, 32, 128, 128]`, conv `[1, 4096, 4]` bf16,
+K/V `[1, 32, T, 192]` / `[1, 32, T, 128]`). **The bf16 floor is the result of record: median (B1) of one 1,023-token chunk
+pass against the 767-token prefill plus 256-token continuation on the same weights reads 7.97e-4 and 8.35e-4 on Base
+(two held-out windows) and 1.18e-3 on Instruct — eight to twelve times R-K2's limit of 1e-4. Under R-K2 as taken,
+HOLDS_B is UNEVALUABLE for this family, and under R-K5 the design ends at the probe.** The floor is invariant to the
+chunk alignment of the cached rows (768: 8.60e-4), to the kernel the continuation takes (64 tokens, fused: 9.26e-4) and
+to the split point (one-chunk prefix: 7.98e-4); dump equivalence and identity read exactly 0 on every cell, so the dump
+layout and the kernels' determinism are not it. Along the continuation one Base window is flat by quarter (8.6e-4 to
+6.8e-4) and the other rises (5.2e-5 to 2.14e-3) with its arms rising alike; whether that is per-token bf16 rounding
+under sigmoid top-8-of-256 routing or a divergence compounded through the recurrent state is left open — a float32
+reference needs two cards and was not run. **Descriptive, disclosed as a prior for any later registration:** at
+Base → Instruct the arms read FULL-STALE 3.10e-2 / 4.36e-2, MLA-STALE 9.60e-3 / 1.08e-2, KDA-STALE 2.60e-2 / 2.88e-2
+on the two windows; Instruct → Base FULL 1.32e-2 / 2.25e-2, MLA 7.04e-3 / 6.80e-3, KDA 1.15e-2 / 1.62e-2 — FULL ≥ KDA >
+MLA in all four cells (the direction (iii) named blind), 8–52× the floors, FULL / (MLA + KDA) 0.71–1.10, UNRESOLVED
+throughout. The Instruct reader ran its own weights under Base's `modeling_kimi.py` because Instruct's published file
+runs under neither transformers 4.57.1 (its `X | None` hints break `auto_docstring`) nor 5.20 (`OutputRecorder`
+removed); the two files differ in packaging only. Environment that runs this model on 2026-10-22: torch 2.8.0+cu128,
+transformers 4.57.1, flash-linear-attention 0.4.0 (the only release whose `fused_kda_gate` has the `g_bias` signature
+the model calls; the card's "≥ 0.4.0" is wrong), the prebuilt cu12torch2.8 flash-attn 2.8.3.post2 wheel; the H200 NVL was
+out of stock, the SXM ran at $5.29/h. **Any floor rule other than 1e-4 is a new registration**, written before any run,
+with the arm readings above disclosed as its prior; nothing in `results/`, nothing in the ledger.

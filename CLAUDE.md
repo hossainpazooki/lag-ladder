@@ -2,7 +2,7 @@
 
 Read `README.md` for what this is. `docs/2026-09-19-holdover-design.md` is the authority on scope and
 carries the rulings (§10), the build order (§9), the re-aim (§12), statistic (B) (§13), the own run (§14), statistic (C)
-(§15) and the hybrid-state seed on Kimi Linear (§16; R-K1–R-K8 taken 2026-10-22, probe next, nothing registered). `ledger/ledger.md` is the record and
+(§15) and the hybrid-state seed on Kimi Linear (§16; R-K1–R-K8 taken 2026-10-22; the probe ran the same day and read a bf16 floor of ≈ 1e-3 against the 1e-4 limit — HOLDS_B UNEVALUABLE, the design ends at the probe; nothing registered). `ledger/ledger.md` is the record and
 is append-only by numbered entry; entry 0001 carries the chassis provenance, the inherited definitions (f\*,
 τ_K) and the first rulings, entry 0002 the ruling that the instrument serves statistic (A) only, entries
 0003 and 0004 the instrument re-pins (checkpoint selection; per-side `ModelRef` with verified provenance),
