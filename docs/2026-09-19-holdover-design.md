@@ -784,7 +784,7 @@ steps; nothing about a cache older than 32 steps; nothing a reward model would c
 the descriptive Δ — under greedy decoding at a 256-token cap the step-32 policy answers 6% of GSM8K test and loops on
 most of the rest, so this section measures whether the answer changes, not whether it worsens.
 
-## 16. Hybrid state: carryover decomposed by state kind (Kimi Linear 48B-A3B) (seeded 2026-10-22; R-K1–R-K8 PROPOSED, none taken; probe pending; nothing registered)
+## 16. Hybrid state: carryover decomposed by state kind (Kimi Linear 48B-A3B) (seeded 2026-10-22; R-K1–R-K8 TAKEN 2026-10-22 as proposed at 8995105; probe pending; nothing registered)
 
 **Why.** Every rung so far reads one state kind: K and V at every layer of a dense or GQA transformer, so a stale cache
 is stale everywhere at once and nothing in (B) can say *which* part of the carried state the reader notices. A hybrid
@@ -847,7 +847,7 @@ injected cache:
 | MLA-STALE | writer's | reader's own |
 | KDA-STALE | reader's own | writer's |
 
-**R-K8 (proposed) — the backbone under bf16.** `tools/perturb_checkpoint.py` writes, today, one float32
+**R-K8 (taken 2026-10-22, option (a) with (b)'s placement) — the backbone under bf16.** `tools/perturb_checkpoint.py` writes, today, one float32
 `model.safetensors` with `torch_dtype` float32 in the copied config, because bf16's mantissa step (2⁻⁸ ≈ 3.9e-3
 relative per element) cannot carry a 1e-4 relative perturbation; `config/distance.toml` registers the seven rungs
 1e-4 … 1e-1 on that float32 path, and the OLMo and Qwen readers of record loaded float32. Under R-K2 this reader loads
@@ -858,10 +858,9 @@ limit. (b) *Place by measured distance:* write float32 at any target, then compu
 `tools/weight_distance.py` on the two checkpoints **as the reader loads them** (both cast to bf16), so a rung sits
 where it really is and a rung that collapses onto the anchor is dropped by rule (measured distance under half its
 target). (c) *Float32 anchors:* load the reader in float32 — 192 GB of weights, two H200s or four A100s, with FLA's
-Triton kernels unverified in float32 — a different design and a different cost. **Recommend (a) with (b)'s
-placement**: targets 1e-2, 3e-2, 1e-1 only, each rung's distance measured on the bf16-loaded pair and recorded as its
-x-coordinate; 3e-3 attempted once at the probe and kept only if its measured distance is within 2× of target,
-otherwise the family's backbone starts at 1e-2 and the section says so. Two consequences the probe must read before
+Triton kernels unverified in float32 — a different design and a different cost. **Ruled 2026-10-22: (a) with (b)'s
+placement** — targets 1e-2, 3e-2, 1e-1 only, each rung's distance measured on the bf16-loaded pair and recorded as its
+x-coordinate; no rung under 1e-2 is attempted, and the gap under 1e-2 is named as this family's limit. Two consequences the probe must read before
 the run: the tool holds every tensor and its noise in host memory (≈ 480 GB for 48B parameters: the bf16 source, a
 float32 noise draw and the float32 output) and writes 192 GB per rung, so it needs a streaming rewrite for this model
 (tensor by tensor, per-tensor seeds, the same rule) and the volume plan is two 96 GB checkpoints plus one 192 GB
@@ -889,8 +888,8 @@ also asserts the shapes above on the machine, per layer, and halts on any mismat
 
 **Seal (to be committed at registration; values blind until then).** (i) Floor, dump equivalence, identity and
 scrambled pass on every reader. (ii) At every rung FULL-STALE ≥ max(MLA-STALE, KDA-STALE): consuming more stale state
-never reads less — a sanity clause, falsifiable. (iii) **Direction, picked blind (R-K3's recommendation,
-proposed 2026-10-22): at Base → Instruct, median (B1) under KDA-STALE ≥ under MLA-STALE** — 20 of 27 layers, and the recurrent
+never reads less — a sanity clause, falsifiable. (iii) **Direction, picked blind (R-K3, taken
+2026-10-22 before any arm was read): at Base → Instruct, median (B1) under KDA-STALE ≥ under MLA-STALE** — 20 of 27 layers, and the recurrent
 state integrates the whole prefix while K/V is a per-token store, each row partly recoverable by attention over fresh
 tokens. The
 probe's two-sequence arm readings are taken after this direction is on record, so they size the bands without
@@ -924,11 +923,14 @@ under an MLA-only change. *Planned:* `tools/score_hybrid.py` (torch + fla, the p
 `kvt` or `lag_ladder`, as `score_continuation.py`'s rule) — dump a `KimiDynamicCache` through the layout, fill one from a
 composed arm, teacher-force the continuation, write the report; the probe scripts; the token file; the registration
 entry with the seal and a config under `config/`; the streaming rewrite of `perturb_checkpoint.py` if R-K8 keeps the
-backbone. Rulings PROPOSED 2026-10-22, none taken; the recommendations are: R-K1 a second driver here; R-K2 bf16, floor
-band-relative at 1e-4; R-K3 three arms on consumed state, (ii)–(iii) as above, additivity descriptive; R-K4 backbone
-then Base → Instruct, Instruct → Base descriptive, no own run; R-K5 probe first, outside `results/`, allowed to end the
-design; R-K6 this section; R-K7 the caps above; R-K8 the bf16-carried rungs placed by measured distance. Nothing below
-the probe is built until they are taken.
+backbone, and a bf16-cast option in `tools/weight_distance.py` so a rung is placed by the distance of the weights as the
+reader loads them. Rulings TAKEN 2026-10-22 by the operator, as this section proposed them at 8995105: R-K1 a second
+driver here; R-K2 bf16, floor band-relative at 1e-4; R-K3 three arms on consumed state, (ii)–(iii) as above, additivity
+descriptive; R-K4 backbone then Base → Instruct, Instruct → Base descriptive, no own run; R-K5 probe first, outside
+`results/`, allowed to end the design; R-K6 this section; R-K7 the caps above; R-K8 option (a): the backbone restricted
+to 1e-2, 3e-2 and 1e-1, each rung placed by the distance measured on the bf16-loaded weights, the gap under 1e-2 named as
+this family's limit. Order after the rulings: the probe; only if it passes, the two offline builds above; then the
+registration entry with its seal, the token file, the config, and the run sitting under the run cap.
 
 **What §16 cannot say.** Nothing about a trained direction on this family — Base → Instruct is one post-training
 step of unknown composition, and the backbone is noise; nothing about which *layers* carry the injury, only which
