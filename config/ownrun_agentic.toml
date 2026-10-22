@@ -11,7 +11,10 @@
 # P = tokens[:768], C = tokens[768:1024], held-out rows [40, 50): the registered convention of 0012-0017, so the
 # reader scores a stored continuation exactly as it scores `corpus`; no spans sidecar, nothing is padded. The
 # builder interleaves the rows by suite (even rows coding, odd rows workflow), so [40, 50) reads 5 + 5 windows and
-# not ten of one suite; whether the cell reads ten rows or all fifty is a registration ruling (job count x5).
+# not ten of one suite. Ruled 2026-10-22: the first sitting reads these ten rows, not all fifty. A side effect
+# worth stating in the entry: the scrambled control takes the NEXT held-out row's prefix (reader.plan), so under
+# the interleaving every scrambled pair crosses suites (a coding prefix under a workflow continuation and the
+# reverse), which only makes that control harder to pass, never easier.
 #
 # New dumps are needed on the pod: the step-0 writer's cache and each kept reader's own cache ON THIS TEXT, dumped
 # through the pinned instrument from the Hub weights, filed as source@local-step_<g> under this pair (R-C3).
