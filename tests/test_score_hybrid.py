@@ -20,7 +20,8 @@ from tests.test_score_continuation import REPORT_KEYS
 
 TOOL = lag_ladder.REPO_ROOT / "tools" / "score_hybrid.py"
 
-HYBRID_REPORT_KEYS = REPORT_KEYS | {"arm", "sources", "state_v_first", "dtype", "cached_rows", "seconds"}
+HYBRID_REPORT_KEYS = REPORT_KEYS | {"arm", "sources", "state_v_first", "dtype", "cached_rows", "seconds",
+                                    "attn_implementation", "f32_precision"}
 
 # the Kimi Linear 48B-A3B config.json fields the shape check reads (retrieved 2026-10-22; digest a6ac3c2c4b5aa723)
 KIMI_CFG = {
@@ -266,3 +267,62 @@ def test_cli_names_the_contract_flags():
     assert r.returncode == 0, r.stderr
     for sub in ("shapes", "dump", "score"):
         assert sub in r.stdout
+
+
+# --- float32 reference probe (design §16 follow-up, 2026-10-23): dtype plumbing and the split-point gaps readout ----
+
+def test_float32_activations_are_stored_as_float32_and_round_trip(sh, tmp_path):
+    key, val, rec, conv = _fake_cache_lists()
+    arrays = sh.arrays_from_lists(key, val, rec, conv, LAYER_TYPES, to_numpy=sh.numpy_from_array,
+                                  activation_dtype="float32")
+    meta = sh.write_dump(tmp_path / "d", arrays, LAYER_TYPES, cached_rows=12, extra={})
+    assert meta["mla"]["dtype"] == "float32" and meta["kda"]["conv_dtype"] == "float32"
+    d = sh.read_dump(tmp_path / "d")
+    K, _ = d.mla[0]
+    assert K.dtype == np.float32 and np.array_equal(K, np.ascontiguousarray(key[0][0].transpose(1, 0, 2)))
+    k2, v2, r2, c2 = sh.lists_from_arrays(d, from_numpy=lambda a, kind: a)
+    assert k2[0].dtype == np.float32 and np.array_equal(k2[0], key[0])
+
+
+def test_torch_dtype_name_accepts_the_two_registered_dtypes_only(sh):
+    assert sh.dtype_name("bfloat16") == "bfloat16" and sh.dtype_name("float32") == "float32"
+    with pytest.raises(ValueError):
+        sh.dtype_name("float16")
+
+
+def test_report_keys_carry_attn_implementation_and_precision(sh):
+    assert {"attn_implementation", "f32_precision"} <= set(sh.REPORT_KEYS)
+
+
+def _fake_report(P, end, logprob_fresh, logprob_stale, argmax_fresh, argmax_stale):
+    n = end - P
+    return {"schema": sh_schema, "prefix_len": P, "cached_rows": P - 1, "length": end, "seq": 0,
+            "continuation_tokens": list(range(P, end)), "logprob_fresh": list(logprob_fresh), "logprob_stale": list(logprob_stale),
+            "argmax_fresh": list(argmax_fresh), "argmax_stale": list(argmax_stale), "kl_per_token": [0.0] * n}
+
+
+sh_schema = "hybrid-report-v1"
+
+
+def test_pairwise_gaps_aligns_reports_by_absolute_position(sh):
+    # three ONE-PASS reports of the same row with cached rows 767, 768 and 64; the shared positions are 769..1023
+    rng = np.random.default_rng(0)
+    truth = rng.normal(size=1024)                       # the "one-pass" logprob by absolute position
+    reps = {}
+    for P in (768, 769, 65):
+        pos = np.arange(P, 1024)
+        reps[str(P)] = _fake_report(P, 1024, truth[pos], truth[pos] + 0.01 * P / 768, pos % 7, pos % 7)
+    g = sh.pairwise_gaps(reps, lo=769, hi=1024)
+    assert g["positions"] == [769, 1024] and g["n"] == 255
+    assert g["one_pass_identical"] is True, "the one-pass vectors agree at shared positions"
+    assert g["cached_vs_one_pass"]["768"] == pytest.approx(0.01)
+    assert g["cached_vs_cached"]["768|769"] == pytest.approx(0.01 * (769 - 768) / 768)
+    assert g["cached_vs_cached"]["65|768"] == pytest.approx(0.01 * (768 - 65) / 768)
+    assert g["argmax_agreement"]["65|768"] == 1.0   # pair keys are ordered by cached-row count
+
+
+def test_pairwise_gaps_refuses_reports_that_do_not_cover_the_window(sh):
+    reps = {"768": _fake_report(768, 1024, np.zeros(256), np.zeros(256), np.zeros(256, int), np.zeros(256, int)),
+            "900": _fake_report(900, 1024, np.zeros(124), np.zeros(124), np.zeros(124, int), np.zeros(124, int))}
+    with pytest.raises(ValueError):
+        sh.pairwise_gaps(reps, lo=769, hi=1024)

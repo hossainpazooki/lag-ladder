@@ -88,9 +88,11 @@ scores a stored continuation exactly as `corpus`): run with the instrument's int
 `score_hybrid.py` (§16, PROPOSED, nothing registered: the hybrid-state scorer for Kimi Linear — `shapes` | `dump` | `score`;
 the `hybrid-dump-v1` layout that `lag_ladder.hybrid_state` reads, arms FRESH / FULL-STALE / MLA-STALE / KDA-STALE on the
 consumed state plus ONE-PASS as the bf16 floor; torch, transformers and fla imported inside the functions so the layout and
-report test offline; run with the pod's interpreter, imports nothing from here or the instrument).
+report test offline; `--dtype float32 --attn sdpa [--device-map auto]` for the float32 reference probe and `gaps`, the torch-free
+split-point readout over ONE-PASS reports; run with the pod's interpreter, imports nothing from here or the instrument).
 `agentic_tokens.py` (the 2026-10-22 plan, cell 1b: the MLPerf Agentic Inference windows as a held-out token file, built
-from linear-ceiling's rendered export under the instrument pair's tokenizer by the 0016 §4 window rule restated there;
+from linear-ceiling's rendered export under the instrument pair's tokenizer by the 0016 §4 window rule restated there, seed 8,
+rows suite by suite — the SAME fifty windows as linear-ceiling's `data/e8m` file, which `--assert-equal` checks id for id;
 writes the .npy and a manifest sidecar; needs `tokenizers`, imports only `lag_ladder.rng`). `own_run.py` (§14: the GRPO trajectory with its save hook;
 run with the trainer's interpreter, imports nothing from here or the instrument). `task_swap.py` (§15, the (C) tool:
 `equivalence` | `cells` | `prepare`; builds prompt caches live, rounds them through float16 and injects them through

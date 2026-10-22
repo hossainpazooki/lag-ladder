@@ -70,7 +70,16 @@ REPORT_KEYS = (
     "inputs_sha256", "reader_checkpoint",
     "device", "torch_version", "peak_cuda_mem_bytes", "gen_seconds",
     "arm", "sources", "state_v_first", "dtype", "cached_rows", "seconds",
+    "attn_implementation", "f32_precision",
 )
+DTYPES = ("bfloat16", "float32")
+
+
+def dtype_name(name: str) -> str:
+    """The two registered dtypes: bf16 as the Hub serves the weights (R-K2), float32 for the reference probe."""
+    if name not in DTYPES:
+        raise ValueError(f"dtype {name!r} is not one of {DTYPES}")
+    return name
 
 
 def sha256_file(p: Path) -> str:
@@ -365,6 +374,39 @@ def score_fields(logits_fresh, logits_stale, cont) -> dict:
     }
 
 
+def pairwise_gaps(reports: dict, lo: int, hi: int) -> dict:
+    """The split-point readout of the float32 reference probe: several ONE-PASS reports of the SAME row with different
+    cached-row counts, aligned by absolute position [lo, hi). Returns the median |delta logprob| of the realized token
+    between every two cached paths and between each cached path and its one-pass, whether the one-pass vectors agree
+    bit for bit at the shared positions, and the argmax agreement between cached paths. Refuses a report that does
+    not cover the window."""
+    cols = {}
+    for name, r in reports.items():
+        P, end = int(r["prefix_len"]), int(r["prefix_len"]) + len(r["continuation_tokens"])
+        if P > lo or end < hi:
+            raise ValueError(f"report {name!r} covers positions {P}..{end}, not {lo}..{hi}")
+        a, b = lo - P, hi - P
+        cols[name] = {k: np.asarray(r[k][a:b], dtype=np.float64) for k in ("logprob_fresh", "logprob_stale")}
+        cols[name]["argmax_stale"] = np.asarray(r["argmax_stale"][a:b])
+        cols[name]["tokens"] = np.asarray(r["continuation_tokens"][a:b])
+    names = sorted(cols, key=lambda n: (0, int(n)) if str(n).isdigit() else (1, str(n)))
+    toks = [cols[n]["tokens"] for n in names]
+    if any(not np.array_equal(toks[0], t) for t in toks[1:]):
+        raise ValueError("the reports do not score the same tokens at the shared positions")
+    ones = [cols[n]["logprob_fresh"] for n in names]
+    out = {"positions": [lo, hi], "n": int(hi - lo), "reports": names,
+           "one_pass_identical": bool(all(np.array_equal(ones[0], o) for o in ones[1:])),
+           "cached_vs_one_pass": {n: float(np.median(np.abs(cols[n]["logprob_stale"] - cols[n]["logprob_fresh"])))
+                                  for n in names},
+           "cached_vs_cached": {}, "argmax_agreement": {}}
+    for i, a in enumerate(names):
+        for b in names[i + 1:]:
+            out["cached_vs_cached"][f"{a}|{b}"] = float(
+                np.median(np.abs(cols[a]["logprob_stale"] - cols[b]["logprob_stale"])))
+            out["argmax_agreement"][f"{a}|{b}"] = float((cols[a]["argmax_stale"] == cols[b]["argmax_stale"]).mean())
+    return out
+
+
 # =================================================================================================================
 # pod side: everything below imports torch and runs a model
 # =================================================================================================================
@@ -393,12 +435,40 @@ def torch_from_numpy(device, activation_dtype: str):
     return conv
 
 
-def load_model(path: Path, device):
+def f32_precision() -> dict:
+    """What a float32 forward actually computes with: torch's matmul precision and Triton's default fp32 dot
+    precision (`TRITON_F32_DEFAULT`; unset means TF32 on Ampere+ -- FLA 0.4.0's delta-rule kernels pass no
+    `allow_tf32`, so an honest float32 reference sets it to `ieee`)."""
+    import os
+    import torch
+    return {"torch_float32_matmul_precision": torch.get_float32_matmul_precision(),
+            "torch_allow_tf32_matmul": bool(torch.backends.cuda.matmul.allow_tf32),
+            "torch_allow_tf32_cudnn": bool(torch.backends.cudnn.allow_tf32),
+            "TRITON_F32_DEFAULT": os.environ.get("TRITON_F32_DEFAULT")}
+
+
+def load_model(path: Path, device, dtype: str = "bfloat16", attn: str = "model", device_map: str | None = None):
+    """`attn` 'model' keeps whatever the model's own __init__ forces (flash_attention_2); 'sdpa' or 'eager' is set
+    on the config AFTER construction, since the model overrides anything passed in -- float32 needs it, flash-attn
+    has no float32 kernels. `device_map` 'auto' shards across the visible GPUs (the float32 reference: 192 GB)."""
     import torch
     from transformers import AutoModelForCausalLM
     t0 = time.time()
-    model = AutoModelForCausalLM.from_pretrained(str(path), trust_remote_code=True, torch_dtype=torch.bfloat16)
-    model = model.to(device).eval()
+    td = {"bfloat16": torch.bfloat16, "float32": torch.float32}[dtype_name(dtype)]
+    if dtype == "float32":
+        torch.set_float32_matmul_precision("highest")
+        torch.backends.cuda.matmul.allow_tf32 = False
+        torch.backends.cudnn.allow_tf32 = False
+    kw = {"device_map": device_map} if device_map else {}
+    model = AutoModelForCausalLM.from_pretrained(str(path), trust_remote_code=True, torch_dtype=td, **kw)
+    if not device_map:
+        model = model.to(device)
+    model = model.eval()
+    if attn != "model":
+        model.config._attn_implementation = attn
+        for m in model.modules():
+            if hasattr(m, "config") and hasattr(m.config, "_attn_implementation"):
+                m.config._attn_implementation = attn
     cfg = json.loads((Path(path) / "config.json").read_text(encoding="utf-8"))
     return model, cfg, time.time() - t0
 
@@ -493,7 +563,7 @@ def cmd_shapes(a) -> int:
     seq = _tokens(Path(a.tokens), a.seq, hashes)
     if not (0 < a.length <= seq.shape[0]):
         raise SystemExit(f"--length {a.length} is outside the row (T={seq.shape[0]})")
-    model, cfg, load_s = load_model(Path(a.model), device)
+    model, cfg, load_s = load_model(Path(a.model), device, a.dtype, a.attn, a.device_map)
     exp = expected_shapes(cfg)
     cache, fwd_s = prefix_cache(model, seq[: a.length], device)
     key, val, rec, conv = _lists_of(cache)
@@ -505,9 +575,12 @@ def cmd_shapes(a) -> int:
     problems = check_shapes(obs, exp, a.length)
     act = sorted({str(x.dtype).replace("torch.", "") for x in key if x is not None}
                  | {str(x.dtype).replace("torch.", "") for c in conv if c is not None for x in c})
+    if act != [a.dtype]:
+        problems.append(f"activation-dtype states are {act}, the run asked for {a.dtype}: a kernel cast the state")
     rec_out = {"schema": "hybrid-shapes-v1", "model": Path(a.model).as_posix(), "checkpoint": checkpoint_digest(Path(a.model)),
                "length": a.length, "expected": exp, "observed": obs, "problems": problems, "activation_dtypes": act,
                "attn_implementation": getattr(model.config, "_attn_implementation", None),
+               "dtype": a.dtype, "f32_precision": f32_precision(),
                "seconds": {"load": load_s, "prefill": fwd_s}, "torch_version": torch.__version__,
                "device": device.type, "inputs_sha256": hashes}
     _write_json(Path(a.out), "shapes.json", rec_out)
@@ -523,16 +596,17 @@ def cmd_dump(a) -> int:
     hashes = {}
     seq = _tokens(Path(a.tokens), a.seq, hashes)
     cached_rows, _, _ = scored_input(seq, a.prefix_len)
-    model, cfg, load_s = load_model(Path(a.model), device)
+    model, cfg, load_s = load_model(Path(a.model), device, a.dtype, a.attn, a.device_map)
     exp = expected_shapes(cfg)
     cache, fwd_s = prefix_cache(model, seq[:cached_rows], device)
     t0 = time.time()
-    arrays = arrays_from_lists(*_lists_of(cache), exp["layer_types"], torch_to_numpy, "bfloat16")
+    arrays = arrays_from_lists(*_lists_of(cache), exp["layer_types"], torch_to_numpy, a.dtype)
     meta = write_dump(Path(a.out), arrays, exp["layer_types"], cached_rows,
                       extra={"semantic_prefix_len": a.prefix_len, "seq": a.seq, "tokens_file": Path(a.tokens).as_posix(),
                              "tokens_sha256": hashes[Path(a.tokens).as_posix()], "model": Path(a.model).as_posix(),
                              "checkpoint": checkpoint_digest(Path(a.model)),
-                             "state_v_first": a.state_v_first,
+                             "state_v_first": a.state_v_first, "dtype": a.dtype,
+                             "attn_implementation": getattr(model.config, "_attn_implementation", None),
                              "seconds": {"load": load_s, "prefill": fwd_s}})
     write_s = time.time() - t0
     print(f"DUMP_OK {Path(a.out).as_posix()} cached_rows={cached_rows} files={len(meta['files'])} "
@@ -560,10 +634,10 @@ def cmd_score(a) -> int:
     hashes = {}
     seq = _tokens(Path(a.tokens), a.seq, hashes)
     cached_rows, inp, cont = scored_input(seq, a.prefix_len, a.length)
-    model, cfg, load_s = load_model(Path(a.reader), device)
+    model, cfg, load_s = load_model(Path(a.reader), device, a.dtype, a.attn, a.device_map)
     exp = expected_shapes(cfg)
     seconds = {"load": load_s}
-    conv_in = torch_from_numpy(device, "bfloat16")
+    conv_in = torch_from_numpy(device, a.dtype)
 
     if a.arm == "ONE-PASS":
         end = seq.shape[0] if a.length is None else a.length
@@ -578,7 +652,7 @@ def cmd_score(a) -> int:
             hashes[(Path(a.stale) / name).as_posix()] = h
         if a.live:
             cache, seconds["prefill"] = prefix_cache(model, seq[:cached_rows], device)
-            arrays = arrays_from_lists(*_lists_of(cache), exp["layer_types"], torch_to_numpy, "bfloat16")
+            arrays = arrays_from_lists(*_lists_of(cache), exp["layer_types"], torch_to_numpy, a.dtype)
             fresh = _dump_from_arrays(arrays, exp["layer_types"], cached_rows, stale.meta)
         else:
             fresh = read_dump(Path(a.fresh))
@@ -611,8 +685,9 @@ def cmd_score(a) -> int:
         "device": device.type, "torch_version": torch.__version__,
         "peak_cuda_mem_bytes": int(torch.cuda.max_memory_allocated()) if device.type == "cuda" else None,
         "gen_seconds": None,
-        "arm": a.arm, "sources": SOURCES[a.arm], "state_v_first": a.state_v_first, "dtype": "bfloat16",
+        "arm": a.arm, "sources": SOURCES[a.arm], "state_v_first": a.state_v_first, "dtype": a.dtype,
         "cached_rows": cached_rows, "seconds": seconds,
+        "attn_implementation": getattr(model.config, "_attn_implementation", None), "f32_precision": f32_precision(),
     }
     assert set(report) == set(REPORT_KEYS)
     p = _write_json(out, "report.json", report)
@@ -648,6 +723,13 @@ def main(argv=None) -> int:
         p.add_argument("--device", default="auto", choices=("auto", "cpu", "cuda"))
         p.add_argument("--state-v-first", type=int, choices=(0, 1), default=None,
                        help="the FLA state layout flag as read from the installed fla source; recorded, not acted on")
+        p.add_argument("--dtype", default="bfloat16", choices=DTYPES,
+                       help="bfloat16 as served (R-K2); float32 for the reference probe (torch 'highest', no TF32; "
+                            "set TRITON_F32_DEFAULT=ieee in the environment for the Triton kernels)")
+        p.add_argument("--attn", default="model", choices=("model", "sdpa", "eager"),
+                       help="'model' keeps the forced flash_attention_2; float32 needs sdpa or eager")
+        p.add_argument("--device-map", default=None, choices=("auto",),
+                       help="'auto' shards the weights across the visible GPUs (192 GB in float32)")
 
     p = sub.add_parser("shapes", help="forward --length tokens with a cache and assert the §16 shapes per layer")
     common(p, "--model")
@@ -671,8 +753,35 @@ def main(argv=None) -> int:
     p.add_argument("--probe", action="store_true", help="refuse any --out under results/")
     p.set_defaults(fn=cmd_score)
 
+    p = sub.add_parser("gaps", help="split-point readout: pairwise gaps between ONE-PASS reports of one row (no torch)")
+    p.add_argument("--report", action="append", required=True, metavar="NAME=PATH",
+                   help="a ONE-PASS report.json named by its cached-row count, e.g. 767=/workspace/probe/floor/base/seq0/report.json")
+    p.add_argument("--lo", type=int, required=True)
+    p.add_argument("--hi", type=int, required=True)
+    p.add_argument("--out", required=True)
+    p.set_defaults(fn=cmd_gaps)
+
     a = ap.parse_args(argv)
     return a.fn(a)
+
+
+def cmd_gaps(a) -> int:
+    reports, files = {}, {}
+    for spec in a.report:
+        name, path = spec.split("=", 1)
+        reports[name] = json.loads(Path(path).read_text(encoding="utf-8"))
+        files[Path(path).as_posix()] = sha256_file(Path(path))
+    g = pairwise_gaps(reports, a.lo, a.hi)
+    g["schema"] = "hybrid-gaps-v1"
+    g["inputs_sha256"] = files
+    g["dtypes"] = {n: r.get("dtype") for n, r in reports.items()}
+    g["f32_precision"] = {n: r.get("f32_precision") for n, r in reports.items()}
+    p = _write_json(Path(a.out), "gaps.json", g)
+    c1 = {k: f"{v:.2e}" for k, v in g["cached_vs_one_pass"].items()}
+    c2 = {k: f"{v:.2e}" for k, v in g["cached_vs_cached"].items()}
+    print(f"wrote {p.as_posix()} n={g['n']} one_pass_identical={g['one_pass_identical']} "
+          f"cached_vs_one_pass={c1} cached_vs_cached={c2}")
+    return 0
 
 
 if __name__ == "__main__":
