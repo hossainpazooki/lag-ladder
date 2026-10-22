@@ -103,7 +103,7 @@ def _load_report(d: Path, named_sha: str, root: Path, upstream: Path) -> dict:
             raise _refuse(f"{f}: {key} has {len(rep[key])} entries for a {n}-token continuation")
     if continuation_sha256(toks) != rep["continuation_sha256"]:
         raise _refuse(f"{f}: continuation_sha256 does not match the stored tokens")
-    if rep["text"] in ("corpus", "rollout"):   # a stored continuation: it must be the token file's own
+    if rep["text"] in ("corpus", "rollout", "agentic"):   # a stored continuation: it must be the token file's own
         tf = _resolve(rep["tokens_file"], root, upstream)
         if not tf.exists():
             raise _refuse(f"{f}: token file {tf} is missing")

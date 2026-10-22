@@ -236,7 +236,9 @@ def _check_rule(rule: dict, where: str) -> dict:
     return rule
 
 
-_SCORE_TEXTS = ("corpus", "on-path", "rollout")   # rollout (§14): a stored continuation, per-rung only
+_SCORE_TEXTS = ("corpus", "on-path", "rollout", "agentic")   # rollout (§14) and agentic (the 2026-10-22 plan): stored
+                                                             # continuations, per-rung only; agentic is scored exactly as
+                                                             # corpus, on a pair whose token file is the MLPerf windows
 _RULE_TEXTS = ("corpus", "on-path")
 _GENERATE_ARMS = ("stale", "fresh")
 _READER_RULE_KEYS = ("statistic", "holds_max", "degrades_min", "texts", "generate_under")

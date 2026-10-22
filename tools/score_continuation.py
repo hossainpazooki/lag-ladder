@@ -219,8 +219,8 @@ def main(argv=None) -> int:
     ap.add_argument("--length", type=int, default=None,
                     help="end of the stored continuation (exclusive); default: the row's length. Rows padded past a "
                          "sampled completion (design §14 rollout text) are cut here")
-    ap.add_argument("--text", choices=("corpus", "on-path", "rollout"), required=True,
-                    help="corpus and rollout teacher-force the stored tokens after the prefix; on-path generates them")
+    ap.add_argument("--text", choices=("corpus", "on-path", "rollout", "agentic"), required=True,
+                    help="corpus, rollout and agentic teacher-force the stored tokens after the prefix; on-path generates them")
     ap.add_argument("--generate-under", choices=("stale", "fresh"), default=None)
     ap.add_argument("--live", action="store_true",
                     help="floor arm: fresh = the reader's own live float32 cache of P")
@@ -235,7 +235,7 @@ def main(argv=None) -> int:
         raise SystemExit(f"probe mode refuses to write under results/: {out}")
     if a.text == "on-path" and a.generate_under is None:
         raise SystemExit("--text on-path requires --generate-under stale|fresh")
-    if a.text in ("corpus", "rollout") and a.generate_under is not None:
+    if a.text in ("corpus", "rollout", "agentic") and a.generate_under is not None:
         raise SystemExit(f"--generate-under is meaningless on {a.text} text")
     if a.live and a.fresh:
         raise SystemExit("--live replaces the fresh arm; do not also pass --fresh")
