@@ -82,8 +82,11 @@ equivalence, the floor or the identity) · `summarize_task` (recomputes Δ accur
 (C) bands, flip / no-answer / cap rates, the (B)→(C) rank correlation; withholds a lag whose positive controls do not
 fire; reads the sealed clauses out). `tools/` — `perturb_checkpoint.py`,
 `convert_bin_checkpoint.py`, `weight_distance.py`, `score_continuation.py` (the (B) scorer: injects a stale vs fresh
-cache, scores the continuation; `--text rollout` teacher-forces a stored continuation cut at `--length`): run with
-the instrument's interpreter, import nothing from it. `own_run.py` (§14: the GRPO trajectory with its save hook;
+cache, scores the continuation; `--text rollout` teacher-forces a stored continuation cut at `--length`; `--text agentic`
+scores a stored continuation exactly as `corpus`): run with the instrument's interpreter, import nothing from it.
+`agentic_tokens.py` (the 2026-10-22 plan, cell 1b: the MLPerf Agentic Inference windows as a held-out token file, built
+from linear-ceiling's rendered export under the instrument pair's tokenizer by the 0016 §4 window rule restated there;
+writes the .npy and a manifest sidecar; needs `tokenizers`, imports only `lag_ladder.rng`). `own_run.py` (§14: the GRPO trajectory with its save hook;
 run with the trainer's interpreter, imports nothing from here or the instrument). `task_swap.py` (§15, the (C) tool:
 `equivalence` | `cells` | `prepare`; builds prompt caches live, rounds them through float16 and injects them through
 `score_continuation.py`'s functions; greedy generation per arm; one `task-record-v2` per prompt and arm, keeping the
@@ -91,7 +94,7 @@ decoded completion text and the first-`####` answer beside the registered last-`
 interpreter). Built 2026-10-15, registered by 0025 after two probes: `config/ownrun_task.toml` pins the GSM8K test
 prompts file, floor 1%, positive controls at 0.5 flips, dump equivalence at an absolute 2⁻⁵ (0026; the relative
 gap and the share of differing elements descriptive).
-`config/` — `seal.toml`, `pilot.toml`, `distance.toml`, `reader.toml`, `ownrun.toml` (0017, as run), `ownrun_controls.toml` (0020; `per_pair` controls), `ownrun_far.toml` (0022; `far_pair` + `far_min`), `ownrun_task.toml` (0025; §15, the (C) arms and controls), `ownrun_seed2.toml` (0028; §14.3, the second trainer seed: `per_pair`, `far_pair`, `evaluable_under_far`). `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
+`config/` — `seal.toml`, `pilot.toml`, `distance.toml`, `reader.toml`, `ownrun.toml` (0017, as run), `ownrun_controls.toml` (0020; `per_pair` controls), `ownrun_far.toml` (0022; `far_pair` + `far_min`), `ownrun_task.toml` (0025; §15, the (C) arms and controls), `ownrun_seed2.toml` (0028; §14.3, the second trainer seed: `per_pair`, `far_pair`, `evaluable_under_far`), `ownrun_agentic.toml` (UNREGISTERED; the fourth text `agentic` on the seed-1 readers: six per-rung rungs on the pair `qwen2.5-1.5b-mlperf`, `tokens_sha256` pending until the token file is built and the entry pins it). `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
 `mappers/` — seal artifact roots, gitignored past their placeholders. `docs/` — the design doc.
 
 ## State
