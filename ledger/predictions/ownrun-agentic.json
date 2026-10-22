@@ -1,0 +1,252 @@
+{
+  "pair": "ownrun-agentic",
+  "prediction": {
+    "controls": "per (reader, pair) as 0020: float16 floor, identity and scrambled on the agentic text itself; no far control (no far_pair): a reader whose scrambled misses 0.1 is UNEVALUABLE and its rung UNREAD. The scrambled control takes the next row's prefix (wrap 49 -> 0), so under the suite-blocked rows it pairs within suite everywhere but rows 24 (-> 25) and 49 (-> 0): the weaker form, stated in 0030",
+    "descriptive_not_sealed": [
+      "the per-lag ratio agentic / corpus and agentic / on-path against seed 1 and seed 2 (seed 2 corpus at lag 32: 4.629e-06; seed 2 rollout at lag 32: 9.322e-02)",
+      "the two suites read separately over their twenty-five rows each (coding rows 0-24, workflow 25-49): per-suite medians are reported, not sealed",
+      "the per-window join with linear-ceiling's mapper reading of the same fifty windows (its entry 0064): median mean-KL per window and lag beside the per-sequence R2 drop at k = 1; a figure, no verdict",
+      "the scrambled medians per reader against 0018's 0.552-0.552 on corpus and 0029's 0.114-0.124 on rollout",
+      "the six re-derived distance.json values against 0018's rel_delta_all (expected identical: same weights)"
+    ],
+    "halting": "a floor over 1e-4 halts the reader run (0014); the distance refusal above (a code addition); the step-0 and step-g weights restored from the private Hub backup must hash to the manifest the backup carries",
+    "kind": "statistic (B) on the own run (0017, seed 1) read on a fourth text, `agentic`: the 50 MLPerf Agentic Inference windows linear-ceiling's cell reads under the mapper (one bridge; the same token ids row for row), every row held out; the clauses place the reading against seed 1's own readings on corpus / on-path (0018) and rollout (0018), which this seal carries",
+    "predictions": {
+      "distance_must_equal": {
+        "reference": {
+          "1": 2.2895683763734974e-05,
+          "16": 9.547494899946862e-05,
+          "2": 3.518530054413405e-05,
+          "32": 0.00010494302565318275,
+          "4": 5.267686242230837e-05,
+          "8": 7.476090097973842e-05
+        },
+        "rel_tol": 1e-09,
+        "rungs": {
+          "1": "ownrun-agentic-lag-1",
+          "16": "ownrun-agentic-lag-16",
+          "2": "ownrun-agentic-lag-2",
+          "32": "ownrun-agentic-lag-32",
+          "4": "ownrun-agentic-lag-4",
+          "8": "ownrun-agentic-lag-8"
+        },
+        "source": "results/ownrun/summary.json sha256 f3b8f00ff6ed... (entry 0018)",
+        "statement": "the six new rung labels' results/distance/rungs/<label>/distance.json, re-derived on the sitting machine from the same step-0 / step-g weights, must carry rel_delta_all equal to 0018's for the same step within 1e-9 relative; summarize_reader.assert_distance_pins refuses the summary otherwise (a rung with no distance file has no position and refuses too: the provenance fallback does not exist for the own run's checkpoints)"
+      },
+      "i_backbone_quadratic": {
+        "fit": "least squares of log median (B1) on log rel_delta_all, per text",
+        "rungs": [
+          "ownrun-agentic-lag-1",
+          "ownrun-agentic-lag-2",
+          "ownrun-agentic-lag-4",
+          "ownrun-agentic-lag-8",
+          "ownrun-agentic-lag-16",
+          "ownrun-agentic-lag-32"
+        ],
+        "slope_in": [
+          1.5,
+          2.5
+        ],
+        "statement": "clause (iv): least squares of log median (B1) on log rel_delta_all over the six rungs, slope in [1.5, 2.5] on the agentic text (seed 1 read 2.26 on corpus and 2.19 on on-path, 0018)",
+        "texts": [
+          "agentic"
+        ]
+      },
+      "i_heldout_holds_at_every_lag": {
+        "holds_max": 0.001,
+        "rungs": [
+          "ownrun-agentic-lag-1",
+          "ownrun-agentic-lag-2",
+          "ownrun-agentic-lag-4",
+          "ownrun-agentic-lag-8",
+          "ownrun-agentic-lag-16",
+          "ownrun-agentic-lag-32"
+        ],
+        "statement": "clause (ii) of the entry, the sealed direction (read by the summarizer as i-holds): median (B1) on `agentic` <= 0.001 (HOLDS_B) at every lag rung, every rung above 2x its reader's floor",
+        "texts": [
+          "agentic"
+        ]
+      },
+      "iii_lands_with": {
+        "margin_log10": 1.0,
+        "reference_corpus": {
+          "1": 2.043284212239864e-07,
+          "16": 4.852626956028394e-06,
+          "2": 5.177699016860327e-07,
+          "32": 6.646009999125568e-06,
+          "4": 1.4422700613386796e-06,
+          "8": 2.837407038588924e-06
+        },
+        "reference_onpath": {
+          "1": 1.2232949612826782e-07,
+          "16": 2.5305786890608e-06,
+          "2": 2.896229355309546e-07,
+          "32": 3.5423387226979353e-06,
+          "4": 7.159629660342601e-07,
+          "8": 1.6132963392145871e-06
+        },
+        "reference_rollout": {
+          "1": 0.004679106903489593,
+          "16": 0.08881501903335705,
+          "2": 0.013029200757240154,
+          "32": 0.08914039763956683,
+          "4": 0.029369849307680232,
+          "8": 0.06379572466746403
+        },
+        "rungs": {
+          "1": "ownrun-agentic-lag-1",
+          "16": "ownrun-agentic-lag-16",
+          "2": "ownrun-agentic-lag-2",
+          "32": "ownrun-agentic-lag-32",
+          "4": "ownrun-agentic-lag-4",
+          "8": "ownrun-agentic-lag-8"
+        },
+        "statement": "clause (iii): at every lag the agentic median is closer, in log10, to seed 1's corpus median than to seed 1's rollout median at the same lag, by at least 1.0 decade; read by the summarizer as `lands`, which also names the side each lag lands with",
+        "text": "agentic"
+      },
+      "iv_controls_as_0020": {
+        "statement": "clause (i) of the entry (read by the summarizer as iv): every (reader, pair) unit passes its controls under 0014's limits (float16 floor <= 1e-4, identity <= 1e-5, scrambled >= 0.1) on the agentic text; no unit UNEVALUABLE",
+        "units": [
+          "local:step_1 @ qwen2.5-1.5b-mlperf",
+          "local:step_2 @ qwen2.5-1.5b-mlperf",
+          "local:step_4 @ qwen2.5-1.5b-mlperf",
+          "local:step_8 @ qwen2.5-1.5b-mlperf",
+          "local:step_16 @ qwen2.5-1.5b-mlperf",
+          "local:step_32 @ qwen2.5-1.5b-mlperf"
+        ]
+      }
+    },
+    "registering_entry": "0030",
+    "rule": {
+      "at_floor_factor": 2.0,
+      "degrades_min": 0.1,
+      "floor_max_median_kl": 0.0001,
+      "holds_max": 0.001,
+      "identity_max_logit_diff": 1e-05,
+      "scrambled_min": 0.1
+    },
+    "ruled": "2026-10-23",
+    "seed1_reference": {
+      "corpus_median_b1": {
+        "1": 2.043284212239864e-07,
+        "16": 4.852626956028394e-06,
+        "2": 5.177699016860327e-07,
+        "32": 6.646009999125568e-06,
+        "4": 1.4422700613386796e-06,
+        "8": 2.837407038588924e-06
+      },
+      "onpath_median_b1": {
+        "1": 1.2232949612826782e-07,
+        "16": 2.5305786890608e-06,
+        "2": 2.896229355309546e-07,
+        "32": 3.5423387226979353e-06,
+        "4": 7.159629660342601e-07,
+        "8": 1.6132963392145871e-06
+      },
+      "rollout_median_b1": {
+        "1": 0.004679106903489593,
+        "16": 0.08881501903335705,
+        "2": 0.013029200757240154,
+        "32": 0.08914039763956683,
+        "4": 0.029369849307680232,
+        "8": 0.06379572466746403
+      },
+      "rollout_over_corpus": {
+        "1": 22899.931764070745,
+        "16": 18302.461705411457,
+        "2": 25164.07522880859,
+        "32": 13412.618646570685,
+        "4": 20363.62682341188,
+        "8": 22483.81138124983
+      },
+      "scrambled_median": {
+        "local:step_1": 0.5522480509424952,
+        "local:step_16": 0.5518328086863278,
+        "local:step_2": 0.5520180482807291,
+        "local:step_32": 0.5517461962274126,
+        "local:step_4": 0.5519008616083738,
+        "local:step_8": 0.5519319238472917
+      },
+      "source": "results/ownrun/summary.json sha256 f3b8f00ff6ed... (entry 0018)"
+    },
+    "statistic": "per rung and text, median over held-out sequences of the mean per-token KL(pi_fresh || pi_stale) over the continuation (B1), nats/token; x = whole-vector relative L2 weight distance of the reader (step g) to the writer (step 0), tools/weight_distance.py",
+    "texts": [
+      "agentic"
+    ],
+    "tokens": {
+      "equal_to_linear_ceiling": {
+        "bytes_identical": true,
+        "file": "data/e8m/agent_n50_len1024_seed8.npy",
+        "ids_equal_row_by_row": true,
+        "manifest_sha256": "08f05359e524c5d35fb968ba0a5d65ba8e0708791c204a1d2f00dcbe5a446221",
+        "registering_entry": "0064",
+        "sha256": "9dce6082d057fb739a17b0c5454ecc57cf2ec0476a902bf1609d563de9221351"
+      },
+      "file": "data/tokens/qwen2.5-1.5b-mlperf_n50_len1024_seed8.npy",
+      "layout": "rows 0-24 mlperf-coding, 25-49 mlperf-workflow",
+      "manifest_sha256": "d184215195ec34c62dd10d8a604ff856bd1e5447774d1e10adb265968544e042",
+      "rendered_sha256": "58b3b1e250632118738c2c70d93ceb3f4a05810290cad9b74c7ec10b8a78c6e6",
+      "rows_heldout": [
+        "aiomonitor-task-snapshots-diff",
+        "bandit-interprocedural-taint-checks",
+        "claude-code-by-agents-recursive-delegation",
+        "drizzle-orm-window-function-builders",
+        "etree-xml-diff-patch",
+        "fastapi-deprecation-response-headers",
+        "fastapi-implicit-head-options",
+        "happy-dom-deterministic-intersectionobserver",
+        "helm-array-merge-strategies",
+        "helm-unified-manifest-stream",
+        "igel-persist-feature-schema",
+        "kombu-single-active-consumer-priority",
+        "koota-query-predicates",
+        "kysely-window-grouping-helpers",
+        "meriyah-explicit-resource-declarations",
+        "mnamer-daemon-watch-lifecycle",
+        "narwhals-rolling-window-suite",
+        "participle-grammar-conflict-analysis",
+        "returns-validated-error-accumulation",
+        "sqlfmt-create-table-ddl-formatting",
+        "task-task-graph-export",
+        "tengo-callable-instance-isolation",
+        "updo-policy-alerting",
+        "wasmi-trap-coredumps",
+        "ytt-jsonpath-query-api",
+        "sim_000008",
+        "sim_000036",
+        "sim_000039",
+        "sim_000048",
+        "sim_000066",
+        "sim_000082",
+        "sim_000089",
+        "sim_000112",
+        "sim_000168",
+        "sim_000187",
+        "sim_000193",
+        "sim_000194",
+        "sim_000198",
+        "sim_000214",
+        "sim_000216",
+        "sim_000229",
+        "sim_000240",
+        "sim_000307",
+        "sim_000309",
+        "sim_000383",
+        "sim_000456",
+        "sim_000466",
+        "sim_000500",
+        "sim_000507",
+        "sim_000525"
+      ],
+      "rule": "linear-ceiling ledger entry 0016 section 4 (first window per trajectory, equal stratification, rows written suite by suite), restated in tools/agentic_tokens.py; at the same seed the same rows as linear-ceiling's file",
+      "seed": 8,
+      "sha256": "9dce6082d057fb739a17b0c5454ecc57cf2ec0476a902bf1609d563de9221351",
+      "tokenizer": {
+        "sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+        "snapshot": "989aa7980e4cf806f80c7fef2b1adb7bc71aa306"
+      }
+    }
+  },
+  "prior_artifacts": [],
+  "sealed_pre_fit": true
+}
