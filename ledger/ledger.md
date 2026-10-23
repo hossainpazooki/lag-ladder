@@ -1282,3 +1282,95 @@ clauses with a factor of three, and nothing in them resolves it.
 past the reviewer round); a third seed.
 
 **Consequences in this commit set:** `README.md`, `CLAUDE.md`.
+
+### 0030 — 2026-10-23 — A fourth statistic-(B) text registered on the own run: `agentic`, fifty windows of the MLPerf Agentic Inference trajectories read by seed 1's kept readers at lags 1–32; sealed to land with held-out text, not with the trainer's prompts
+
+prior-entries-sha256: 79d22fe648d3612d2456a850c2f12b6e5825dfc0c7726aeb89a2a1959f089f2f
+
+**Registers** `config/ownrun_agentic.toml`, now `registered_by = "0030"`, with the token file pinned
+(`tokens_sha256 = "9dce6082d057fb739a17b0c5454ecc57cf2ec0476a902bf1609d563de9221351"`): the kept readers of the seed-1 run (0017, local checkpoints `step_g`, g ∈ {1, 2, 4, 8,
+16, 32}, restored from the private Hub backup, R-C7) read a FOURTH text under the registered convention of 0012–0017 —
+P = tokens[:768], C = tokens[768:1024], float32, reader seed 0, instrument `5d4aa4a`, rule, bands and limits 0012's as
+amended by 0013 and 0014 — with one departure from the earlier texts: `heldout = [0, 50)`, every row. Nothing in the own run
+trained on this text, so every window is held out and the readers read all fifty. Nothing trains; no weight is new. Six rungs `ownrun-agentic-lag-<g>`, writer
+cache at step 0 and reader at step g on this text (R-C3), `texts = ["agentic"]` per rung; the rule's own texts stay
+`["corpus", "on-path"]` and `agentic` is a per-rung text only (`load_reader_config` refuses it as a rule text). Statistic
+(C) is not registered on this text and will not be: the trajectories carry no gold a greedy-flip scorer can read.
+
+**The text.** The MLCommons MLPerf Agentic Inference dataset (one flat JSONL, 613 trajectories: 113 DeepSWE coding traces,
+500 Workato workflow conversations; SHA-256 `1beb24c8…` against its README). Licenses, as the shipped `LICENSES.txt` and
+`NOTICE` put it: DeepSWE "Mixed" — Datacurve AI Inc.'s Apache-2.0 covers its task specs, harness, verifiers and curation
+only, the published traces are MLCommons derivative works under MLCommons' Apache-2.0, and the upstream project code inside
+them carries each project's own permissive license, none copyleft; Workato CC BY 4.0 with an attribution header the NOTICE
+requires preserved verbatim wherever the data is distributed; the compilation Apache-2.0. The token file and the rendered
+export DROP that header, so neither is distributed from this repository (the token file stays in the instrument's gitignored
+directory; this entry carries hashes and the manifest's trajectory ids), and any copy that leaves the sitting machine — the
+private backup — carries `NOTICE` and `LICENSES.txt` beside it: an operator rule, enforced by no code here. Rendered by linear-ceiling's adapter (its own registration entry, drafted alongside this one, will register the rendering; export
+`58b3b1e25063…`): rows grouped by conversation, ordered by turn, role-tagged, reasoning kept, tool calls as
+`name(arguments)`, tool results' contents; the shared system prompt and tool schema that every workflow conversation
+opens with (about 31K tokens, identical across all 500; the coding traces' own shared 77-token block likewise) is NOT rendered, because under a first-window rule it would make
+every workflow window the same tokens. Windows by `tools/agentic_tokens.py`, which restates linear-ceiling's 0016 §4 rule
+(one window per trajectory, the FIRST 1,024 tokens, shorter trajectories skipped never padded, 25 + 25 drawn with
+`make_rng(8)` from each suite's eligible trajectories sorted by id, rows written suite by suite: coding 0–24, workflow 25–49)
+under the instrument pair's Qwen2.5 tokenizer (snapshot `989aa7980e4c`, tokenizer.json
+`c0382117ea32…`). **One bridge with linear-ceiling.** These are the SAME fifty windows its cell reads under the
+mapper (its entry 0064, which appends after this one and names this entry back): seed 8 and the rule are linear-ceiling's
+`config/e8m.toml`, and the builder asserts, row by row, that the ids equal its `data/e8m/agent_n50_len1024_seed8.npy` — the
+Qwen2.5 and Qwen3 tokenizers give identical ids on this text, and the assert, not the claim, is the proof. The two files are
+byte-identical (one SHA-256, `9dce6082d057…`; this entry pins it in the config, linear-ceiling's entry 0064 in its text);
+manifests `d184215195ec…` here (it records the equality under `equal_to`) and `08f05359e524…` there. So every window
+gets a reader reading here and a mapper reading there. 50 distinct windows, 25 per suite, recomputed by this script. Eligibility
+is not a constraint (113/113 coding and 492/500 workflow trajectories reach 1,024 tokens under the rendering and either
+tokenizer). Said once:
+the first 1,024 tokens of a coding trace are mostly its task statement (median first user turn ≈ 1,100 tokens), so this
+cell reads the opening of an agent trajectory, not its accumulated history; the long form is a later registration.
+
+**Controls** per (reader, pair) on the agentic text itself (0020's `per_pair`): float16 floor ≤ 1e-4, identity ≤ 1e-5,
+scrambled ≥ 0.1 (0014). No far control. The scrambled control takes the NEXT row's prefix (`reader.plan`, wrap 49 → 0), so
+under the suite-blocked rows it pairs WITHIN suite for every row but two: row 24's coding continuation under row 25's
+workflow prefix, and the wrap, row 49's workflow continuation under row 0's coding prefix. That is the weaker form of the
+control (a same-suite prefix is the nearer impostor) and it is stated, not adjusted for. 1,200 jobs, the planner's count
+(per reader: 50 floor, 50 identity, 50 scrambled; six rungs × 50); at the 11.8 s/job the seed-1 run measured (420 jobs,
+0018's record; seed 2's 660 ran at 7.9 s/job), ≈ 3.95 h of reading before the seven dumps.
+
+**Seal** (`ledger/predictions/ownrun-agentic.json`, pre-fit, committed before any dump). The summarizer reads all four
+clauses: (i), (ii) and (iv) under the keys of 0017/0028 (`iv_controls_as_0020`, `i_heldout_holds_at_every_lag`,
+`i_backbone_quadratic`), (iii) under `iii_lands_with` (the `lands` readout, landed ahead of this entry with its test, which also
+names the side each lag lands with), and the distance pin below under `distance_must_equal` (`assert_distance_pins`, likewise).
+The question the cell asks is whether the injury 0018 read on the trainer's own prompts (rollout median (B1)
+8.914e-02 at lag 32, UNRESOLVED) or the near-silence it read on held-out text (corpus 6.646e-06,
+on-path 3.542e-06, HOLDS_B) is what an agent-serving benchmark's own text draws. The seal takes a side.
+(i) Every (reader, pair) unit passes its controls; no unit UNEVALUABLE. (ii) The sealed direction: median (B1) on
+`agentic` ≤ 1e-3 at every lag, every rung above 2× its reader's floor — the reading lands with held-out text. (iii)
+at every lag the agentic median is closer in log10 to seed 1's corpus median than to its rollout median by at least one
+decade (the gap between the two is 1.3e+04× to 2.5e+04×, so the clause has room on
+both sides); a new readout reads it and the outcome entry states which text the reading lands with, in those words.
+(iv) The quadratic law along the trajectory, slope of log median (B1) on log distance over the six rungs in
+[1.5, 2.5] (seed 1: 2.26 corpus, 2.19 on-path). Descriptive, not sealed: the two suites read separately over their
+twenty-five rows each; the per-lag ratios against seed 1's and seed 2's readings on every text; the scrambled medians
+against 0018's 0.55 and 0029's 0.12; and the per-window join with linear-ceiling's mapper reading of the same fifty
+windows (its 0064: per-sequence R² drop at k = 1 beside the per-window median KL at each lag) — a figure, no verdict.
+The clauses are about seed 1's readers; a seed-2 sibling would be its own entry.
+
+**Halting and reading.** The restored step-0 and step-g weights must hash to the backup manifest before any dump. The six
+new rung labels need their own `results/distance/rungs/<label>/distance.json`, re-derived on the sitting machine by
+`tools/weight_distance.py` from the same weights; the summarizer refuses the run if any differs from 0018's
+`rel_delta_all` at the same step by more than 1e-9 relative (same weights, same tool; a different number is a wrong
+checkpoint) — the seal carries the six reference values (`distance_must_equal`), `summarize_reader.assert_distance_pins`
+refuses. A rung without its file has no position (no provenance fallback exists for the own run's checkpoints) and refuses too.
+A floor over 1e-4 halts the reader run (0014). A unit that misses scrambled is UNEVALUABLE and its rung UNREAD in (ii)–(iv).
+
+**Run.** One sitting on a 48 GB card under the GPU protocol (no trainer, so an A40 carries it; watchdog sitting ceiling $5,
+account kill $6, TTL 6 h, set explicitly): weights from the Hub backup, seven dumps of the fifty sequences through the pinned
+instrument (`source@local-step_0` as the writer's, `source@local-step_g` as each reader's, filed under this pair, R-C3), the
+six distance files, the 1,200-job reader run, summary, pull with digests both ends; dumps, the token file and the pulled tar
+to the private dataset under `ownrun-agentic/` with a manifest (R-C7). Budget ASSUMED until the first dump is timed: ≈ 4 h
+of reading at the measured rate plus the dumps, ≈ 5 h wall on an A40.
+
+**Consequences in this commit set:** `config/ownrun_agentic.toml` (`registered_by`, `tokens_sha256`),
+`ledger/predictions/ownrun-agentic.json` + `.sha256`, `docs/2026-09-19-holdover-design.md` (§14.4, the fourth text under the
+own run, beside §14.1–14.3: the same readers, not a new ladder), `README.md`, `CLAUDE.md` (the config's line loses UNREGISTERED).
+Landed ahead of it as their own commits: `src/lag_ladder/summarize_reader.py` (the `lands` readout for clause (iii) and
+`assert_distance_pins`) with `tests/test_summarize_reader.py`; `tools/agentic_tokens.py` (seed 8, rows suite by suite, the
+row-by-row equality assert against linear-ceiling's file) with `tests/test_agentic_tokens.py` and the config's layout
+(`heldout = [0, 50]`, the seed-8 file).
