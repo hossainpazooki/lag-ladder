@@ -1,8 +1,9 @@
 # lag-ladder — repo brief
 
 Read `README.md` for what this is. `docs/2026-09-19-holdover-design.md` is the authority on scope and
-carries the rulings (§10), the build order (§9), the re-aim (§12), statistic (B) (§13), the own run (§14), statistic (C)
-(§15) and the hybrid-state seed on Kimi Linear (§16; R-K1–R-K8 taken 2026-10-22; the probe ran the same day and read a bf16 floor of ≈ 1e-3 against the 1e-4 limit — HOLDS_B UNEVALUABLE, the design ends at the probe; nothing registered). `ledger/ledger.md` is the record and
+carries the rulings (§10), the build order (§9), the re-aim (§12), statistic (B) (§13), the own run (§14; §14.5 the own run
+on two more families, Llama-3.2-3B then SmolLM3-3B-Base, R-F1–R-F10 ruled 2026-10-23, registration pending), statistic (C)
+(§15) and the hybrid-state seed on Kimi Linear (§16; R-K1–R-K8 taken 2026-10-22; the probe ran the same day and read a bf16 floor of ≈ 1e-3 against the 1e-4 limit — HOLDS_B UNEVALUABLE under R-K2; the float32 reference of 2026-10-23 showed the floor is bf16 arithmetic ambiguity across computation orders, and a floor-relative registration is drafted for after the families; nothing registered). `ledger/ledger.md` is the record and
 is append-only by numbered entry; entry 0001 carries the chassis provenance, the inherited definitions (f\*,
 τ_K) and the first rulings, entry 0002 the ruling that the instrument serves statistic (A) only, entries
 0003 and 0004 the instrument re-pins (checkpoint selection; per-side `ModelRef` with verified provenance),
@@ -77,7 +78,9 @@ per rung) · `summarize_distance` (rungs by measured distance, tied to the dumps
 (B) driver: plan|check|run|probe; controls per reader, then the rungs, by subprocess into the pinned
 instrument; refuses while `reader.toml` is unregistered) · `summarize_reader` (recomputes B1–B4 from the
 reports, withholds failed-control rungs, places rungs by the distance ladder's `distance.json`, reads the sealed
-clauses out; per-rung texts and ragged continuations for §14) · `task` (the (C) driver, §15: plan|check|run|probe; the
+clauses out; per-rung texts and ragged continuations for §14; from §14.5 also `ii_rollout_lost_at_lag_1` (`ii-lost`) and the
+machine-readable `iii_rl_excess_over_0015_backbone` (`iii-excess`: the sealed rungs inside a distance range against the
+nearest noise rung of another summary, pinned by sha256; 0017's prose-only form is left alone)) · `task` (the (C) driver, §15: plan|check|run|probe; the
 dump-equivalence control first, then one `cells` job per reader with the floor and identity arms; halts on the
 equivalence, the floor or the identity) · `summarize_task` (recomputes Δ accuracy with a seeded paired bootstrap, the
 (C) bands, flip / no-answer / cap rates, the (B)→(C) rank correlation; withholds a lag whose positive controls do not
@@ -94,14 +97,16 @@ split-point readout over ONE-PASS reports; run with the pod's interpreter, impor
 from linear-ceiling's rendered export under the instrument pair's tokenizer by the 0016 §4 window rule restated there, seed 8,
 rows suite by suite — the SAME fifty windows as linear-ceiling's `data/e8m` file, which `--assert-equal` checks id for id;
 writes the .npy and a manifest sidecar; needs `tokenizers`, imports only `lag_ladder.rng`). `own_run.py` (§14: the GRPO trajectory with its save hook;
-run with the trainer's interpreter, imports nothing from here or the instrument). `task_swap.py` (§15, the (C) tool:
+`--prompt-format {chat,plain}` on both commands from §14.5 — `chat` fails loudly on a template-less tokenizer, `plain` renders the registered
+string and keeps the tokenizer's special tokens as TRL 1.15.0 does for string prompts; the format, prompt token counts, peak CUDA memory
+and seconds per step go to `run_config.json` / the spans sidecar; run with the trainer's interpreter, imports nothing from here or the instrument). `task_swap.py` (§15, the (C) tool:
 `equivalence` | `cells` | `prepare`; builds prompt caches live, rounds them through float16 and injects them through
 `score_continuation.py`'s functions; greedy generation per arm; one `task-record-v2` per prompt and arm, keeping the
 decoded completion text and the first-`####` answer beside the registered last-`####` answer; run with the instrument's
 interpreter). Built 2026-10-15, registered by 0025 after two probes: `config/ownrun_task.toml` pins the GSM8K test
 prompts file, floor 1%, positive controls at 0.5 flips, dump equivalence at an absolute 2⁻⁵ (0026; the relative
 gap and the share of differing elements descriptive).
-`config/` — `seal.toml`, `pilot.toml`, `distance.toml`, `reader.toml`, `ownrun.toml` (0017, as run), `ownrun_controls.toml` (0020; `per_pair` controls), `ownrun_far.toml` (0022; `far_pair` + `far_min`), `ownrun_task.toml` (0025; §15, the (C) arms and controls), `ownrun_seed2.toml` (0028; §14.3, the second trainer seed: `per_pair`, `far_pair`, `evaluable_under_far`), `ownrun_agentic.toml` (0030; the fourth text `agentic` on the seed-1 readers: six per-rung rungs on the pair `qwen2.5-1.5b-mlperf`, every row held out, the token file linear-ceiling's `data/e8m` draw id for id). `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
+`config/` — `seal.toml`, `pilot.toml`, `distance.toml`, `reader.toml`, `ownrun.toml` (0017, as run), `ownrun_controls.toml` (0020; `per_pair` controls), `ownrun_far.toml` (0022; `far_pair` + `far_min`), `ownrun_task.toml` (0025; §15, the (C) arms and controls), `ownrun_seed2.toml` (0028; §14.3, the second trainer seed: `per_pair`, `far_pair`, `evaluable_under_far`), `ownrun_agentic.toml` (0030; the fourth text `agentic` on the seed-1 readers: six per-rung rungs on the pair `qwen2.5-1.5b-mlperf`, every row held out, the token file linear-ceiling's `data/e8m` draw id for id), `ownrun_llama.toml` (§14.5, UNREGISTERED: 0028's layout on the pair `llama3.2-3b-to-llama3.1-8b` plus the rollout pair `llama3.2-3b-ownrun-rollout` with its hashes `*_PENDING`; a `[trainer]` table the pod script and the entry read — `prompt_format = "plain"`, the model revision, the pins). `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
 `mappers/` — seal artifact roots, gitignored past their placeholders. `docs/` — the design doc.
 
 ## State
@@ -166,4 +171,7 @@ within 3× of seed 1 per lag and ≥ 1e-3 at g = 1, (iii) rollout ≥ 1e3× held
 summarizer reads all four. Halting: the saved step-0 weights must hash to seed 1's. **0029 reads it**: step-0 digest equal
 to seed 1's, no halt, all twelve control units passed (none carried by far), all five clauses HELD — distances within 1.3%
 of seed 1's, held-out medians 0.62–0.91 of 0018's at equal lag, rollout medians 0.80–1.05, slopes 2.13 / 2.05, rollout
-over held-out 2.0e4×–5.1e4×. Hub `ownrun-seed2/` (20,527 files). 128-step closed; (C) on seed 2 deferred.
+over held-out 2.0e4×–5.1e4×. Hub `ownrun-seed2/` (20,527 files). 128-step closed; (C) on seed 2 deferred. **0030 registers
+the fourth text `agentic`** on seed 1's readers (`config/ownrun_agentic.toml`, seal `ownrun-agentic`; not yet run). **§14.5 is
+ruled, nothing registered yet**: the own run's recipe on Llama-3.2-3B (`config/ownrun_llama.toml`, UNREGISTERED, rollout hashes
+pending) and then SmolLM3-3B-Base (after a kvt pair and a re-pin entry); the trainer and the two new summarizer readouts landed ahead.

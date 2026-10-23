@@ -696,6 +696,115 @@ ratios against seed 1 and seed 2, the scrambled medians, the per-window join. Ha
 the backup manifest; the six re-derived distance files must equal 0018's `rel_delta_all` within 1e-9 relative
 (`assert_distance_pins`, from the seal's `distance_must_equal`); a floor over 1e-4 halts the reader run (0014).
 
+### 14.5 Two more families: Llama-3.2-3B and SmolLM3-3B-Base under the own run's recipe (R-F1–R-F10 ruled 2026-10-23; registration pending)
+
+**Why.** Every reading in §14 is one checkpoint, Qwen2.5-1.5B (0017–0029): the rollout-over-held-out gap of 0024's statement
+of record (1.3e4× to 2.5e4× on corpus and 2.5e4× to 4.5e4× on on-path on seed 1, 0018; 2.0e4× to 5.1e4× on seed 2, 0029) and
+the quadratic law on held-out text (slopes 2.26 / 2.19 on seed 1, 2.13 / 2.05 on seed 2) have no second family. linear-ceiling's
+families of record are Qwen3 0.6B→1.7B, Llama-3.2-3B→Llama-3.1-8B and SmolLM3-3B; two of those three are dense 3B bases this
+instrument already reads or can read. The sentence to earn: neither reading is a property of one Qwen checkpoint. Not earned
+here: the size confound against Qwen2.5-1.5B (both new families are 3B; stated, not fixed).
+
+**Order, and why the tree decided it (R-F1).** `scripts.dump_kv` takes `--pair` from the instrument's `PAIRS` and runs
+`check_matched_kv` between the pair's source and target before every dump (kvt/pairs.py 118–127, scripts/dump_kv.py 89 at
+`5d4aa4a`). The only non-Qwen pair at the pin is `llama3.2-3b-to-llama3.1-8b` (source `meta-llama/Llama-3.2-3B`, n_kv 8, d_h
+128), so a Llama-3.2-3B trajectory dumps through the pinned instrument with no instrument change and no re-pin entry, and its
+held-out token file already exists under the instrument's rule (`data/tokens/llama3.2-3b-to-llama3.1-8b_n50_len1024_seed0.npy`,
+sha256 `2a79dbe4…`, FineWeb-Edu, 50 × 1024, seed 0; rows 40–49 held out as 0017). SmolLM3-3B-Base has no pair: it needs one
+`Pair` in kvt/pairs.py (the operator's repository, by PR), its own token file from `prepare_tokens.py`, and a re-pin entry here
+moving `upstream_sha`; so it is second. Llama-3.2-1B (n_kv 8, d_h 64) has no pair either and does not serve the sentence; dropped.
+The Llama pair's target is gated (`meta-llama/Llama-3.1-8B`) and `dump_kv` fetches its config before every dump; the pod's
+token carries that access (R-F9: the account dumped the 8B for linear-ceiling's 0039–0053; the sitting's first dump exercises
+the fetch), so there is no identity pair for Llama.
+
+**The one recipe departure (R-F2).** 0017's recipe is otherwise unchanged (R-F3: TRL GRPO, lr 1e-6, β 0, 16 prompts × 8
+completions, T 1.0, 256-token completions, fp32 master weights, gradient checkpointing, no vLLM, trainer seed 0, 32 steps, keep
+{0, 1, 2, 4, 8, 16, 32}, dumps every step, GSM8K train, exact match + 0.2 format; pins as 0029's sitting: torch 2.14.1+cu130,
+transformers 5.20.2, TRL 1.15.0). Both bases ship NO chat template (Llama-3.2-3B `tokenizer_config.json` at `13afe5124825`;
+SmolLM3-3B-Base at `d78a42f7`), and `tools/own_run.py` renders prompts through `apply_chat_template`. Template-less bases take a
+plain-text prompt, `--prompt-format plain` on both commands and `[trainer] prompt_format = "plain"` in the config:
+
+```
+{SYSTEM_LINE}\n\nQuestion: {question}\nAnswer:
+```
+
+the same system line, the same reward parsing (`#### <number>`). Under `plain` the tokenizer's special tokens stay on (Llama
+prepends `<|begin_of_text|>`): TRL 1.15.0 tokenizes a string prompt with `processing_class(text=prompts)` and the default
+`add_special_tokens` (grpo_trainer.py, `_tokenize_prompts`, line 1716), so the rollout prefix is sampled under the tokens the
+trainer sees. Under `chat`, a tokenizer without a template fails loudly with the model id. The Qwen cells are NOT re-run under
+the plain format; every family comparison crosses a prompt-format change and the entry says so, with the rollout prompts' token
+counts beside 0017's 75–117 (`spans.json` and `run_config.json` carry `prompt_format` and `prompt_token_counts`).
+
+**Cells, texts, controls (R-F4).** 0028's layout, one config per family (`config/ownrun_llama.toml`, later
+`config/ownrun_smollm3.toml`): writer step 0, reader step g ∈ {1, 2, 4, 8, 16, 32}; texts corpus (the pair's own windows, rows
+40–49), on-path (greedy by the reader), rollout (the same ten GSM8K indices — `select_prompt_indices(seed 0)` is model-independent,
+so {123, 306, 562, 1309, 2014, 2298, 3816, 4754, 6077, 6349} as 0017 — one step-0 sample each at T 1.0, ≥ 64 tokens, excluded from
+the batches); controls per (reader, pair): float16 floor ≤ 1e-4, identity ≤ 1e-5, scrambled ≥ 0.1, far ≥ 0.1 on the rollout pair
+with `evaluable_under_far = true`. Twelve rungs `ownrun-llama-lag-<g>` / `ownrun-llama-rollout-lag-<g>`; 660 jobs, the planner's
+count. `agentic` is not registered on these families (its windows would need re-rendering under each tokenizer).
+
+**The step-size prediction, stated as one.** Whole-vector RMS of Llama-3.2-3B's released weights is 2.003e-2 (254 tensors,
+3,212,749,824 parameters, bf16 shards of `13afe5124825`, recomputed 2026-10-23), so an Adam step at lr 1e-6 is expected near
+lr / RMS ≈ 5.0e-5 relative per step; the same estimate gave Qwen2.5-1.5B 2.4e-5 (RMS 4.2e-2) against 2.29e-5 measured (0018).
+If the trajectory keeps Qwen's shape (step 32 at 4.6× step 1), Llama saturates near 2.2e-4, INSIDE 0015's backbone range
+[1e-4, 1e-1], from about step 4 — so seal clause (iv) below would have several rungs where 0017's had one (lag 32 at 1.049e-4).
+A prediction; the smoke reads steps 1 and 2 before the run.
+
+**Seal (R-F5), pre-fit, 0017/0028's forms aimed across families; the summarizer reads every clause.** (i) held-out HOLDS_B at
+every lag on both held-out texts, every rung above 2× its reader's floor, and the slope of log median (B1) on log distance over
+the six held-out rungs in [1.5, 2.5], both texts (`i_heldout_holds_at_every_lag`, `i_backbone_quadratic`); (ii) rollout median
+(B1) ≥ 1e-3 at g = 1 (`ii_rollout_lost_at_lag_1`, the `ii-lost` readout: 0017's sentence as a clause of its own, since 0028's
+replication clause needs a seed-1 reference a new family lacks) and ≥ 1e3× the same reader's held-out median at every lag
+(`iii_rollout_over_heldout`); (iii) every (reader, pair) unit passes its controls or is EVALUABLE under far as 0028 pre-committed
+(`iv_controls_as_0020`); (iv) [Llama; SmolLM3 only where distance allows] at every held-out lag rung whose distance lies inside
+[1e-4, 1e-1], (B1) ≥ 10× 0015's OLMo backbone median at the nearest noise rung by log distance, both texts — 0017's clause (iii),
+which fell on its one rung by a factor 1.27 on on-path (0018, read by hand), now read by the summarizer's `iii-excess` readout
+from the seal's machine-readable form (`against` 0015's `summary.json` pinned by `against_sha256` `5d761594…`, `backbone_pair`
+`olmo2-1b-rlvr1`, `distance_range`, `at_least_factor`; rungs outside the range listed and not read; the test reproduces 0018's
+11.1 / 7.88). Descriptive, not sealed: per-lag ratios to 0018 and 0029 at matched lag and distance; the per-step distance curve
+against the 5.0e-5 prediction; the reward and entropy trajectories; the prompt-format token counts. Comparisons to Qwen are
+descriptive (R-F5).
+
+**Halting (R-F6 as ruled 2026-10-23: no separate smoke pod).** The two-step smoke is the first stage of the registered sitting,
+as 0017 ran it: the step-0 safetensors the trainer saves must equal the Hub snapshot's weights (`tools/weight_distance.py`
+against the snapshot: `rel_delta_all` 0 with all tensors compared — bf16 → fp32 is exact), peak memory and seconds per step are
+logged, OOM aborts the sitting (H200 on a second attempt), otherwise the run proceeds and its step-0 digest must equal the
+smoke's; a floor over 1e-4 halts the reader run (0014); a step-1 distance under 1e-6 stops the sitting.
+
+**Where it runs (R-F7).** One sitting per family under the GPU protocol on an A100-SXM4-80GB, watchdog `--sitting-max 25
+--kill 30` with the TTL set to the expected wall plus one hour, explicit; the pod script pushes the results tar and manifest to
+the private dataset as its last step and the watchdog closes the pod; the morning pull comes from the Hub verified against the
+manifest. Costs ASSUMED until the smoke times a step (0017's A100 sitting ≈ 4 h; a 3B model's dumps are about twice the work).
+Backups under `ownrun-llama3.2-3b/` and `ownrun-smollm3-3b/` with manifests (R-C7); Llama 3.2 Community License: fine-tuned
+weights stay private with the license file beside them.
+
+**The SmolLM3 path, in order.** (1) kvt pair `smollm3-3b-base` (R-F10), the identity pair: R-F8 was decided by a run of
+`assert_shared_tokenizer` on 2026-10-23 (transformers 5.15.1), which refused the post-trained SmolLM3-3B as a target —
+"tokenizers differ: 128256 vs 128256 entries or different mapping" — as the two `tokenizer.json` files predicted (`model.vocab`
+equal, `added_tokens` 128017/128018 differ); the source side stays unpinned because `dump_kv` refuses `--local-path` on a side
+the pair pins (dump_kv.py 77–80) and the own run dumps every checkpoint by `--local-path`; (2) `prepare_tokens.py --pair
+smollm3-3b-base` → its own seed-0 windows (SmolLM3's tokenizer ≠ Llama's); (3) the kvt PR; (4) a re-pin entry moving `upstream_sha`
+(the four (A) gate paths are untouched by a pairs.py change); (5) registration. `kv_shape` reads `rope_theta` from the config
+(SmolLM3-Base carries 5e6; `head_dim` null → 2048 / 16 = 128, n_kv 4). Rope-free layers (every fourth, `no_rope_layer_interval
+= 4`): `dump_kv` records K_rope and V and `score_continuation.py` rebuilds the cache from them, layer-generic, so (B) is
+unaffected; `K_stripped` (statistic (A), closed by 0010) is wrong on those layers and the entry says so.
+
+**What §14.5 cannot say.** Anything about size (3B vs 1.5B is confounded with family); anything about the chat format (the
+Qwen cells ran under a template, these under plain text); anything about `agentic` on these families.
+
+| | ruled 2026-10-23 |
+|---|---|
+| R-F1 | order: Llama-3.2-3B first (no instrument change), SmolLM3-3B-Base second (kvt pair + re-pin); Llama-3.2-1B dropped |
+| R-F2 | plain prompt format for template-less bases, recorded in the config; Qwen not re-run; disclosed in the entry |
+| R-F3 | recipe otherwise 0017's, pins as 0029's sitting (TRL 1.15.0, transformers 5.20.2, torch 2.14.1+cu130) |
+| R-F4 | texts corpus + on-path + rollout, same ten prompt indices; `agentic` deferred |
+| R-F5 | seal clauses (i)–(iv) above, every clause read by the summarizer; (iv) Llama only; comparisons to Qwen descriptive |
+| R-F6 | halting: step-0 weights equal to the snapshot, the two-step smoke as the sitting's first stage (memory probe), floor, step-1 distance |
+| R-F7 | A100-80GB, caps $25/$30, TTL = expected wall + 1 h, the pod uploads last and the watchdog closes; H200 only on OOM |
+| R-F8 | SmolLM3 pair target: decided by the check's run — REFUSED, so the identity pair |
+| R-F9 | the pod's token carries Llama-3.1-8B access; the first dump exercises the fetch; no identity pair for Llama |
+| R-F10 | the SmolLM3 pair is named `smollm3-3b-base` |
+
 ## 15. Statistic (C), "does the task notice", on the own run (designed 2026-10-15, revised after review the same day and after two probes; built 2026-10-15; registered by 0025)
 
 **Why.** (B) at the operating lag on the trainer's own prompts: the reader notices from the first optimizer step (0018),
@@ -989,3 +1098,28 @@ transformers 4.57.1, flash-linear-attention 0.4.0 (the only release whose `fused
 the model calls; the card's "≥ 0.4.0" is wrong), the prebuilt cu12torch2.8 flash-attn 2.8.3.post2 wheel; the H200 NVL was
 out of stock, the SXM ran at $5.29/h. **Any floor rule other than 1e-4 is a new registration**, written before any run,
 with the arm readings above disclosed as its prior; nothing in `results/`, nothing in the ledger.
+
+**Float32 reference (2026-10-23, two H200 SXM under a reference cap of $25; records in the private evidence folder
+`2026-10-23-pod-kimi-f32/`, tar sha256 8aa71ceb…e2de; every number below recomputed at home from its `report.json` and
+`score_hybrid.py gaps`).** The question the probe left open is answered: the 1e-3 is bf16 arithmetic ambiguity across
+computation orders, not a divergence compounded through the recurrent state. The same ONE-PASS cell on Base's first window
+in float32 with IEEE dot precision and sdpa attention reads median (B1) 7.57e-12 at cached row 767, 6.48e-12 at 768 and
+5.99e-12 at 64, and every pairwise split-point gap at positions 769–1023 collapses together, from 1.2e-2–1.6e-2 to
+1.5e-6–1.8e-6 median |Δ logprob| (the reference brief's P1 confirmed; P2, that the one-pass gap stays, and P3, that
+nothing collapses, falsified). bf16 with sdpa reproduces the bf16 floor (7.59e-4 / 7.80e-4 / 8.86e-4 at the same three
+rows) and the bf16 gap pattern, so the attention kernel is not the driver; and the bf16 one-pass logprob vector itself
+sits 1.61e-2 median |Δ logprob| from the float32 one-pass (the record's FA2 one-pass 1.58e-2 from it, FA2 from sdpa
+1.23e-2), the size of the split-point gaps — no bf16 computation order is a reference, each is one more order. The
+second window's float32 profile rises over the first three quarters (2.9e-13, 3.7e-12, 9.6e-12) and falls in the fourth
+(8.3e-12), eight orders below the bf16 climb the probe read on the same window, so the climb is that window's
+computation-order sensitivity and not a property of bf16; 64-token quarter medians are noisy and the fourth quarter is
+evidence of nothing. A bf16 replicate of the record's cell under the reference's two-card placement read 7.38e-4 against
+the record's 7.97e-4 — the same magnitude, not the same bits; the placement difference is inferred from peak memory
+(91.7 GB on the reporting device, half the float32 weights), not logged. R-K2's verdict stands as the probe's result of
+record. What follows is a rule, not a run: a floor-relative evaluability rule — a (model, window) unit is evaluable when
+its two bf16 one-pass floors, at cached rows 767 and 768, lie within a factor of two of each other; an arm reads only
+above 2× its unit's floor (0020/0030's convention); HOLDS_B and DEGRADES_B are not read on bf16 hybrids — with blind
+order clauses on fresh windows (FULL-STALE ≥ max(MLA-STALE, KDA-STALE); KDA-STALE ≥ MLA-STALE; FULL / (MLA + KDA) in
+[0.5, 1.5]) and the four bf16 arm cells above disclosed as the prior. It is drafted as its own registration entry with its
+seal and `config/kimi_hybrid.toml`, and takes its number after the §14.5 families (post-deadline). float32 is a
+reference for this family, never a run dtype: 192 GB of weights.
