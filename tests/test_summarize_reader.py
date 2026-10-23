@@ -476,26 +476,46 @@ def test_lost_at_lag_1_clause_reads_the_rollout_median_at_the_first_lag(tmp_path
 
 def _excess_seal(root, rungs, against_sha=None, against="results/reader/summary.json"):
     from lag_ladder.hashing import sha256_file_bytes
-    sha = against_sha or sha256_file_bytes(REPO_ROOT / "results" / "reader" / "summary.json")
+    sha = against_sha or sha256_file_bytes(_REF_0015)
     _seal(root, {"iii_rl_excess_over_0015_backbone": {
         "against": against, "against_sha256": sha, "backbone_pair": "olmo2-1b-rlvr1",
         "distance_range": [1e-4, 1e-1], "at_least_factor": 10.0, "rungs": rungs, "texts": ["corpus", "on-path"]}})
 
 
+_REF_0015 = REPO_ROOT / "results" / "reader" / "summary.json"      # 0015's record: gitignored, present at home only
+_REF_0018 = REPO_ROOT / "results" / "ownrun" / "summary.json"
+
+
 def _copy_0015_reference(root):
-    ref = REPO_ROOT / "results" / "reader" / "summary.json"
     (root / "results" / "reader").mkdir(parents=True, exist_ok=True)
-    (root / "results" / "reader" / "summary.json").write_bytes(ref.read_bytes())
+    (root / "results" / "reader" / "summary.json").write_bytes(_REF_0015.read_bytes())
 
 
+def _write_synthetic_reference(root):
+    """A stand-in for 0015's summary with the fields the readout reads: two OLMo noise rungs and a Qwen one."""
+    def rung(label, pair, x, c, o):
+        return {"label": label, "pair": pair, "kind": "noise", "withheld": False, "rel_delta_all": x,
+                "texts": {"corpus": {"b1": {"median_kl": c}}, "on-path": {"b1": {"median_kl": o}}}}
+    ref = {"rungs": [rung("noise-0.0001", "olmo2-1b-rlvr1", 1e-4, 6e-7, 4.5e-7),
+                     rung("noise-0.001", "olmo2-1b-rlvr1", 1e-3, 5.3e-5, 4.4e-5),
+                     rung("qwen-noise-0.01", "qwen2.5-1.5b-to-instruct", 1e-2, 3.3e-4, 2.1e-4)]}
+    (root / "results" / "reader").mkdir(parents=True, exist_ok=True)
+    f = root / "results" / "reader" / "summary.json"
+    f.write_text(json.dumps(ref), encoding="utf-8")
+    return f
+
+
+@pytest.mark.skipif(not (_REF_0015.exists() and _REF_0018.exists()),
+                    reason="0015's and 0018's summary.json are gitignored records, present at home only")
 def test_backbone_excess_clause_reproduces_0018s_reading_from_0015s_summary(tmp_path):
     """0017's clause (iii), read by hand in 0018 as 11.1 (corpus) / 7.88 (on-path) at lag 32 against noise-0.0001:
     the readout recomputes it from 0015's summary.json (sha 5d761594...) and 0018's own medians, and FALSIFIES on
-    on-path as 0018 did; lag 16 at 9.55e-5 lies outside [1e-4, 1e-1] and is listed, not read."""
+    on-path as 0018 did; lag 16 at 9.55e-5 lies outside [1e-4, 1e-1] and is listed, not read. Runs where the two
+    records are on disk (home); the synthetic test below covers the mechanics everywhere."""
     from lag_ladder.hashing import sha256_file_bytes
     from lag_ladder.summarize_reader import seal_readout
-    assert sha256_file_bytes(REPO_ROOT / "results" / "reader" / "summary.json").startswith("5d76159485892f1d")
-    s18 = json.loads((REPO_ROOT / "results" / "ownrun" / "summary.json").read_text(encoding="utf-8"))
+    assert sha256_file_bytes(_REF_0015).startswith("5d76159485892f1d")
+    s18 = json.loads(_REF_0018.read_text(encoding="utf-8"))
     by = {e["label"]: e for e in s18["rungs"]}
     rungs = [_rung(k, by[k]["rel_delta_all"], **{t: by[k]["texts"][t]["b1"]["median_kl"] for t in ("corpus", "on-path")})
              for k in ("ownrun-lag-16", "ownrun-lag-32")]
@@ -510,16 +530,29 @@ def test_backbone_excess_clause_reproduces_0018s_reading_from_0015s_summary(tmp_
     assert c["verdict"] == "FALSIFIED"
 
 
-def test_backbone_excess_clause_refuses_a_moved_reference_and_reads_unread_with_no_rung_in_range(tmp_path):
+def test_backbone_excess_clause_on_a_synthetic_reference_reads_nearest_rung_refuses_a_moved_file_and_unread_out_of_range(tmp_path):
+    """Self-contained (no gitignored record): the nearest OLMo noise rung by log distance (the Qwen noise rung is not
+    of the backbone pair), the ratio and verdict per text, UNREAD with every rung outside the range, and the refusal
+    when the reference's bytes differ from the sealed sha256."""
+    from lag_ladder.hashing import sha256_file_bytes
     from lag_ladder.summarize_reader import seal_readout
-    summary = {**_BASE, "rungs": [_rung("lag-1", 2e-5, corpus=2e-7, **{"on-path": 1e-7})]}
-    _copy_0015_reference(tmp_path)
-    _excess_seal(tmp_path, ["lag-1"])
+    f = _write_synthetic_reference(tmp_path)
+    sha = sha256_file_bytes(f)
+    # 2e-4 is nearer noise-0.0001 than noise-0.001 in log distance; 6.6e-6 / 6e-7 = 11, 3.5e-6 / 4.5e-7 = 7.8 < 10
+    summary = {**_BASE, "rungs": [_rung("lag-32", 2e-4, corpus=6.6e-6, **{"on-path": 3.5e-6})]}
+    _excess_seal(tmp_path, ["lag-32"], against_sha=sha)
     c = seal_readout(summary, tmp_path, "x")["clauses"]["iii-excess"]
+    assert c["backbone_rungs"] == ["noise-0.0001", "noise-0.001"]
+    r = c["rungs"]["lag-32"]
+    assert r["nearest_backbone"] == "noise-0.0001" and r["ratio"]["corpus"] == pytest.approx(11.0)
+    assert r["ratio"]["on-path"] == pytest.approx(3.5e-6 / 4.5e-7) and c["verdict"] == "FALSIFIED"
+    out = {**_BASE, "rungs": [_rung("lag-1", 2e-5, corpus=2e-7, **{"on-path": 1e-7})]}
+    _excess_seal(tmp_path, ["lag-1"], against_sha=sha)
+    c = seal_readout(out, tmp_path, "x")["clauses"]["iii-excess"]
     assert c["verdict"] == "UNREAD" and c["rungs"] == {} and list(c["outside_range"]) == ["lag-1"]
     _excess_seal(tmp_path, ["lag-1"], against_sha="0" * 64)
     with pytest.raises(ValueError, match="sha256"):
-        seal_readout(summary, tmp_path, "x")
+        seal_readout(out, tmp_path, "x")
 
 
 def test_backbone_excess_readout_leaves_0017s_prose_only_seal_alone(tmp_path):
