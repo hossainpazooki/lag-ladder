@@ -92,3 +92,56 @@ def test_labels_by_step_reads_the_config_rungs():
 def test_dump_command_takes_the_instrument_pair():
     cmd = own_run.dump_command(Path("py"), Path("kvt"), Path("ckpt"), Path("s.npy"), Path("o"), kvt_pair="qwen3-0.6b-to-1.7b")
     assert cmd[cmd.index("--pair") + 1] == "qwen3-0.6b-to-1.7b"
+
+
+# --- §14.5: the prompt format (chat for templated models, plain for template-less bases) --------------------------
+
+class _Tok:
+    """A tokenizer stand-in: `chat_template` present or not, and a recognisable rendering."""
+    def __init__(self, template):
+        self.chat_template = template
+
+    def apply_chat_template(self, msgs, tokenize=False, add_generation_prompt=True):
+        assert tokenize is False and add_generation_prompt is True
+        return "CHAT:" + msgs[-1]["content"]
+
+
+def test_render_prompt_plain_is_the_registered_string_and_keeps_special_tokens():
+    text, special = own_run.render_prompt(_Tok(None), "What is 2+2?", "plain")
+    assert text == f"{own_run.SYSTEM_LINE}\n\nQuestion: What is 2+2?\nAnswer:"
+    # TRL 1.15.0 tokenizes a string prompt with processing_class(text=prompts), add_special_tokens left at its
+    # default (grpo_trainer.py `_tokenize_prompts`, line 1716), so the rollout prefix must carry the same BOS
+    assert special is True
+
+
+def test_render_prompt_chat_uses_the_template_and_fails_loudly_without_one():
+    text, special = own_run.render_prompt(_Tok("{{ messages }}"), "What is 2+2?", "chat")
+    assert text == "CHAT:What is 2+2?" and special is False
+    with pytest.raises(SystemExit, match="meta-llama/Llama-3.2-3B@13afe.* has no chat template"):
+        own_run.render_prompt(_Tok(None), "q", "chat", model="meta-llama/Llama-3.2-3B@13afe5124825")
+    with pytest.raises(ValueError, match="prompt format"):
+        own_run.render_prompt(_Tok(None), "q", "markdown")
+
+
+def test_train_prompt_is_role_dicts_under_chat_and_the_plain_string_under_plain():
+    assert own_run.train_prompt("q", "chat") == [{"role": "system", "content": own_run.SYSTEM_LINE},
+                                                 {"role": "user", "content": "q"}]
+    assert own_run.train_prompt("q", "plain") == f"{own_run.SYSTEM_LINE}\n\nQuestion: q\nAnswer:"
+
+
+def test_count_stats_summarises_prompt_token_counts():
+    assert own_run.count_stats([5, 3, 4]) == {"n": 3, "min": 3, "median": 4, "max": 5}
+    assert own_run.count_stats([]) == {"n": 0, "min": None, "median": None, "max": None}
+
+
+def test_both_commands_take_prompt_format_with_chat_as_the_default():
+    ap = own_run.build_parser()
+    common_s = ["sample-rollouts", "--model", "m", "--tokens-out", "t", "--spans-out", "s", "--excluded-out", "e"]
+    common_t = ["train", "--model", "m", "--lag-ladder", "l", "--kvt", "k", "--kvt-python", "p", "--heldout-tokens", "h",
+                "--rollout-tokens", "r", "--excluded-indices", "x", "--config", "c", "--out", "o"]
+    assert ap.parse_args(common_s).prompt_format == "chat"
+    assert ap.parse_args(common_s + ["--prompt-format", "plain"]).prompt_format == "plain"
+    assert ap.parse_args(common_t).prompt_format == "chat"
+    assert ap.parse_args(common_t + ["--prompt-format", "plain"]).prompt_format == "plain"
+    with pytest.raises(SystemExit):
+        ap.parse_args(common_t + ["--prompt-format", "markdown"])

@@ -222,11 +222,49 @@ class StepArtifacts:
 # --- commands ---------------------------------------------------------------------------------------------------------
 
 SYSTEM_LINE = "Solve the problem. Reason step by step, then give the final answer on its own line as '#### <number>'."
+PROMPT_FORMATS = ("chat", "plain")   # §14.5: `chat` renders the model's template (0017–0029, Qwen); `plain` is for
+                                     # template-less bases (Llama-3.2-3B, SmolLM3-3B-Base): the same system line as text
 
 
-def _chat(tokenizer, question: str):
-    msgs = [{"role": "system", "content": SYSTEM_LINE}, {"role": "user", "content": question}]
-    return tokenizer.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
+def _messages(question: str) -> list[dict]:
+    return [{"role": "system", "content": SYSTEM_LINE}, {"role": "user", "content": question}]
+
+
+def plain_prompt(question: str) -> str:
+    """The registered plain rendering (design §14.5, R-F2): system line, blank line, `Question:` / `Answer:`."""
+    return f"{SYSTEM_LINE}\n\nQuestion: {question}\nAnswer:"
+
+
+def render_prompt(tokenizer, question: str, fmt: str, model: str = "") -> tuple[str, bool]:
+    """The prompt text the step-0 policy samples from, and whether the tokenizer adds its special tokens to it.
+    `chat`: the tokenizer's own template with the generation prompt, special tokens off (the template carries them);
+    a tokenizer with no template fails loudly here, naming the model, instead of inside transformers. `plain`: the
+    registered string, special tokens ON — TRL 1.15.0 tokenizes a string prompt with `processing_class(text=prompts)`
+    and the default add_special_tokens (grpo_trainer.py `_tokenize_prompts`, line 1716), so the trainer's prompt
+    carries the BOS the tokenizer adds and the rollout prefix must carry the same."""
+    if fmt not in PROMPT_FORMATS:
+        raise ValueError(f"prompt format {fmt!r} is not one of {PROMPT_FORMATS}")
+    if fmt == "plain":
+        return plain_prompt(question), True
+    if getattr(tokenizer, "chat_template", None) is None:
+        raise SystemExit(f"{model or 'the tokenizer'} has no chat template; a template-less base runs with "
+                         "--prompt-format plain (design §14.5)")
+    return tokenizer.apply_chat_template(_messages(question), tokenize=False, add_generation_prompt=True), False
+
+
+def train_prompt(question: str, fmt: str):
+    """The `prompt` field the trainer's dataset carries: role dicts under `chat` (TRL applies the template), the plain
+    string under `plain` (TRL tokenizes it as text)."""
+    if fmt not in PROMPT_FORMATS:
+        raise ValueError(f"prompt format {fmt!r} is not one of {PROMPT_FORMATS}")
+    return _messages(question) if fmt == "chat" else plain_prompt(question)
+
+
+def count_stats(counts: list[int]) -> dict:
+    """n / min / median / max of prompt token counts, for the record."""
+    if not counts:
+        return {"n": 0, "min": None, "median": None, "max": None}
+    return {"n": len(counts), "min": int(min(counts)), "median": int(np.median(counts)), "max": int(max(counts))}
 
 
 def cmd_sample_rollouts(a) -> int:
@@ -242,8 +280,8 @@ def cmd_sample_rollouts(a) -> int:
     torch.manual_seed(a.seed)
     rows, meta = [], []
     for i in idx:
-        prompt = _chat(tok, ds[i]["question"])
-        enc = tok(prompt, return_tensors="pt", add_special_tokens=False).to(a.device)
+        prompt, special = render_prompt(tok, ds[i]["question"], a.prompt_format, a.model)
+        enc = tok(prompt, return_tensors="pt", add_special_tokens=special).to(a.device)
         pl = int(enc["input_ids"].shape[1])
         for attempt in range(5):
             out = model.generate(**enc, do_sample=True, temperature=a.temperature, top_p=1.0, top_k=0,
@@ -264,7 +302,8 @@ def cmd_sample_rollouts(a) -> int:
     tokens_out.parent.mkdir(parents=True, exist_ok=True); spans_out.parent.mkdir(parents=True, exist_ok=True)
     np.save(tokens_out, arr)
     spans.update({"model": a.model, "seed": a.seed, "temperature": a.temperature, "pad_id": int(pad_id),
-                  "system_line": SYSTEM_LINE, "prompts": meta})
+                  "system_line": SYSTEM_LINE, "prompt_format": a.prompt_format,
+                  "prompt_token_counts": count_stats([m["prefix_len"] for m in meta]), "prompts": meta})
     spans_out.write_text(json.dumps(spans, indent=1), encoding="utf-8")
     Path(a.excluded_out).write_text(json.dumps(idx), encoding="utf-8")
     for f in (tokens_out, spans_out):
@@ -285,9 +324,16 @@ def cmd_train(a) -> int:
     excluded = set(json.loads(Path(a.excluded_indices).read_text(encoding="utf-8")))
     ds = load_dataset("openai/gsm8k", "main", split="train")
     ds = ds.select([i for i in range(len(ds)) if i not in excluded]).shuffle(seed=a.seed)
-    ds = ds.map(lambda ex: {"prompt": [{"role": "system", "content": SYSTEM_LINE},
-                                       {"role": "user", "content": ex["question"]}],
+    render_prompt(tok, "", a.prompt_format, a.model)   # the loud failure for a template-less tokenizer under chat
+    ds = ds.map(lambda ex: {"prompt": train_prompt(ex["question"], a.prompt_format),
                             "gold": gsm8k_gold(ex["answer"])}, remove_columns=["question", "answer"])
+    # the prompt token counts as TRL will tokenize them (template under chat, text with special tokens under plain)
+    if a.prompt_format == "chat":
+        prompt_tokens = [len(tok.apply_chat_template(p, tokenize=True, add_generation_prompt=True)) for p in ds["prompt"]]
+    else:
+        prompt_tokens = [len(ids) for ids in tok(ds["prompt"])["input_ids"]]
+    prompt_token_counts = count_stats(prompt_tokens)
+    print(f"PROMPT_FORMAT {a.prompt_format} prompt_token_counts {json.dumps(prompt_token_counts)}", flush=True)
 
     def _texts(completions):
         return [c[0]["content"] if isinstance(c, list) else str(c) for c in completions]
@@ -332,19 +378,35 @@ def cmd_train(a) -> int:
                      log_completions=False)
     trainer = GRPOTrainer(model=model, processing_class=tok, reward_funcs=[exact, fmt], args=cfg,
                           train_dataset=ds, callbacks=[DumpOnSave()])
-    trainer.train()
+
+    def peak_bytes():
+        return int(torch.cuda.max_memory_allocated()) if torch.cuda.is_available() else None
+
+    try:
+        result = trainer.train()
+    except torch.cuda.OutOfMemoryError:
+        # the smoke's job (§14.5 R-F6): name the peak before the sitting decides on a bigger card
+        print(f"TRAIN_OOM peak_cuda_mem_bytes {peak_bytes()}", flush=True)
+        raise
+    runtime = float(result.metrics.get("train_runtime", float("nan")))
+    stats = {"prompt_format": a.prompt_format, "prompt_token_counts": prompt_token_counts,
+             "peak_cuda_mem_bytes": peak_bytes(), "train_runtime_s": runtime,
+             "seconds_per_step": runtime / a.steps if a.steps else None}
     (out_dir / "trainer_log.json").write_text(json.dumps(trainer.state.log_history, indent=1), encoding="utf-8")
-    (out_dir / "run_config.json").write_text(json.dumps({**vars(a), "trl_config": cfg.to_dict()}, indent=1,
+    (out_dir / "run_config.json").write_text(json.dumps({**vars(a), **stats, "trl_config": cfg.to_dict()}, indent=1,
                                                         default=str), encoding="utf-8")
+    print(f"TRAIN_STATS {json.dumps(stats)}", flush=True)
     print("TRAIN_DONE")
     return 0
 
 
-def main(argv=None) -> int:
+def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("sample-rollouts")
     s.add_argument("--model", required=True, help="model_id@revision (the step-0 policy)")
+    s.add_argument("--prompt-format", choices=PROMPT_FORMATS, default="chat",
+                   help="chat: the tokenizer's template (0017); plain: the registered text for template-less bases (§14.5)")
     s.add_argument("--n", type=int, default=10); s.add_argument("--seed", type=int, default=0)
     s.add_argument("--temperature", type=float, default=1.0); s.add_argument("--max-new-tokens", type=int, default=256)
     s.add_argument("--row-len", type=int, default=ROW_LEN); s.add_argument("--device", default="cuda")
@@ -354,6 +416,8 @@ def main(argv=None) -> int:
     s.set_defaults(fn=cmd_sample_rollouts)
     t = sub.add_parser("train")
     t.add_argument("--model", required=True); t.add_argument("--steps", type=int, default=32)
+    t.add_argument("--prompt-format", choices=PROMPT_FORMATS, default="chat",
+                   help="must equal the config's [trainer] prompt_format and the one the rollouts were sampled under")
     t.add_argument("--keep", default=",".join(str(k) for k in DEFAULT_KEEP))
     t.add_argument("--lr", type=float, default=1e-6); t.add_argument("--beta", type=float, default=0.0)
     t.add_argument("--num-generations", type=int, default=8); t.add_argument("--prompts-per-step", type=int, default=16)
@@ -368,7 +432,11 @@ def main(argv=None) -> int:
     t.add_argument("--excluded-indices", required=True, help="excluded_train_indices.json from sample-rollouts")
     t.add_argument("--config", required=True, help="config/ownrun.toml: its local:step_<g> rungs name the distance files")
     t.add_argument("--out", required=True); t.set_defaults(fn=cmd_train)
-    a = ap.parse_args(argv)
+    return ap
+
+
+def main(argv=None) -> int:
+    a = build_parser().parse_args(argv)
     return a.fn(a)
 
 
