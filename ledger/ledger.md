@@ -1374,3 +1374,89 @@ Landed ahead of it as their own commits: `src/lag_ladder/summarize_reader.py` (t
 `assert_distance_pins`) with `tests/test_summarize_reader.py`; `tools/agentic_tokens.py` (seed 8, rows suite by suite, the
 row-by-row equality assert against linear-ceiling's file) with `tests/test_agentic_tokens.py` and the config's layout
 (`heldout = [0, 50]`, the seed-8 file).
+
+### 0031 — 2026-10-23 — The own run on a second family registered: statistic (B) at lags 1–32 on a GRPO trajectory of Llama-3.2-3B (design §14.5)
+
+prior-entries-sha256: 02b286a4dea84f08a4c8d87cde1e16f6ad545495e5b6849d1435e81223d4bf47
+
+**Registers** `config/ownrun_llama.toml`, now `registered_by = "0031"`, as design §14.5 defines after R-F1–R-F8 were ruled on
+2026-10-23: 0017's recipe on a second family. Policy `meta-llama/Llama-3.2-3B@13afe5124825b4f3751f836b40dafda64c1ed062`
+(base, bf16 release shards, 3,212,749,824 parameters); TRL 1.15.0 (`dae7b6ad…`), transformers 5.20.2, torch 2.14.1+cu130 as
+0029's sitting ran them; learning rate 1e-6, no reference-KL term, 16 prompts × 8 completions per step, temperature 1.0,
+256-token completions, fp32 master weights, gradient checkpointing, no vLLM, trainer seed 0, 32 optimizer steps, weights kept at
+{0, 1, 2, 4, 8, 16, 32}, both token sets dumped from every step through the pinned instrument `5d4aa4a` (pair
+`llama3.2-3b-to-llama3.1-8b`, `--which source --local-path`; float32 forward). Rule, bands and limits 0012's as amended by 0013
+and 0014; reader seed 0.
+
+**One departure from 0017, disclosed.** Llama-3.2-3B ships no chat template, so prompts are rendered plain —
+`{SYSTEM_LINE}\n\nQuestion: {question}\nAnswer:` with 0017's system line — under `[trainer] prompt_format = "plain"` in the
+config and `--prompt-format plain` on both `sample-rollouts` and `train`; the reward parsing is unchanged. The Qwen cells
+(0017–0029) ran under Qwen's template and are not re-run; every comparison to them crosses this change. Rollout prompt token
+counts under the plain format: 67–107 (median 78) (0017: 75–117).
+
+**Cells.** Writer cache at step 0, reader at step g ∈ {1, 2, 4, 8, 16, 32}. Held-out pair `llama3.2-3b-to-llama3.1-8b`: the
+instrument's own windows for this pair (`data/tokens/llama3.2-3b-to-llama3.1-8b_n50_len1024_seed0.npy`,
+`2a79dbe4c8b59f245d876426f2b930d36df8696c0dc9e91e9718ef220170af21`; FineWeb-Edu, 50 × 1024, seed 0), sequences 40–49, corpus
+and greedy on-path texts. Rollout pair `llama3.2-3b-ownrun-rollout`: GSM8K train prompts {123, 306, 562, 1309, 2014, 2298,
+3816, 4754, 6077, 6349} (`select_prompt_indices(seed 0)`, model-independent, so 0017's; excluded from the batches), one
+completion each sampled from the step-0 policy at temperature 1.0, ≥ 64 tokens — token file
+`llama3.2-3b-ownrun_rollout_n10_seed0.npy` `09407b03…`, spans `….spans.json` `14619581…`,
+`llama3.2-3b-ownrun_rollout_excluded.json` beside them (sampled on the Mac mini, CPU, torch 2.14.1, transformers 5.15.1, 2026-10-23); completion lengths and how many ran
+to the cap 81–256 tokens, 5 of ten at the 256-token cap. Controls per (reader,
+pair) as 0028: float16 floor ≤ 1e-4, identity ≤ 1e-5, scrambled ≥ 0.1; the rollout pair carries 0022's far control (`far_pair`
+the held-out pair, `far_min` 0.1) with `evaluable_under_far = true`. Twelve rungs `ownrun-llama-lag-<g>` and
+`ownrun-llama-rollout-lag-<g>`; 660 jobs, the planner's count.
+
+**The distance axis, and a prediction.** Rungs are placed by `results/distance/rungs/<label>/distance.json`, written by the
+trainer's save hook from `tools/weight_distance.py` against the saved step 0; this entry pins no distance it has not seen.
+Expected: the released weights' whole-vector RMS is 2.003e-2 (recomputed from the two shards), so lr / RMS puts one Adam step
+near 5.0e-5 relative (Qwen2.5-1.5B: 2.4e-5 expected, 2.29e-5 measured, 0018), and under Qwen's trajectory shape step 32 sits
+near 2.2e-4 — inside 0015's backbone range from about step 4. The two-step smoke (R-F6 as ruled 2026-10-23: the sitting's
+first stage, outputs discarded) reads the step-1 and step-2 distances, peak memory and seconds per step on the pod; the outcome
+entry records them.
+
+**Seal** (`ledger/predictions/ownrun-llama.json`, pre-fit, committed before any dump; the summarizer reads every clause — (i)
+under 0028's keys, (ii) under `ii_rollout_lost_at_lag_1` (the `ii-lost` readout, landed ahead of this entry with its test) and
+0028's `iii_rollout_over_heldout`, (iii) under `iv_controls_as_0020`, (iv) under `iii_rl_excess_over_0015_backbone` in
+machine-readable form (the `iii-excess` readout, landed ahead with a test that reproduces 0018's 11.1 / 7.88 from 0015's
+`summary.json` `5d761594…`). (i) Held-out text HOLDS_B (median (B1) ≤ 1e-3) at every lag on corpus and on-path, every
+rung above 2× its reader's floor (`i_heldout_holds_at_every_lag`), and the slope of log median (B1) on log distance over the six
+held-out lag rungs in [1.5, 2.5] on both texts (`i_backbone_quadratic`; Qwen 2.26 / 2.19 on seed 1, 0018, and 2.13 / 2.05 on seed 2, 0029). (ii) Rollout median
+(B1) ≥ 1e-3 at g = 1 — HOLDS_B lost at the first optimizer step on this family too (`ii_rollout_lost_at_lag_1`) — and at every
+lag ≥ 1e3× the same reader's median on corpus and on on-path text (`iii_rollout_over_heldout`; Qwen 1.3e4× to 5.1e4×).
+(iii) Every (reader, pair) unit passes its controls under 0014's limits or is EVALUABLE under far as pre-committed; no unit
+UNEVALUABLE; the readout names the units far carried (`iv_controls_as_0020`). (iv) At every lag rung whose distance lies inside
+0015's backbone range [1e-4, 1e-1], (B1) ≥ 10× the OLMo backbone's median at the nearest 0015 rung by log distance, both texts,
+read against 0015's `summary.json`, pinned by `against_sha256` `5d761594…`, `backbone_pair` `olmo2-1b-rlvr1`, rungs outside
+the range listed and not read, no rung inside UNREAD (`iii_rl_excess_over_0015_backbone`; on Qwen it fell on its one rung by
+1.27 on on-path, read by hand in 0018; here several rungs are expected). Descriptive, not sealed: per-lag ratios to 0018 and 0029
+at matched distance; the per-step distance curve against the 5.0e-5 prediction; the reward and entropy trajectories against
+0018's and 0029's; rollout over scrambled and over far per lag; the plain-format prompt token counts beside 0017's.
+
+**Halting and reading.** The step-0 safetensors the trainer saves must equal the snapshot's weights before the first optimizer
+step: `tools/weight_distance.py` against `meta-llama/Llama-3.2-3B@13afe5124825…` reads `rel_delta_all` 0 with all 254 tensors
+compared (bf16 → fp32 is exact), in the smoke and in the run, and the run's step-0 digest equals the smoke's; a different reading
+is an environment drift and the sitting stops before it bills the trajectory. The smoke is the sitting's first stage (no separate
+pod): two steps on two prompts per step, peak memory and seconds per step logged, OOM aborts the sitting, otherwise its outputs
+are deleted and the run starts. A step-1 distance under 1e-6 stops the sitting before the reader run (0017). A floor over 1e-4 halts the reader
+run (0014). A unit that misses scrambled and far is UNEVALUABLE and its rungs UNREAD in (ii) and (iv) at that lag. Before every
+dump the instrument fetches the pair's target config (`meta-llama/Llama-3.1-8B`, gated) for `check_matched_kv`; the pod's token
+carries that access (R-F9 as ruled: the account dumped the 8B for linear-ceiling's 0039–0053) and the smoke's first dump
+exercises the fetch.
+
+**Run.** One A100-SXM4-80GB sitting under the GPU protocol (H200 only if the smoke OOMs): setup, the smoke with its step-0
+check, the 32-step trajectory with the save hook, 330 dumps, 32 distances, 660 jobs, the pod-side summary, then — the pod's
+last step — the results and record tars with their manifest, the kept weights, every step's dumps and the token files to the
+private dataset under `ownrun-llama3.2-3b/` (R-C7; the Llama 3.2 Community License file beside the weights); the watchdog
+closes the pod at its TTL and the morning pull comes from the Hub, verified against the manifest. Caps `--sitting-max 25
+--kill 30`, TTL = the expected wall plus one hour, set from the smoke's seconds per step; the budget is ASSUMED until then.
+
+**Not registered here.** SmolLM3-3B-Base (its pair does not exist at the pin; after the kvt PR and the re-pin entry); `agentic`
+on this family; a second trainer seed; the sliding writer; statistic (C).
+
+**Consequences in this commit set:** `config/ownrun_llama.toml` (`registered_by`, the two rollout hashes), `ledger/predictions/
+ownrun-llama.json` + `.sha256`, `README.md`, `CLAUDE.md`. Landed ahead of it as their own commits: `tools/own_run.py`
+(`--prompt-format {chat,plain}` on both commands, the loud failure for a template-less tokenizer under `chat`, the format,
+prompt token counts, peak memory and seconds per step in `run_config.json` and the spans sidecar) with `tests/test_own_run.py`;
+`summarize_reader`'s `ii-lost` and `iii-excess` readouts with `tests/test_summarize_reader.py`; `config/ownrun_llama.toml`
+UNREGISTERED with its `[trainer]` table; §14.5 of the design doc and the README / CLAUDE lines.
