@@ -585,7 +585,76 @@ def seal_readout(summary: dict, repo: Path, seal: str = "reader") -> dict | None
             units[u] = None if c is None else {"passed": c.get("passed"), "evaluable_under": c.get("evaluable_under")}
             checks.append(None if c is None or c.get("passed") is None else bool(c["passed"]))
         out["clauses"]["iv"] = {"units": units, "verdict": verdict(checks)}
+    # §14.5 (the families): 0017's sentence, HOLDS_B lost at the first optimizer step on the trainer's own text, as a
+    # clause of its own — the rollout median at the lag-1 rung is at least `at_least` (0028 folded it into the
+    # replication clause, which needs a seed-1 reference a new family does not have).
+    lost = P.get("ii_rollout_lost_at_lag_1")
+    if lost:
+        e = _entry(lost["rung"])
+        m = (e or {}).get("texts", {}).get(str(lost["text"]), {}).get("b1", {}).get("median_kl")
+        lo = float(lost["at_least"])
+        out["clauses"]["ii-lost"] = {"rung": lost["rung"], "text": str(lost["text"]), "at_least": lo, "median_kl": m,
+                                     "verdict": verdict([None if m is None else m >= lo])}
+    ex = P.get("iii_rl_excess_over_0015_backbone")
+    if ex and "against_sha256" in ex:
+        # 0017's seal carries this key as prose only ("read by hand in the outcome entry", 0018); the readout engages
+        # on the machine-readable form §14.5's seals carry and leaves 0017's summary as it was written.
+        out["clauses"]["iii-excess"] = backbone_excess_readout(summary, repo, ex, verdict)
     return out
+
+
+def backbone_excess_readout(summary: dict, repo: Path, ex: dict, verdict) -> dict:
+    """0017's clause (iii), read by hand in 0018 and by this function from §14.5 on: at every sealed rung whose
+    whole-vector distance lies inside `distance_range`, median (B1) is at least `at_least_factor` times the backbone's
+    median at the nearest backbone rung by log distance, on every text named. The backbone is another summary
+    (`against`, 0015's `results/reader/summary.json`), pinned by `against_sha256` and REFUSED if the bytes moved;
+    its backbone points are the non-withheld `noise` rungs of `backbone_pair` with a position. Sealed rungs outside
+    the range are listed under `outside_range` and not read; with no rung inside, the clause is UNREAD (0018 read
+    one rung, lag 32 at 1.049e-4: 11.1 on corpus, 7.88 on on-path — FALSIFIED on on-path)."""
+    ref_path = repo / str(ex["against"])
+    if not ref_path.exists():
+        raise _refuse(f"backbone excess: the reference summary {ex['against']} is not on disk")
+    got = sha256_file_bytes(ref_path)
+    if got != str(ex["against_sha256"]):
+        raise _refuse(f"backbone excess: {ex['against']} sha256 {got[:12]}... is not the sealed {str(ex['against_sha256'])[:12]}...; "
+                      "the reference the clause names has moved")
+    ref = json.loads(ref_path.read_text(encoding="utf-8"))
+    pair = str(ex["backbone_pair"])
+    backbone = [(e["label"], float(e["rel_delta_all"])) for e in ref["rungs"]
+                if e.get("kind") == "noise" and e.get("pair") == pair and not e.get("withheld")
+                and e.get("rel_delta_all") is not None]
+    if not backbone:
+        raise _refuse(f"backbone excess: {ex['against']} carries no evaluated noise rung of pair {pair}")
+    ref_b1 = {e["label"]: {t: s["b1"]["median_kl"] for t, s in e["texts"].items()} for e in ref["rungs"]}
+    lo, hi = (float(v) for v in ex["distance_range"])
+    k = float(ex["at_least_factor"])
+    texts = [str(t) for t in ex["texts"]]
+    rows, outside, checks = {}, {}, []
+    for label in ex["rungs"]:
+        e = next((e for e in summary["rungs"] if e["label"] == label), None)
+        x = (e or {}).get("rel_delta_all")
+        if x is None:
+            rows[label] = {"rel_delta_all": None, "nearest_backbone": None, "ratio": {t: None for t in texts}}
+            checks.append(None)       # a sealed rung with no position cannot be placed: UNREAD
+            continue
+        x = float(x)
+        if not (lo <= x <= hi):
+            outside[label] = x
+            continue
+        nb, _ = min(backbone, key=lambda b: abs(math.log10(x) - math.log10(b[1])))
+        ratio = {}
+        for t in texts:
+            a = e["texts"].get(t, {}).get("b1", {}).get("median_kl") if not e.get("withheld") else None
+            b = ref_b1[nb].get(t)
+            r = (a / b) if (a is not None and b) else None
+            ratio[t] = r
+            checks.append(None if r is None else r >= k)
+        rows[label] = {"rel_delta_all": x, "nearest_backbone": nb, "backbone_median_kl": {t: ref_b1[nb].get(t) for t in texts},
+                       "ratio": ratio}
+    return {"against": str(ex["against"]), "against_sha256": got, "backbone_pair": pair,
+            "backbone_rungs": [b[0] for b in backbone], "distance_range": [lo, hi], "at_least_factor": k,
+            "texts": texts, "rungs": rows, "outside_range": outside,
+            "verdict": verdict(checks) if checks else "UNREAD"}
 
 
 def render(s: dict) -> str:

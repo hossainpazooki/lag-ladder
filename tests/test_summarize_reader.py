@@ -6,7 +6,7 @@ import math
 
 import pytest
 
-from lag_ladder import reader
+from lag_ladder import REPO_ROOT, reader
 from lag_ladder.hashing import sha256_file_bytes
 from lag_ladder.summarize_reader import summarize
 from tests.fake_instrument import FakeInstrument, default_kl
@@ -441,3 +441,91 @@ def test_distance_pin_refuses_a_missing_or_moved_rung_and_passes_the_sealed_plac
     t = copy.deepcopy(s); t["rungs"] = t["rungs"][:1]
     with pytest.raises(ValueError, match="is not in this summary"):
         assert_distance_pins(t, tmp_path, "x")
+
+
+# --- §14.5: the two readouts the families' seals need that no earlier seal had -------------------------------------
+
+def _seal(root, predictions: dict, texts=("corpus", "on-path", "rollout")):
+    from lag_ladder.summarize_reader import PREDICTIONS
+    (root / PREDICTIONS).mkdir(parents=True, exist_ok=True)
+    (root / PREDICTIONS / "x.json").write_text(
+        json.dumps({"prediction": {"texts": list(texts), "rule": {"holds_max": 1e-3}, "predictions": predictions}}),
+        encoding="utf-8")
+
+
+def _rung(label, x, **medians):
+    return {"label": label, "withheld": False, "rel_delta_all": x,
+            "texts": {t: {"b1": {"median_kl": m}, "band": "UNRESOLVED", "at_floor": False} for t, m in medians.items()}}
+
+
+_BASE = {"rule": {"texts": ["corpus", "on-path"], "holds_max": 1e-3}, "controls": {}, "slope_fit": {}}
+
+
+def test_lost_at_lag_1_clause_reads_the_rollout_median_at_the_first_lag(tmp_path):
+    """0017's sentence as a sealed clause: HOLDS_B is lost at the first optimizer step on the trainer's own text."""
+    from lag_ladder.summarize_reader import seal_readout
+    _seal(tmp_path, {"ii_rollout_lost_at_lag_1": {"rung": "roll-1", "text": "rollout", "at_least": 1e-3}})
+    c = seal_readout({**_BASE, "rungs": [_rung("roll-1", 2e-5, rollout=4.7e-3)]}, tmp_path, "x")["clauses"]["ii-lost"]
+    assert c == {"rung": "roll-1", "text": "rollout", "at_least": 1e-3, "median_kl": 4.7e-3, "verdict": "HELD"}
+    c = seal_readout({**_BASE, "rungs": [_rung("roll-1", 2e-5, rollout=4e-4)]}, tmp_path, "x")["clauses"]["ii-lost"]
+    assert c["verdict"] == "FALSIFIED"
+    withheld = {**_rung("roll-1", 2e-5, rollout=4.7e-3), "withheld": True}
+    assert seal_readout({**_BASE, "rungs": [withheld]}, tmp_path, "x")["clauses"]["ii-lost"]["verdict"] == "UNREAD"
+    assert seal_readout({**_BASE, "rungs": []}, tmp_path, "x")["clauses"]["ii-lost"]["verdict"] == "UNREAD"
+
+
+def _excess_seal(root, rungs, against_sha=None, against="results/reader/summary.json"):
+    from lag_ladder.hashing import sha256_file_bytes
+    sha = against_sha or sha256_file_bytes(REPO_ROOT / "results" / "reader" / "summary.json")
+    _seal(root, {"iii_rl_excess_over_0015_backbone": {
+        "against": against, "against_sha256": sha, "backbone_pair": "olmo2-1b-rlvr1",
+        "distance_range": [1e-4, 1e-1], "at_least_factor": 10.0, "rungs": rungs, "texts": ["corpus", "on-path"]}})
+
+
+def _copy_0015_reference(root):
+    ref = REPO_ROOT / "results" / "reader" / "summary.json"
+    (root / "results" / "reader").mkdir(parents=True, exist_ok=True)
+    (root / "results" / "reader" / "summary.json").write_bytes(ref.read_bytes())
+
+
+def test_backbone_excess_clause_reproduces_0018s_reading_from_0015s_summary(tmp_path):
+    """0017's clause (iii), read by hand in 0018 as 11.1 (corpus) / 7.88 (on-path) at lag 32 against noise-0.0001:
+    the readout recomputes it from 0015's summary.json (sha 5d761594...) and 0018's own medians, and FALSIFIES on
+    on-path as 0018 did; lag 16 at 9.55e-5 lies outside [1e-4, 1e-1] and is listed, not read."""
+    from lag_ladder.hashing import sha256_file_bytes
+    from lag_ladder.summarize_reader import seal_readout
+    assert sha256_file_bytes(REPO_ROOT / "results" / "reader" / "summary.json").startswith("5d76159485892f1d")
+    s18 = json.loads((REPO_ROOT / "results" / "ownrun" / "summary.json").read_text(encoding="utf-8"))
+    by = {e["label"]: e for e in s18["rungs"]}
+    rungs = [_rung(k, by[k]["rel_delta_all"], **{t: by[k]["texts"][t]["b1"]["median_kl"] for t in ("corpus", "on-path")})
+             for k in ("ownrun-lag-16", "ownrun-lag-32")]
+    _copy_0015_reference(tmp_path)
+    _excess_seal(tmp_path, ["ownrun-lag-16", "ownrun-lag-32"])
+    c = seal_readout({**_BASE, "rungs": rungs}, tmp_path, "x")["clauses"]["iii-excess"]
+    assert c["against_sha256"].startswith("5d76159485892f1d") and c["backbone_pair"] == "olmo2-1b-rlvr1"
+    assert c["outside_range"] == {"ownrun-lag-16": pytest.approx(9.547494899946862e-05)}
+    r = c["rungs"]["ownrun-lag-32"]
+    assert r["nearest_backbone"] == "noise-0.0001" and r["rel_delta_all"] == pytest.approx(1.0494302565318275e-4)
+    assert round(r["ratio"]["corpus"], 1) == 11.1 and round(r["ratio"]["on-path"], 2) == 7.88
+    assert c["verdict"] == "FALSIFIED"
+
+
+def test_backbone_excess_clause_refuses_a_moved_reference_and_reads_unread_with_no_rung_in_range(tmp_path):
+    from lag_ladder.summarize_reader import seal_readout
+    summary = {**_BASE, "rungs": [_rung("lag-1", 2e-5, corpus=2e-7, **{"on-path": 1e-7})]}
+    _copy_0015_reference(tmp_path)
+    _excess_seal(tmp_path, ["lag-1"])
+    c = seal_readout(summary, tmp_path, "x")["clauses"]["iii-excess"]
+    assert c["verdict"] == "UNREAD" and c["rungs"] == {} and list(c["outside_range"]) == ["lag-1"]
+    _excess_seal(tmp_path, ["lag-1"], against_sha="0" * 64)
+    with pytest.raises(ValueError, match="sha256"):
+        seal_readout(summary, tmp_path, "x")
+
+
+def test_backbone_excess_readout_leaves_0017s_prose_only_seal_alone(tmp_path):
+    """ledger/predictions/ownrun.json carries the key as prose (0018 read it by hand); no machine-readable fields,
+    no readout, and 0018's summary re-summarizes as written."""
+    from lag_ladder.summarize_reader import seal_readout
+    _seal(tmp_path, {"iii_rl_excess_over_0015_backbone": {
+        "against": "results/reader/summary.json sha256 5d76... (entry 0015)", "statement": "read by hand"}})
+    assert seal_readout({**_BASE, "rungs": []}, tmp_path, "x")["clauses"] == {}
