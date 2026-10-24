@@ -2,7 +2,7 @@
 
 Read `README.md` for what this is. `docs/2026-09-19-holdover-design.md` is the authority on scope and
 carries the rulings (§10), the build order (§9), the re-aim (§12), statistic (B) (§13), the own run (§14; §14.5 the own run
-on two more families, Llama-3.2-3B then SmolLM3-3B-Base, R-F1–R-F10 ruled 2026-10-23; Llama registered by 0031), statistic (C)
+on two more families, Llama-3.2-3B then SmolLM3-3B-Base, R-F1–R-F10 ruled 2026-10-23; Llama registered by 0031, read by 0032), statistic (C)
 (§15) and the hybrid-state seed on Kimi Linear (§16; R-K1–R-K8 taken 2026-10-22; the probe ran the same day and read a bf16 floor of ≈ 1e-3 against the 1e-4 limit — HOLDS_B UNEVALUABLE under R-K2; the float32 reference of 2026-10-23 showed the floor is bf16 arithmetic ambiguity across computation orders, and a floor-relative registration is drafted for after the families; nothing registered). `ledger/ledger.md` is the record and
 is append-only by numbered entry; entry 0001 carries the chassis provenance, the inherited definitions (f\*,
 τ_K) and the first rulings, entry 0002 the ruling that the instrument serves statistic (A) only, entries
@@ -19,8 +19,8 @@ outcome, entry 0024 the ruling that adds the trainer's own text to (B)'s stateme
 0025 the registration of statistic (C) on the own run with its seal, entry 0026 the restatement of its
 dump-equivalence limit (absolute 2⁻⁵) after the sitting halted on the relative one, entry 0027 the outcome of the
 (C) sitting, entry 0028 the registration of the own run's second trainer seed (§14.3), entry 0029 its outcome
-(all five clauses held), entry 0030 the registration of the fourth text `agentic` (§14.4), and entry 0031 the registration of
-the own run on Llama-3.2-3B (§14.5).
+(all five clauses held), entry 0030 the registration of the fourth text `agentic` (§14.4), entry 0031 the registration of
+the own run on Llama-3.2-3B (§14.5), and entry 0032 its outcome ((i-holds), (ii), (iii) HELD; (i) and (iv) FALSIFIED).
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never
@@ -175,5 +175,10 @@ of seed 1's, held-out medians 0.62–0.91 of 0018's at equal lag, rollout median
 over held-out 2.0e4×–5.1e4×. Hub `ownrun-seed2/` (20,527 files). 128-step closed; (C) on seed 2 deferred. **0030 registers
 the fourth text `agentic`** on seed 1's readers (`config/ownrun_agentic.toml`, seal `ownrun-agentic`; not yet run). **0031 registers
 the own run on Llama-3.2-3B** (§14.5; `config/ownrun_llama.toml`, seal `ownrun-llama`, plain prompt format, the same ten rollout
-prompts sampled from this family's step 0; not yet run); SmolLM3-3B-Base follows after a kvt pair and a re-pin entry; the
-trainer's `--prompt-format` and the `ii-lost` / `iii-excess` readouts landed ahead.
+prompts sampled from this family's step 0); the trainer's `--prompt-format` and the `ii-lost` / `iii-excess` readouts landed ahead.
+**0032 reads it**: one A100 sitting at `54c4d48` (two fixes past the registering commit, disclosed), no halt, step 0 equal to the
+snapshot by value, step 1 at 4.71e-5 against the ≈ 5.0e-5 RMS prediction, step 32 at 2.11e-4; all twelve control units passed;
+held-out HOLDS_B at every lag, slopes 2.3404 / 2.5063 (on-path 0.0063 past the sealed 2.5: (i) FALSIFIED); rollout 1.19e-3 at
+g = 1 to 6.14e-2 at g = 32, 1.9e3×–5.8e3× held-out ((ii) HELD); (iii) HELD; the excess over 0015's backbone 3.5×–19× on four
+in-range rungs, one of four over 10× ((iv) FALSIFIED). Hub `ownrun-llama3.2-3b/` (20,537 files). SmolLM3-3B-Base follows after a
+kvt pair and a re-pin entry if the cut allows.

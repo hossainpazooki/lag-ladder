@@ -48,8 +48,10 @@ ran (0028 registered, 0029 read): all five agreement clauses against the first s
 held-out medians 0.62–0.91 of seed 1's, rollout medians 0.80–1.05, slopes 2.13 / 2.05, every control passed. A fourth
 text is registered on seed 1's readers (0030, not yet run): fifty windows of the MLPerf Agentic Inference trajectories, the
 same fifty linear-ceiling reads under its mapper, sealed to land with held-out text rather than with the trainer's prompts.
-A second model family is registered under the own run's recipe (0031, design §14.5, not yet run): `config/ownrun_llama.toml`,
-Llama-3.2-3B with prompts rendered plain because the base ships no chat template; the rollout hashes are pinned.
+A second model family ran under the own run's recipe (0031 registered, 0032 read; design §14.5): Llama-3.2-3B with prompts
+rendered plain because the base ships no chat template. Held-out text HOLDS_B at every lag (slopes 2.34 / 2.51, the on-path slope
+0.006 past the sealed 2.5), the policy's own text UNRESOLVED from the first step at 2e3× to 6e3× held-out text (Qwen: 1e4× to
+5e4×); every control passed; the excess over isotropic noise at matched distance 3.5× to 19× against the 10× sealed on every rung.
 
 ## How a rung is measured
 
