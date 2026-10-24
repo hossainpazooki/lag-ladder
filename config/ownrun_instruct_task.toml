@@ -63,7 +63,7 @@ equivalence_b1_max_rel = 1e-3
 equivalence_reader = "local:step_32"
 equivalence_expect_b1 = { summary = "results/ownrun_instruct/summary.json", rung = "ownrun-instruct-rollout-lag-32", text = "rollout" }
 rollout_tokens = "data/tokens/qwen2.5-1.5b-instruct-ownrun_rollout_n10_seed0.npy"
-rollout_tokens_sha256 = "ROLLOUT_TOKENS_SHA256_PENDING"
+rollout_tokens_sha256 = "79a65f8c965246ba3c7ec469fd3f7957b6ee2a8ea23ffea7400dc520885dafaf"
 rollout_spans = "data/tokens/qwen2.5-1.5b-instruct-ownrun_rollout_n10_seed0.spans.json"
-rollout_spans_sha256 = "ROLLOUT_SPANS_SHA256_PENDING"
+rollout_spans_sha256 = "429a53232f5180c402332646ea546594e7bc02ef570022c8f009e5edd2d3aa48"
 rollout_dump_root = "results/distance/pairs/qwen2.5-1.5b-instruct-ownrun-rollout/dumps/target@local-step_0"

@@ -66,9 +66,9 @@ tokens_sha256 = "01bd7698f7413ab9a3b6958991487bbba626f5a8cc4f24142cd22091d96af74
 [[reader.pairs]]
 name = "qwen2.5-1.5b-instruct-ownrun-rollout"
 tokens = "data/tokens/qwen2.5-1.5b-instruct-ownrun_rollout_n10_seed0.npy"
-tokens_sha256 = "ROLLOUT_TOKENS_SHA256_PENDING"
+tokens_sha256 = "79a65f8c965246ba3c7ec469fd3f7957b6ee2a8ea23ffea7400dc520885dafaf"
 spans = "data/tokens/qwen2.5-1.5b-instruct-ownrun_rollout_n10_seed0.spans.json"
-spans_sha256 = "ROLLOUT_SPANS_SHA256_PENDING"
+spans_sha256 = "429a53232f5180c402332646ea546594e7bc02ef570022c8f009e5edd2d3aa48"
 heldout = [0, 10]
 # 0022: rollout sequence i's far prefix is the held-out pair's reader dump of sequence 40 + i (this run's own dumps).
 far_pair = "qwen2.5-1.5b-to-instruct"
