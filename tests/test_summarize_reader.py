@@ -562,3 +562,45 @@ def test_backbone_excess_readout_leaves_0017s_prose_only_seal_alone(tmp_path):
     _seal(tmp_path, {"iii_rl_excess_over_0015_backbone": {
         "against": "results/reader/summary.json sha256 5d76... (entry 0015)", "statement": "read by hand"}})
     assert seal_readout({**_BASE, "rungs": []}, tmp_path, "x")["clauses"] == {}
+
+
+
+def test_slope_fit_covers_a_text_carried_by_rungs_alone_so_the_slope_clause_reads(repo, seal_cfg):
+    """0030's `agentic` (and 0017's `rollout`) are per-rung texts the rule's text list does not name. The slope fit used
+    to run over the rule texts only, so a seal whose slope clause names such a text read UNREAD for want of a fit.
+    Here two rollout rungs on noise readers carry `rollout`; the fit exists and clause (i) reads HELD (the fake's
+    KL is (20x)^2, slope 2), while the rule texts' fits are unchanged."""
+    import hashlib, shutil
+    from lag_ladder.seal import write_prediction
+    from tests.conftest import commit_all
+    from lag_ladder.config import load_reader_config
+    from tests.test_reader import ROLLOUT_PAIR, ROLLOUT_RUNG, SPANS, _setup_reader, _token_shas
+    cfg, tools = _setup_reader(repo, seal_cfg, seal=False)
+    up = repo.parent / "upstream"
+    spans_path = up / "data" / "tokens" / "qwen.spans.json"
+    spans_path.write_text(json.dumps(SPANS), encoding="utf-8")
+    ssha = hashlib.sha256(spans_path.read_bytes()).hexdigest()
+    shas = _token_shas(up)
+    cpath = repo / "config" / "reader.toml"
+    text = cpath.read_text(encoding="utf-8").replace("[[reader.rungs]]", ROLLOUT_PAIR.format(qsha=shas["qwen"], ssha=ssha) + "[[reader.rungs]]", 1)
+    second = ROLLOUT_RUNG.replace("rollout-1e-3", "rollout-1e-1").replace("noise-0.001", "noise-0.1")
+    cpath.write_text(text + ROLLOUT_RUNG + second, encoding="utf-8")
+    src = repo / "results" / "distance" / "pairs" / "olmo2-1b-rlvr1" / "dumps"
+    dst = repo / "results" / "distance" / "pairs" / "ownrun-rollout" / "dumps"
+    for key in ("source@step_200", "source@local-noise-0.001", "source@local-noise-0.1"):
+        for i in range(4):
+            shutil.copytree(src / key / f"seq{max(i, 1)}", dst / key / f"seq{i}")
+    write_prediction(reader.SEAL_NAME, {"floor_median_kl_probe": 1e-6, "texts": ["rollout"], "rule": {"holds_max": 1e-3},
+                                        "predictions": {"i_backbone_quadratic": {"rungs": ["rollout-1e-3", "rollout-1e-1"],
+                                                                                 "slope_in": [1.5, 2.5]}}}, seal_cfg)
+    commit_all(repo, "two rollout rungs and a slope seal on their text")
+    cfg = load_reader_config(cpath, repo)
+    reader.run(cfg, repo, runner=FakeInstrument(), seal_cfg=seal_cfg, tools_dir=tools)
+    s = summarize(cfg)
+    assert set(s["slope_fit"]) >= {"corpus", "on-path", "rollout"}
+    assert s["slope_fit"]["rollout"]["slope"] == pytest.approx(2.0, abs=0.05)
+    assert s["slope_fit"]["rollout"]["rungs"] == ["rollout-1e-1", "rollout-1e-3"]
+    c = s["seal_readout"]["clauses"]["i"]
+    assert c["verdict"] in ("HELD", "FALSIFIED") and c["verdict"] == "HELD" and c["slope"] == {"rollout": s["slope_fit"]["rollout"]["slope"]}
+    # the rule texts' fits run over the same sealed rungs, which carry no corpus column: no points, slope None, as before
+    assert s["slope_fit"]["corpus"]["slope"] is None and s["slope_fit"]["on-path"]["slope"] is None

@@ -356,7 +356,10 @@ def summarize(cfg: ReaderConfig, root: Path | None = None, out: Path | None = No
         return sorted((_x(e), e["texts"][text]["b1"]["median_kl"]) for e in es
                       if text in e["texts"] and e["texts"][text]["b1"]["median_kl"] and e["texts"][text]["b1"]["median_kl"] > 0)
 
-    for text in texts:
+    # Fit every text the summary carries: the rule's texts and any text a rung carries on its own (0017's `rollout`,
+    # 0030's `agentic`), so a seal whose slope clause names a per-rung text finds its fit instead of reading UNREAD.
+    fit_texts = list(texts) + sorted({t for e in summary["rungs"] for t in e.get("texts", {})} - set(texts))
+    for text in fit_texts:
         pts = _points(fit_rungs, text)
         fit = {"rungs": sorted(e["label"] for e in fit_rungs), "sealed_rungs": sealed is not None,
                "points": [list(p) for p in pts], "slope": None,
