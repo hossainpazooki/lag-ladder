@@ -20,8 +20,9 @@ outcome, entry 0024 the ruling that adds the trainer's own text to (B)'s stateme
 dump-equivalence limit (absolute 2⁻⁵) after the sitting halted on the relative one, entry 0027 the outcome of the
 (C) sitting, entry 0028 the registration of the own run's second trainer seed (§14.3), entry 0029 its outcome
 (all five clauses held), entry 0030 the registration of the fourth text `agentic` (§14.4), entry 0031 the registration of
-the own run on Llama-3.2-3B (§14.5), entry 0032 its outcome ((i-holds), (ii), (iii) HELD; (i) and (iv) FALSIFIED), and entry 0033
-the pair-only re-pin at de6ce9e for the SmolLM3 family (`INSTRUMENT_SHA` stays 5d4aa4a).
+the own run on Llama-3.2-3B (§14.5), entry 0032 its outcome ((i-holds), (ii), (iii) HELD; (i) and (iv) FALSIFIED), entry 0033
+the pair-only re-pin at de6ce9e for the SmolLM3 family (`INSTRUMENT_SHA` stays 5d4aa4a), and entry 0034 the registration of the own run
+on SmolLM3-3B-Base.
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never
@@ -108,7 +109,7 @@ decoded completion text and the first-`####` answer beside the registered last-`
 interpreter). Built 2026-10-15, registered by 0025 after two probes: `config/ownrun_task.toml` pins the GSM8K test
 prompts file, floor 1%, positive controls at 0.5 flips, dump equivalence at an absolute 2⁻⁵ (0026; the relative
 gap and the share of differing elements descriptive).
-`config/` — `seal.toml`, `pilot.toml`, `distance.toml`, `reader.toml`, `ownrun.toml` (0017, as run), `ownrun_controls.toml` (0020; `per_pair` controls), `ownrun_far.toml` (0022; `far_pair` + `far_min`), `ownrun_task.toml` (0025; §15, the (C) arms and controls), `ownrun_seed2.toml` (0028; §14.3, the second trainer seed: `per_pair`, `far_pair`, `evaluable_under_far`), `ownrun_agentic.toml` (0030; the fourth text `agentic` on the seed-1 readers: six per-rung rungs on the pair `qwen2.5-1.5b-mlperf`, every row held out, the token file linear-ceiling's `data/e8m` draw id for id), `ownrun_llama.toml` (0031; §14.5: 0028's layout on the pair `llama3.2-3b-to-llama3.1-8b` plus the rollout pair `llama3.2-3b-ownrun-rollout`, hashes pinned; a `[trainer]` table the pod script and the entry read — `prompt_format = "plain"`, the model revision, the pins). `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
+`config/` — `seal.toml`, `pilot.toml`, `distance.toml`, `reader.toml`, `ownrun.toml` (0017, as run), `ownrun_controls.toml` (0020; `per_pair` controls), `ownrun_far.toml` (0022; `far_pair` + `far_min`), `ownrun_task.toml` (0025; §15, the (C) arms and controls), `ownrun_seed2.toml` (0028; §14.3, the second trainer seed: `per_pair`, `far_pair`, `evaluable_under_far`), `ownrun_agentic.toml` (0030; the fourth text `agentic` on the seed-1 readers: six per-rung rungs on the pair `qwen2.5-1.5b-mlperf`, every row held out, the token file linear-ceiling's `data/e8m` draw id for id), `ownrun_smollm3.toml` (0034; §14.5 on the third family, `upstream_sha` de6ce9e, pair `smollm3-3b-base` + rollout pair `smollm3-3b-base-ownrun-rollout`, labels `ownrun-smollm3-*`), `ownrun_llama.toml` (0031; §14.5: 0028's layout on the pair `llama3.2-3b-to-llama3.1-8b` plus the rollout pair `llama3.2-3b-ownrun-rollout`, hashes pinned; a `[trainer]` table the pod script and the entry read — `prompt_format = "plain"`, the model revision, the pins). `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
 `mappers/` — seal artifact roots, gitignored past their placeholders. `docs/` — the design doc.
 
 ## State
@@ -181,5 +182,7 @@ prompts sampled from this family's step 0); the trainer's `--prompt-format` and 
 snapshot by value, step 1 at 4.71e-5 against the ≈ 5.0e-5 RMS prediction, step 32 at 2.11e-4; all twelve control units passed;
 held-out HOLDS_B at every lag, slopes 2.3404 / 2.5063 (on-path 0.0063 past the sealed 2.5: (i) FALSIFIED); rollout 1.19e-3 at
 g = 1 to 6.14e-2 at g = 32, 1.9e3×–5.8e3× held-out ((ii) HELD); (iii) HELD; the excess over 0015's backbone 3.5×–19× on four
-in-range rungs, one of four over 10× ((iv) FALSIFIED). Hub `ownrun-llama3.2-3b/` (20,537 files). SmolLM3-3B-Base follows after a
-kvt pair and a re-pin entry if the cut allows.
+in-range rungs, one of four over 10× ((iv) FALSIFIED). Hub `ownrun-llama3.2-3b/` (20,537 files). **0033 re-pins pair-only at de6ce9e**
+(PR #4, `smollm3-3b-base`; `INSTRUMENT_SHA` stays) and **0034 registers the own run on SmolLM3-3B-Base** (`config/ownrun_smollm3.toml`,
+seal `ownrun-smollm3`; the same fifty held-out windows as Llama's, disclosed; step size predicted 1.95e-5 so clause (iv) is expected
+UNREAD; not yet run).

@@ -1588,3 +1588,95 @@ rollout hashes and the seal); statistic (A) on this pair; any change to `INSTRUM
 
 **Consequences in this commit set:** `UPSTREAM.md` (M in the pin chain, pair-only, (A) paths byte-identical), `CLAUDE.md`
 (header line). No code; no config.
+
+### 0034 — 2026-10-24 — The own run on a third family registered: statistic (B) at lags 1–32 on a GRPO trajectory of SmolLM3-3B-Base (design §14.5; instrument at de6ce9e, 0033)
+
+prior-entries-sha256: 6f240acafbd2d534c7d6ca7b7a6731c3a28dd1773a20e8f74a0930e705ec9bd3
+
+**Registers** `config/ownrun_smollm3.toml`, now `registered_by = "0034"`, as design §14.5 defines after R-F1–R-F10 were ruled on
+2026-10-23 and the pair-only re-pin of 0033: 0017's recipe on a third family, 0031's form unchanged. Policy
+`HuggingFaceTB/SmolLM3-3B-Base@d78a42f79198603e614095753484a04c10c2b940` (base, bf16 release shards, 3,075,098,624
+parameters, 36 layers, 16 heads / 4 KV heads of 128, vocab 128,256, every fourth layer without RoPE); TRL 1.15.0 (`dae7b6ad…`),
+transformers 5.20.2, torch 2.14.1+cu130 as 0029's and 0032's sittings ran them; learning rate 1e-6, no reference-KL term, 16 prompts
+× 8 completions per step, temperature 1.0, 256-token completions, fp32 master weights, gradient checkpointing, no vLLM, trainer
+seed 0, 32 optimizer steps, weights kept at {0, 1, 2, 4, 8, 16, 32}, both token sets dumped from every step through the instrument
+at `de6ce9e` (0033; the identity pair `smollm3-3b-base`, `--which source --local-path`; float32 forward). `INSTRUMENT_SHA` stays
+`5d4aa4a`; this configuration's `upstream_sha` is `de6ce9e`, and the gate checks it by ancestry and by the four (A) paths, which are
+byte-identical to the pin's blobs. Rule, bands and limits 0012's as amended by 0013 and 0014; reader seed 0.
+
+**The departure from 0017, as 0031.** SmolLM3-3B-Base ships no chat template, so prompts are rendered plain —
+`{SYSTEM_LINE}\n\nQuestion: {question}\nAnswer:` with 0017's system line — under `[trainer] prompt_format = "plain"` and
+`--prompt-format plain` on both commands; the reward parsing is unchanged. Under `plain` the tokenizer's special tokens stay on, as
+TRL 1.15.0 tokenizes string prompts; SmolLM3's tokenizer has no BOS post-processor where Llama's prepends `<|begin_of_text|>`, so the
+prefix here is the plain text's ids alone (recorded as `prefix_len` in the spans file). Rollout prompt token counts:
+66–106 (median 77) (Llama 67–107 under the same format; 0017 75–117 under Qwen's template).
+
+**Cells.** Writer cache at step 0, reader at step g ∈ {1, 2, 4, 8, 16, 32}. Held-out pair `smollm3-3b-base`: the instrument's own
+windows for this pair (`data/tokens/smollm3-3b-base_n50_len1024_seed0.npy`,
+`2a79dbe4c8b59f245d876426f2b930d36df8696c0dc9e91e9718ef220170af21`; FineWeb-Edu, 50 × 1024, seed 0, built at `de6ce9e`), sequences
+40–49, corpus and greedy on-path texts. **Disclosed (0033):** that file is byte-identical to the Llama pair's held-out file — SmolLM3
+ships the Llama 3 byte-level BPE (vocab and all 280,147 merges equal; the files differ only in eight added special tokens and the
+post-processor, neither of which `prepare_tokens` uses) — so the two families' held-out texts are the same fifty windows and every
+held-out comparison between them is on identical tokens; the on-path text is each reader's own greedy continuation and differs.
+Rollout pair `smollm3-3b-base-ownrun-rollout`: GSM8K train prompts {123, 306, 562, 1309, 2014, 2298, 3816, 4754, 6077, 6349}
+(`select_prompt_indices(seed 0)`, model-independent, so 0017's; excluded from the batches), one completion each sampled from THIS
+family's step-0 policy at temperature 1.0, ≥ 64 tokens — token file `smollm3-3b-base-ownrun_rollout_n10_seed0.npy`
+`b7b61d51…`, spans `….spans.json` `74318451…`, `smollm3-3b-base-ownrun_rollout_excluded.json`
+beside them (sampled on the Mac mini, CPU, torch 2.14.1, transformers 5.15.1, 2026-10-24); completion lengths and how many ran to the cap 122–256 tokens, 4 of ten at the 256-token cap. Controls per
+(reader, pair) as 0028: float16 floor ≤ 1e-4, identity ≤ 1e-5, scrambled ≥ 0.1; the rollout pair carries 0022's far control
+(`far_pair` the held-out pair, `far_min` 0.1) with `evaluable_under_far = true`. Twelve rungs `ownrun-smollm3-lag-<g>` and
+`ownrun-smollm3-rollout-lag-<g>`; 660 jobs, the planner's count.
+
+**The distance axis, and a prediction.** Rungs are placed by `results/distance/rungs/<label>/distance.json`, written by the
+trainer's save hook from `tools/weight_distance.py` against the saved step 0; this entry pins no distance it has not seen. Expected:
+the released weights' whole-vector RMS is 5.125e-2 (recomputed from the two bf16 shards, 326 float tensors), so lr / RMS puts one
+Adam step near 1.95e-5 relative (Llama-3.2-3B: 5.0e-5 expected, 4.709e-5 measured at step 1, 0032; Qwen2.5-1.5B 2.4e-5 / 2.29e-5);
+under the shape both earlier families showed (step 32 at 4.5–4.6× step 1, flat from about step 20), step 32 sits near
+8.8e-5 to 9.0e-5 — BELOW 0015's backbone range, so clause (iv) is expected to read UNREAD on this family (no rung inside
+[1e-4, 1e-1]), which §14.5 named in advance ("SmolLM3 only where distance allows"); the prediction is stated so the outcome
+can say whether the distance did what the RMS said. The two-step smoke (R-F6: the sitting's first stage, outputs discarded) reads the step-1 and step-2 distances,
+peak memory and seconds per step on the pod; the outcome entry records them.
+
+**Seal** (`ledger/predictions/ownrun-smollm3.json`, pre-fit, committed before any dump; the summarizer reads every clause under the
+keys 0031 used). (i) Held-out text HOLDS_B (median (B1) ≤ 1e-3) at every lag on corpus and on-path, every rung above 2× its
+reader's floor (`i_heldout_holds_at_every_lag`), and the slope of log median (B1) on log distance over the six held-out lag rungs in
+[1.5, 2.5] on both texts (`i_backbone_quadratic`; Qwen 2.26 / 2.19 and 2.13 / 2.05; Llama 2.3404 / 2.5063, the on-path slope
+0.0063 past this bound in 0032 — the band is kept as sealed on the first two families, not widened after a reading). (ii) Rollout
+median (B1) ≥ 1e-3 at g = 1 (`ii_rollout_lost_at_lag_1`; Qwen 4.68e-3, Llama 1.185e-3) and at every lag ≥ 1e3× the same reader's
+median on corpus and on on-path text (`iii_rollout_over_heldout`; Qwen 1.3e4× to 5.1e4×, Llama 1.9e3× to 5.8e3×). (iii) Every
+(reader, pair) unit passes its controls under 0014's limits or is EVALUABLE under far as pre-committed; no unit UNEVALUABLE
+(`iv_controls_as_0020`). (iv) At every held-out lag rung whose distance lies inside 0015's backbone range [1e-4, 1e-1], (B1) ≥ 10×
+the OLMo backbone's median at the nearest 0015 noise rung by log distance, both texts, read against 0015's `summary.json`
+`5d761594…` as 0031's clause was (`iii_rl_excess_over_0015_backbone`; FALSIFIED on Qwen's one rung and on three of Llama's four;
+rungs below 1e-4 listed, not read). Descriptive, not sealed: the per-step distance curve against the prediction; per-lag ratios to
+0032, 0018 and 0029 at matched lag and distance; the per-window join on held-out text against Llama (the same fifty windows:
+per-sequence mean KL at matched lag, a figure with no verdict); the reward and entropy trajectories; rollout over scrambled and
+over far; the prompt token counts.
+
+**Halting and reading.** The step-0 safetensors the trainer saves must equal the snapshot's weights before the first optimizer
+step: `tools/weight_distance.py` against `HuggingFaceTB/SmolLM3-3B-Base@d78a42f7…` reads `rel_delta_all` 0 with every float
+tensor compared and none only on one side (bf16 → fp32 is exact), in the smoke and in the run, and the run's step-0 digest equals
+the smoke's; a different reading is an environment drift and the sitting stops before it bills the trajectory. The smoke is the
+sitting's first stage: two steps on two prompts per step, peak memory and seconds per step logged, OOM aborts the sitting,
+otherwise its outputs are deleted and the run starts. A step-1 distance under 1e-6 stops the sitting before the reader run
+(0017). A floor over 1e-4 halts the reader run (0014). A unit that misses scrambled and far is UNEVALUABLE and its rungs UNREAD in
+(ii) and (iv) at that lag. The pair is the identity pair, so `check_matched_kv` compares the model with itself and no gated
+config is fetched; the model and GSM8K are public, and the only token on the pod is the dataset write token for the upload.
+`K_stripped`, which statistic (A) reads, is meaningless on the rope-free layers; (A) is closed (0010) and is not run on this pair;
+statistic (B) rebuilds the cache from K and V per layer and is unaffected (0033).
+
+**Run.** One A100-SXM4-80GB sitting under the GPU protocol (H200 only if the smoke OOMs), the Llama sitting's scripts with the
+pins and names swapped: setup (the instrument cloned at `de6ce9e`), the smoke with its step-0 check, the 32-step trajectory with
+the save hook, 330 dumps, 32 distances, 660 jobs, the pod-side summary, then — the pod's last step — the results and record tars
+with their manifest, the kept weights, every step's dumps and the token files to the private dataset under `ownrun-smollm3-3b/`
+(R-C7; the model's license, Apache-2.0 as its model card declares, with README.md copied beside the weights — the repo ships no
+license file); the watchdog closes the pod at its TTL and the morning pull comes
+from the Hub, verified against the manifest. Caps as 0031's as re-armed in practice: sitting ceiling and TTL set from the smoke's
+seconds per step and the measured Llama pace (12.6 min/step, 11.3 s/job); the budget is ASSUMED until then.
+
+**Not registered here.** `agentic` on this family; a second trainer seed; the sliding writer; statistic (C); any further family;
+the statement-of-record ruling for the families (after this run).
+
+**Consequences in this commit set:** `config/ownrun_smollm3.toml` (`registered_by`, the two rollout hashes),
+`ledger/predictions/ownrun-smollm3.json` + `.sha256`, `README.md`, `CLAUDE.md`. Landed ahead: 0033 (the re-pin, `UPSTREAM.md`);
+`config/ownrun_smollm3.toml` UNREGISTERED with its `[trainer]` table.
