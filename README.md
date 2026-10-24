@@ -46,8 +46,10 @@ own prompts. (C) ran (0025 registered, 0026 restated the dump-equivalence limit,
 answer on 71% of prompts at g = 1 and 87% at g = 32; all four sealed clauses held. A second trainer seed of the own run
 ran (0028 registered, 0029 read): all five agreement clauses against the first seed held — distances within 1.3%,
 held-out medians 0.62–0.91 of seed 1's, rollout medians 0.80–1.05, slopes 2.13 / 2.05, every control passed. A fourth
-text is registered on seed 1's readers (0030, not yet run): fifty windows of the MLPerf Agentic Inference trajectories, the
-same fifty linear-ceiling reads under its mapper, sealed to land with held-out text rather than with the trainer's prompts.
+text ran on seed 1's readers (0030 registered, 0036 read): fifty windows of the MLPerf Agentic Inference trajectories, the
+same fifty linear-ceiling reads under its mapper, sealed to land with held-out text rather than with the trainer's prompts —
+and it did: HOLDS_B at every lag, 14.6×–26.5× seed 1's corpus medians and three orders under its rollout medians, slope 2.48;
+all four sealed clauses held.
 A second model family ran under the own run's recipe (0031 registered, 0032 read; design §14.5): Llama-3.2-3B with prompts
 rendered plain because the base ships no chat template. Held-out text HOLDS_B at every lag (slopes 2.34 / 2.51, the on-path slope
 0.006 past the sealed 2.5), the policy's own text UNRESOLVED from the first step at 2e3× to 6e3× held-out text (Qwen: 1e4× to

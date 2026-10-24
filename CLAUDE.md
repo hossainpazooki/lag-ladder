@@ -22,7 +22,8 @@ dump-equivalence limit (absolute 2⁻⁵) after the sitting halted on the relati
 (all five clauses held), entry 0030 the registration of the fourth text `agentic` (§14.4), entry 0031 the registration of
 the own run on Llama-3.2-3B (§14.5), entry 0032 its outcome ((i-holds), (ii), (iii) HELD; (i) and (iv) FALSIFIED), entry 0033
 the pair-only re-pin at de6ce9e for the SmolLM3 family (`INSTRUMENT_SHA` stays 5d4aa4a), entry 0034 the registration of the own run
-on SmolLM3-3B-Base, and entry 0035 the registration of the Instruct-initialised own run (Qwen2.5-1.5B-Instruct), both halves.
+on SmolLM3-3B-Base, entry 0035 the registration of the Instruct-initialised own run (Qwen2.5-1.5B-Instruct), both halves, and
+entry 0036 the outcome of the agentic text (all four clauses HELD).
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never
@@ -109,7 +110,7 @@ decoded completion text and the first-`####` answer beside the registered last-`
 interpreter). Built 2026-10-15, registered by 0025 after two probes: `config/ownrun_task.toml` pins the GSM8K test
 prompts file, floor 1%, positive controls at 0.5 flips, dump equivalence at an absolute 2⁻⁵ (0026; the relative
 gap and the share of differing elements descriptive).
-`config/` — `seal.toml`, `pilot.toml`, `distance.toml`, `reader.toml`, `ownrun.toml` (0017, as run), `ownrun_controls.toml` (0020; `per_pair` controls), `ownrun_far.toml` (0022; `far_pair` + `far_min`), `ownrun_task.toml` (0025; §15, the (C) arms and controls), `ownrun_seed2.toml` (0028; §14.3, the second trainer seed: `per_pair`, `far_pair`, `evaluable_under_far`), `ownrun_agentic.toml` (0030; the fourth text `agentic` on the seed-1 readers: six per-rung rungs on the pair `qwen2.5-1.5b-mlperf`, every row held out, the token file linear-ceiling's `data/e8m` draw id for id), `ownrun_smollm3.toml` (0034; §14.5 on the third family, `upstream_sha` de6ce9e, pair `smollm3-3b-base` + rollout pair `smollm3-3b-base-ownrun-rollout`, labels `ownrun-smollm3-*`), `ownrun_instruct.toml` (0035; (B) on Qwen2.5-1.5B-Instruct@989aa79, chat prompts, pair `qwen2.5-1.5b-to-instruct` with the Instruct side dumped as `target`, rollout pair `qwen2.5-1.5b-instruct-ownrun-rollout`, labels `ownrun-instruct-*`), `ownrun_instruct_task.toml` (0035; (C) on that run: cap 768, n 1,319, `equivalence_expect_b1` a pointer at the run's own (B) summary, seal `ownrun-instruct-task` with clauses (v) and (vi) on accuracy), `ownrun_llama.toml` (0031; §14.5: 0028's layout on the pair `llama3.2-3b-to-llama3.1-8b` plus the rollout pair `llama3.2-3b-ownrun-rollout`, hashes pinned; a `[trainer]` table the pod script and the entry read — `prompt_format = "plain"`, the model revision, the pins). `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
+`config/` — `seal.toml`, `pilot.toml`, `distance.toml`, `reader.toml`, `ownrun.toml` (0017, as run), `ownrun_controls.toml` (0020; `per_pair` controls), `ownrun_far.toml` (0022; `far_pair` + `far_min`), `ownrun_task.toml` (0025; §15, the (C) arms and controls), `ownrun_seed2.toml` (0028; §14.3, the second trainer seed: `per_pair`, `far_pair`, `evaluable_under_far`), `ownrun_agentic.toml` (0030, read by 0036; the fourth text `agentic` on the seed-1 readers: six per-rung rungs on the pair `qwen2.5-1.5b-mlperf`, every row held out, the token file linear-ceiling's `data/e8m` draw id for id), `ownrun_smollm3.toml` (0034; §14.5 on the third family, `upstream_sha` de6ce9e, pair `smollm3-3b-base` + rollout pair `smollm3-3b-base-ownrun-rollout`, labels `ownrun-smollm3-*`), `ownrun_instruct.toml` (0035; (B) on Qwen2.5-1.5B-Instruct@989aa79, chat prompts, pair `qwen2.5-1.5b-to-instruct` with the Instruct side dumped as `target`, rollout pair `qwen2.5-1.5b-instruct-ownrun-rollout`, labels `ownrun-instruct-*`), `ownrun_instruct_task.toml` (0035; (C) on that run: cap 768, n 1,319, `equivalence_expect_b1` a pointer at the run's own (B) summary, seal `ownrun-instruct-task` with clauses (v) and (vi) on accuracy), `ownrun_llama.toml` (0031; §14.5: 0028's layout on the pair `llama3.2-3b-to-llama3.1-8b` plus the rollout pair `llama3.2-3b-ownrun-rollout`, hashes pinned; a `[trainer]` table the pod script and the entry read — `prompt_format = "plain"`, the model revision, the pins). `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
 `mappers/` — seal artifact roots, gitignored past their placeholders. `docs/` — the design doc.
 
 ## State
@@ -175,7 +176,11 @@ summarizer reads all four. Halting: the saved step-0 weights must hash to seed 1
 to seed 1's, no halt, all twelve control units passed (none carried by far), all five clauses HELD — distances within 1.3%
 of seed 1's, held-out medians 0.62–0.91 of 0018's at equal lag, rollout medians 0.80–1.05, slopes 2.13 / 2.05, rollout
 over held-out 2.0e4×–5.1e4×. Hub `ownrun-seed2/` (20,527 files). 128-step closed; (C) on seed 2 deferred. **0030 registers
-the fourth text `agentic`** on seed 1's readers (`config/ownrun_agentic.toml`, seal `ownrun-agentic`; not yet run). **0031 registers
+the fourth text `agentic`** on seed 1's readers (`config/ownrun_agentic.toml`, seal `ownrun-agentic`). **0036 reads it**: one A40
+sitting at the registering commit `ebe5ee4`, no halt, every control passed, HOLDS_B at every lag (medians 3.61e-6 to 1.76e-4,
+14.6×–26.5× seed 1's corpus, 1/506–1/1723 of its rollout, the two suites within 1.4×), lands with held-out text by 1.28–2.07
+decades, slope 2.48 read by `3add994`'s summarizer (the fit over per-rung texts landed after the sitting, disclosed); all four
+clauses HELD. Hub `ownrun-agentic/` (10,864 files). **0031 registers
 the own run on Llama-3.2-3B** (§14.5; `config/ownrun_llama.toml`, seal `ownrun-llama`, plain prompt format, the same ten rollout
 prompts sampled from this family's step 0); the trainer's `--prompt-format` and the `ii-lost` / `iii-excess` readouts landed ahead.
 **0032 reads it**: one A100 sitting at `54c4d48` (two fixes past the registering commit, disclosed), no halt, step 0 equal to the
