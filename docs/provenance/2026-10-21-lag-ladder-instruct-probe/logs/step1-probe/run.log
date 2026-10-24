@@ -1,0 +1,25 @@
+[2026-10-21T21:30:37-06:00] attempt 20261021-213037 on gpu-node-1 job JOB-A step 7346 inherited CVD=0,1,2,3,4,5,6,7
+[2026-10-21T21:30:37-06:00] claimed rrhs_cluster-a_JOB-A_gpu-node-1_<gpu01>
+[2026-10-21T21:30:37-06:00] claimed rrhs_cluster-a_JOB-A_gpu-node-1_<gpu02>
+[2026-10-21T21:30:37-06:00] running setup_probe.sh (LL_COMMIT=e32d523) on token 0
+[2026-10-21T21:31:54-06:00] setup_probe.sh rc=0; verdict lines:
+LAG_LADDER_HEAD e32d523449458c5ab9ca99e55bb98272c61d5cc9
+VERSIONS 2.14.1+cu130 True 13.0 5.20.2
+SELFTEST_OK summarize/band/bootstrap/boxed
+918c7e67f051d41f
+SETUP_PROBE_DONE
+[2026-10-21T21:31:54-06:00] pre-fetching Qwen/Qwen2.5-1.5B-Instruct@989aa7980e4cf806f80c7fef2b1adb7bc71aa306
+MODEL_CACHED $HF_HOME/hub/models--Qwen--Qwen2.5-1.5B-Instruct/snapshots/989aa7980e4cf806f80c7fef2b1adb7bc71aa306
+[2026-10-21T21:32:13-06:00] selected cards free and mapped (MiB used: 0:2 1:2 2:2 3:2 4:2 5:2 6:2 7:2 )
+[2026-10-21T21:32:13-06:00] launched cap 256 pid 2806829 on token 0 (GPU-<gpu01>)
+[2026-10-21T21:32:13-06:00] launched cap 768 pid 2806834 on token 1 (GPU-<gpu02>)
+[2026-10-21T21:33:13-06:00] 60 s snapshot written to $WORK/_gpu_run/logs/attempt-20261021-213037/verify60.txt
+[2026-10-21T21:42:14-06:00] cap 256 exited rc=0
+[2026-10-21T21:44:44-06:00] cap 768 exited rc=0
+[2026-10-21T21:44:44-06:00] cap 256: VALID
+[2026-10-21T21:44:44-06:00] cap 768: VALID
+PROBE_DONE n 200 max_new 256 accuracy 44.5 [37.5, 51.5] cap 0.46 no_answer 0.00 hash_marker 0.09 boxed_marker 0.23 acc_boxed 18.0 loop 0.00 band flips-verdict
+PROBE_DONE n 200 max_new 768 accuracy 64.5 [58.0, 71.0] cap 0.00 no_answer 0.00 hash_marker 0.10 boxed_marker 0.56 acc_boxed 41.0 loop 0.00 band accuracy-verdict
+[2026-10-21T21:44:44-06:00] final state SUCCEEDED both caps valid
+[2026-10-21T21:44:44-06:00] released rrhs_cluster-a_JOB-A_gpu-node-1_<gpu01>
+[2026-10-21T21:44:44-06:00] released rrhs_cluster-a_JOB-A_gpu-node-1_<gpu02>

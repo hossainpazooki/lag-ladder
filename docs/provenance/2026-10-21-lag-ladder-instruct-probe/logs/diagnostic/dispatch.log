@@ -1,0 +1,16 @@
+dispatch: 1 tasks -> $WORK/_gpu_run/dispatch_1021_235908  (queue frozen; POLL=120s)
+23:59 launch T001 -> gpu-node-1 (job JOB-A, 8x 24G)  bash $WORK/_gpu_ru
+23:59 queued 0 . running 1 . done 0/1
+  TASK  NODE    GPUS    TIME LEFT   ELAPSED  PROCESS
+  T001  gpu-node-1  8x 24G  6-17:25:18  0m       bash $WORK/_gpu_ru
+00:01 queued 0 . running 1 . done 0/1
+  TASK  NODE    GPUS    TIME LEFT   ELAPSED  PROCESS
+  T001  gpu-node-1  8x 24G  6-17:23:48  2m       bash $WORK/_gpu_ru
+00:03 queued 0 . running 1 . done 0/1
+  TASK  NODE    GPUS    TIME LEFT   ELAPSED  PROCESS
+  T001  gpu-node-1  8x 24G  6-17:22:18  4m       bash $WORK/_gpu_ru
+00:05 done T001 rc=0 (1/1) -- allocation JOB-A takes the next task
+── dispatch complete: 1/1 tasks ran ──
+  TASK  NODE    GPUS    RC  RUNTIME  ALLOC LEFT  PROCESS
+  T001  gpu-node-1  8x 24G  0   5m       6-17:19:18  bash $WORK/_gpu_ru
+  all 1 tasks rc=0

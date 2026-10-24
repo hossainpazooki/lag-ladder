@@ -1,0 +1,42 @@
+[2026-10-21T23:59:12-06:00] attempt 20261021-235911 on gpu-node-1 (cluster-a) job JOB-A step 7454; dispatcher N=8; inherited CVD=0,1,2,3,4,5,6,7
+[2026-10-21T23:59:16-06:00] selected 8 card(s): 0 1 2 3 4 5 6 7 (NVIDIA RTX PRO 4000 Blackwell )
+[2026-10-21T23:59:16-06:00] plan cap256-s00: prompts 0..49 on token 0 (GPU-<gpu01>)
+[2026-10-21T23:59:16-06:00] plan cap256-s01: prompts 50..99 on token 1 (GPU-<gpu02>)
+[2026-10-21T23:59:16-06:00] plan cap256-s02: prompts 100..149 on token 2 (GPU-<gpu03>)
+[2026-10-21T23:59:16-06:00] plan cap256-s03: prompts 150..199 on token 3 (GPU-<gpu04>)
+[2026-10-21T23:59:16-06:00] plan cap768-s00: prompts 0..49 on token 4 (GPU-<gpu05>)
+[2026-10-21T23:59:16-06:00] plan cap768-s01: prompts 50..99 on token 5 (GPU-<gpu06>)
+[2026-10-21T23:59:16-06:00] plan cap768-s02: prompts 100..149 on token 6 (GPU-<gpu07>)
+[2026-10-21T23:59:16-06:00] plan cap768-s03: prompts 150..199 on token 7 (GPU-<gpu08>)
+[2026-10-21T23:59:16-06:00] launched cap256-s00 pid 2821654 on token 0
+[2026-10-21T23:59:16-06:00] launched cap256-s01 pid 2821659 on token 1
+[2026-10-21T23:59:16-06:00] launched cap256-s02 pid 2821664 on token 2
+[2026-10-21T23:59:16-06:00] launched cap256-s03 pid 2821669 on token 3
+[2026-10-21T23:59:16-06:00] launched cap768-s00 pid 2821674 on token 4
+[2026-10-21T23:59:16-06:00] launched cap768-s01 pid 2821679 on token 5
+[2026-10-21T23:59:16-06:00] launched cap768-s02 pid 2821684 on token 6
+[2026-10-21T23:59:16-06:00] launched cap768-s03 pid 2821689 on token 7
+[2026-10-22T00:00:16-06:00] 60 s snapshot: $WORK/_gpu_run/diag-20261021-235911/logs/verify60.txt
+[2026-10-22T00:02:17-06:00] cap256-s00 exited rc=0
+[2026-10-22T00:02:17-06:00] cap256-s01 exited rc=0
+[2026-10-22T00:02:17-06:00] cap256-s02 exited rc=0
+[2026-10-22T00:02:17-06:00] cap256-s03 exited rc=0
+[2026-10-22T00:02:47-06:00] cap768-s01 exited rc=0
+[2026-10-22T00:02:47-06:00] cap768-s02 exited rc=0
+[2026-10-22T00:02:47-06:00] cap768-s03 exited rc=0
+[2026-10-22T00:03:17-06:00] cap768-s00 exited rc=0
+MERGE_OK cap 256 n 200 accuracy 51.5 [44.5, 58.0] cap 0.46 no_answer 0.00 hash_marker 0.03 boxed_marker 0.25 acc_boxed 21.0 loop 0.00 band accuracy-verdict
+MERGE_OK cap 768 n 200 accuracy 72.0 [65.5, 78.0] cap 0.00 no_answer 0.00 hash_marker 0.03 boxed_marker 0.59 acc_boxed 41.0 loop 0.00 band accuracy-verdict
+      8 DIAG_GENCFG {"before": {"repetition_penalty": 1.1, "eos_token_id": [151645, 151643]}, "after": {"repetition_penalty": 1.0, "eos_token_id": 151645}}
+[2026-10-22T00:03:18-06:00] argmax check on token 0
+ARGMAX_CHECK registered768: 198/200 records, 51783 tokens, raw-argmax 0.9462 (all-raw records 0), penalized-argmax 1.0000 (all-penalized records 198)
+ARGMAX_CHECK norp768: 200/200 records, 50712 tokens, raw-argmax 1.0000 (all-raw records 200), penalized-argmax 0.9472 (all-penalized records 0)
+[2026-10-22T00:04:16-06:00] final state SUCCEEDED
+[2026-10-22T00:04:16-06:00] released rrhs_cluster-a_JOB-A_gpu-node-1_<gpu01>
+[2026-10-22T00:04:16-06:00] released rrhs_cluster-a_JOB-A_gpu-node-1_<gpu02>
+[2026-10-22T00:04:16-06:00] released rrhs_cluster-a_JOB-A_gpu-node-1_<gpu03>
+[2026-10-22T00:04:16-06:00] released rrhs_cluster-a_JOB-A_gpu-node-1_<gpu04>
+[2026-10-22T00:04:16-06:00] released rrhs_cluster-a_JOB-A_gpu-node-1_<gpu05>
+[2026-10-22T00:04:16-06:00] released rrhs_cluster-a_JOB-A_gpu-node-1_<gpu06>
+[2026-10-22T00:04:16-06:00] released rrhs_cluster-a_JOB-A_gpu-node-1_<gpu07>
+[2026-10-22T00:04:16-06:00] released rrhs_cluster-a_JOB-A_gpu-node-1_<gpu08>

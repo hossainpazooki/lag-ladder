@@ -1,0 +1,11 @@
+== +60s 2026-10-21T21:33:13-06:00
+0, GPU-<gpu01>, 6360 MiB, 94 %
+1, GPU-<gpu02>, 6376 MiB, 93 %
+2, GPU-<gpu03>, 2 MiB, 0 %
+3, GPU-<gpu04>, 2 MiB, 0 %
+4, GPU-<gpu05>, 2 MiB, 0 %
+5, GPU-<gpu06>, 2 MiB, 0 %
+6, GPU-<gpu07>, 2 MiB, 0 %
+7, GPU-<gpu08>, 2 MiB, 0 %
+GPU-<gpu01>, 2806829, 6350 MiB
+GPU-<gpu02>, 2806834, 6366 MiB

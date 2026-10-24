@@ -1,0 +1,62 @@
+{
+ "model": "Qwen/Qwen2.5-1.5B-Instruct@989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+ "penalty_tested": 1.1,
+ "device": "NVIDIA H200 NVL",
+ "sets": {
+  "registered256": {
+   "records": 200,
+   "ids_recovered": 199,
+   "tokens": 42930,
+   "eq_raw_argmax": 40412,
+   "eq_penalized_argmax": 42929,
+   "records_all_raw": 0,
+   "records_all_penalized": 198,
+   "raw_mismatch_examples": [
+    {
+     "index": 0,
+     "pos": 0,
+     "recorded": 1249,
+     "raw_argmax": 18315
+    },
+    {
+     "index": 0,
+     "pos": 43,
+     "recorded": 1817,
+     "raw_argmax": 624
+    },
+    {
+     "index": 0,
+     "pos": 48,
+     "recorded": 93210,
+     "raw_argmax": 29901
+    },
+    {
+     "index": 0,
+     "pos": 54,
+     "recorded": 504,
+     "raw_argmax": 369
+    },
+    {
+     "index": 0,
+     "pos": 70,
+     "recorded": 27815,
+     "raw_argmax": 279
+    }
+   ],
+   "frac_raw": 0.9413463778243653,
+   "frac_penalized": 0.9999767062660144
+  },
+  "norp256": {
+   "records": 200,
+   "ids_recovered": 200,
+   "tokens": 41943,
+   "eq_raw_argmax": 41943,
+   "eq_penalized_argmax": 39519,
+   "records_all_raw": 200,
+   "records_all_penalized": 0,
+   "raw_mismatch_examples": [],
+   "frac_raw": 1.0,
+   "frac_penalized": 0.9422072813103498
+  }
+ }
+}

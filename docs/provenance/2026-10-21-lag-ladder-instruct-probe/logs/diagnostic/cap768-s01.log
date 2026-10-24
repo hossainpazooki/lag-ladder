@@ -1,0 +1,8 @@
+DIAG_GENCFG {"before": {"repetition_penalty": 1.1, "eos_token_id": [151645, 151643]}, "after": {"repetition_penalty": 1.0, "eos_token_id": 151645}}
+ENV {"torch": "2.14.1+cu130", "transformers": "5.20.2", "cuda": "13.0", "cuda_available": true, "device_name": "NVIDIA RTX PRO 4000 Blackwell", "python": "3.12.15", "platform": "Linux-4.18.0-553.144.1.el8_10.x86_64-x86_64-with-glibc2.28", "dtype": "float32", "model": "Qwen/Qwen2.5-1.5B-Instruct@989aa7980e4cf806f80c7fef2b1adb7bc71aa306", "model_commit": null}
+PROBE 10/50 34s
+PROBE 20/50 64s
+PROBE 30/50 102s
+PROBE 40/50 127s
+PROBE 50/50 166s
+PROBE_DONE n 50 max_new 768 accuracy 70.0 [58.0, 82.0] cap 0.00 no_answer 0.00 hash_marker 0.04 boxed_marker 0.58 acc_boxed 40.0 loop 0.00 band accuracy-verdict

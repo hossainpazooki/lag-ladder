@@ -1,0 +1,2 @@
+ARGMAX_CHECK registered256: 199/200 records, 42930 tokens, raw-argmax 0.9413 (all-raw records 0), penalized-argmax 1.0000 (all-penalized records 198)
+ARGMAX_CHECK norp256: 200/200 records, 41943 tokens, raw-argmax 1.0000 (all-raw records 200), penalized-argmax 0.9422 (all-penalized records 0)

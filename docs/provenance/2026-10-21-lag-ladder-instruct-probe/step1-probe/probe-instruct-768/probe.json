@@ -1,0 +1,37 @@
+{
+ "n": 200,
+ "accuracy_points": 64.5,
+ "accuracy_ci95": [
+  57.99999999999999,
+  71.0
+ ],
+ "band": "accuracy-verdict",
+ "cap_rate": 0.0,
+ "no_answer_rate": 0.0,
+ "no_hash_marker_rate": 0.895,
+ "first_vs_last_hash_disagree_rate": 0.0,
+ "mean_new_tokens": 261.87,
+ "correct_and_capped": 0,
+ "boxed_marker_rate": 0.56,
+ "accuracy_boxed_points": 41.0,
+ "accuracy_uncapped_only_points": 64.5,
+ "schema": "baseline-probe-summary-v1",
+ "prompts_sha256": "918c7e67f051d41f7b153911f0497bc62c82b76cb04ef84f6f5ee0e66ab22450",
+ "start": 0,
+ "max_new": 768,
+ "system_line": "Solve the problem. Reason step by step, then give the final answer on its own line as '#### <number>'.",
+ "env": {
+  "torch": "2.14.1+cu130",
+  "transformers": "5.20.2",
+  "cuda": "13.0",
+  "cuda_available": true,
+  "device_name": "NVIDIA RTX PRO 4000 Blackwell",
+  "python": "3.12.15",
+  "platform": "Linux-4.18.0-553.144.1.el8_10.x86_64-x86_64-with-glibc2.28",
+  "dtype": "float32",
+  "model": "Qwen/Qwen2.5-1.5B-Instruct@989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+  "model_commit": null
+ },
+ "elapsed_s": 723.0,
+ "records_sha256": "2a5628ffd52dd6a8ffcbf3d6aedb114b02f64fd3ccd8b4fb23bdee1bcaaae24c"
+}

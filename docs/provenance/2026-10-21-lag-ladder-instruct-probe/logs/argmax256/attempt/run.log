@@ -1,0 +1,13 @@
+[2026-10-23T19:46:56-06:00] attempt 20261023-194656-gpu-node-2 on gpu-node-2 (cluster-a) job JOB-B step 11367; inherited CVD=0,1
+[2026-10-23T19:47:02-06:00] selected token 0 GPU-<gpu09> (NVIDIA H200 NVL, 143771 MiB, driver 595.91.07)
+[2026-10-23T19:47:21-06:00] CUDA_OK 2.14.1+cu130 13.0 NVIDIA H200 NVL GPU-<gpu09> 1073741824.0
+[2026-10-23T19:47:21-06:00] launched argmax_check.py pid 6240 on token 0
+[2026-10-23T19:48:11-06:00] argmax_check.py exited rc=0 after 50 s
+ARGMAX_CHECK registered256: 199/200 records, 42930 tokens, raw-argmax 0.9413 (all-raw records 0), penalized-argmax 1.0000 (all-penalized records 198)
+ARGMAX_CHECK norp256: 200/200 records, 41943 tokens, raw-argmax 1.0000 (all-raw records 200), penalized-argmax 0.9422 (all-penalized records 0)
+VALID norp256 records 200 recovered 200 tokens 41943 raw 1.0000 penalized 0.9422 all_raw 200 all_pen 0
+VALID registered256 records 200 recovered 199 tokens 42930 raw 0.9413 penalized 1.0000 all_raw 0 all_pen 198
+VALIDATE_OK NVIDIA H200 NVL
+8aada1fa05829fc0a8a5172cc474bcb2ebabdcdc2477ff3bbc220a03709c98e5  argmax_check_256.json
+[2026-10-23T19:48:11-06:00] SUCCEEDED: cap-256 argmax check valid on gpu-node-2 token 0 (GPU-<gpu09>); published $WORK/diagnostics/no-rep-penalty/argmax_check_256.json
+[2026-10-23T19:48:11-06:00] released rrhs_cluster-a_JOB-B_gpu-node-2_<gpu09>

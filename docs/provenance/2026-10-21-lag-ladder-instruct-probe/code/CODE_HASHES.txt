@@ -1,0 +1,14 @@
+# One row per code file: path, hash kind, hash, what it covers.
+# sha256 rows: the committed file is byte-identical to what ran.
+# hmac-sha256 rows: HMAC-SHA256 of the original bytes that ran, before redaction, under a key the runner holds.
+# The runner hands the key and the originals to the lag-ladder authors or the operator on request; a plain sha256
+# of a redacted original would let anyone test guesses of the redacted values.
+code/argmax256/queue_watch.sh  hmac-sha256  e0ab05c8255214308086828183df6381ddc47ecab146ef5a05b6f7ab929ef49c  redacted: keyed hash of the bytes that ran
+code/argmax256/task.sh  hmac-sha256  e3e748f1ce0f7ac79dbc2e3b4ceafd0126657bcdc772ac9b92c6d2cd01c578b1  redacted: keyed hash of the bytes that ran
+code/diagnostic/argmax_check.py  sha256  3d923becf14f418b200ddfe6009cf28a22439d42e83ecee38ff4ee2fe0f2f89e  verbatim: equals the committed bytes
+code/diagnostic/merge_diag.py  sha256  fbebd752390b011d6f43d517787363be4f7ca39d34a1a24a748a7457f8e8634f  verbatim: equals the committed bytes
+code/diagnostic/norp_probe.py  sha256  e812f5b945c1b74adce63af9505d737a74cc6201fda3ca114d218f0a13231ea8  verbatim: equals the committed bytes
+code/diagnostic/run_diag.sh  hmac-sha256  c3f46d6115a53083687dcbbeeeaeca8f0a2446af4386b150307803e10653a55f  redacted: keyed hash of the bytes that ran
+code/diagnostic/watch.sh  hmac-sha256  20399a93aab14d2603d6c5d484cc6526a7e80541e7bb765d48c9f474a88de748  redacted: keyed hash of the bytes that ran
+code/step1-probe/run.sh  hmac-sha256  fabb2dc9551ee7fe118a24a1db9f45de1d6353db9ff7601bde5a5bc0e8c48cd4  redacted: keyed hash of the bytes that ran
+code/step1-probe/watch.sh  hmac-sha256  f58eb1c8945f0ba5065c4cf6ecc37cfd9a4a8ca1d86e36de189742ea39cfd44e  redacted: keyed hash of the bytes that ran

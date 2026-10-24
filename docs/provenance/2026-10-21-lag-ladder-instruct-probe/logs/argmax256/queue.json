@@ -1,0 +1,10 @@
+{
+ "state": "SUCCEEDED",
+ "updated": "2026-10-23T19:48:49-06:00",
+ "attempts": 1,
+ "failures": 0,
+ "watcher": "cpu-host-1 pid 2393067 step JOB-W.21",
+ "excluded_nodes": [],
+ "queued_at": "2026-10-23T17:15:46-06:00",
+ "last_attempt": "$WORK/_gpu_run/argmax256/attempt-20261023-194656-gpu-node-2"
+}

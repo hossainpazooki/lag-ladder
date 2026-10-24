@@ -1,0 +1,18 @@
+[2026-10-23T17:15:46-06:00] watcher up on cpu-host-1 pid 2393067 step JOB-W.21; queued since 2026-10-23T17:15:46-06:00; POLL 1800s LIFE 252000s; attempts 0 failures 0
+[2026-10-23T17:15:46-06:00] check: 0 allocation(s) with an idle card (cache 3s old)
+[2026-10-23T17:45:47-06:00] check: 0 allocation(s) with an idle card (cache 4s old)
+[2026-10-23T18:15:47-06:00] check: 0 allocation(s) with an idle card (cache 2s old)
+[2026-10-23T18:45:48-06:00] check: 0 allocation(s) with an idle card (cache 4s old)
+[2026-10-23T19:15:48-06:00] check: 0 allocation(s) with an idle card (cache 4s old)
+[2026-10-23T19:45:48-06:00] check: 2 allocation(s) with an idle card (cache 5s old)
+[2026-10-23T19:45:48-06:00]   candidate gpu-node-3 cluster-b/JOB-C GeForce RTX 3090 24G, 2 idle, 6:43:39 left
+[2026-10-23T19:45:48-06:00] attempt 1: cluster-b job JOB-C gpu-node-3 (GeForce RTX 3090) -> $WORK/_gpu_run/argmax256/logs/srun-20261023-194548-gpu-node-3.log
+[2026-10-23T19:46:48-06:00]   gpu-node-3: NO_CARD  no free unclaimed card on gpu-node-3
+[2026-10-23T19:46:48-06:00]   gpu-node-3: srun rc=75 attempt dir $WORK/_gpu_run/argmax256/attempt-20261023-194552-gpu-node-3; [2026-10-23T19:45:54-06:00] NO_CARD: no free unclaimed card on gpu-node-3
+[2026-10-23T19:46:48-06:00]   candidate gpu-node-2 cluster-a/JOB-B H200 NVL 140G, 2 idle, 2-20:10:59 left
+[2026-10-23T19:46:48-06:00] attempt 1: cluster-a job JOB-B gpu-node-2 (H200 NVL) -> $WORK/_gpu_run/argmax256/logs/srun-20261023-194648-gpu-node-2.log
+[2026-10-23T19:47:48-06:00]   gpu-node-2: RUNNING GPU-<gpu09> 
+[2026-10-23T19:48:49-06:00]   gpu-node-2: SUCCEEDED GPU-<gpu09> cap-256 argmax check valid on gpu-node-2 token 0 (GPU-<gpu09>); published $WORK/diagnostics/no-rep-penalty/argmax_check_256.json
+[2026-10-23T19:48:49-06:00]   gpu-node-2: srun rc=0 attempt dir $WORK/_gpu_run/argmax256/attempt-20261023-194656-gpu-node-2; [2026-10-23T19:48:11-06:00] released rrhs_cluster-a_JOB-B_gpu-node-2_<gpu09>
+[2026-10-23T19:48:49-06:00] TERMINAL SUCCEEDED: $WORK/diagnostics/no-rep-penalty/argmax_check_256.json valid
+[2026-10-23T19:48:49-06:00] watcher exiting (state SUCCEEDED)

@@ -1,0 +1,48 @@
+{
+ "labels_used": [
+  "$CLAIMS_DIR",
+  "$FLEET_TOOLS",
+  "$FLEET_TOOLS/",
+  "$HF_HOME",
+  "$SCRATCH",
+  "$WORK",
+  "<cluster-b-node-prefix>",
+  "JOB-A",
+  "JOB-B",
+  "JOB-C",
+  "JOB-W",
+  "another-project",
+  "cluster-a",
+  "cluster-b",
+  "cpu-host-1",
+  "fleet-tools",
+  "gpu-node-1",
+  "gpu-node-2",
+  "gpu-node-3",
+  "login-1"
+ ],
+ "gpu_uuid_labels": [
+  "gpu01",
+  "gpu02",
+  "gpu03",
+  "gpu04",
+  "gpu05",
+  "gpu06",
+  "gpu07",
+  "gpu08",
+  "gpu09"
+ ],
+ "log_lines_dropped_pattern": "Loading weights|Fetching \\d+ files|^ ?Download|^Prepared |^Resolved |^Uninstalled |^Installed |^Using CPython|^Creating virtual|^Activate with|^Using Python|Warning: You are sending unauthenticated",
+ "file_specific_edits": {
+  "logs/step1-probe/manifest.md": [
+   "--n 200 (the runbook allows it)"
+  ],
+  "logs/step1-probe/card_line.txt": [
+   "free on the shared scratch filesystem (df -h): 132T"
+  ]
+ },
+ "notes_added": [
+  "a REDACTED COPY header after the shebang of every redacted .sh",
+  "a not-evidence and path-mapping note under the title of diagnostic-no-rep-penalty/README.md"
+ ]
+}

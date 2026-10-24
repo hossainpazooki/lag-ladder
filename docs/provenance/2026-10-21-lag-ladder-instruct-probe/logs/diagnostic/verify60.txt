@@ -1,0 +1,17 @@
+== +60s 2026-10-22T00:00:16-06:00
+0, GPU-<gpu01>, 6358 MiB, 92 %
+1, GPU-<gpu02>, 6360 MiB, 90 %
+2, GPU-<gpu03>, 6358 MiB, 92 %
+3, GPU-<gpu04>, 6360 MiB, 88 %
+4, GPU-<gpu05>, 6394 MiB, 90 %
+5, GPU-<gpu06>, 6374 MiB, 94 %
+6, GPU-<gpu07>, 6364 MiB, 88 %
+7, GPU-<gpu08>, 6376 MiB, 88 %
+GPU-<gpu01>, 2821654, 6348 MiB
+GPU-<gpu02>, 2821659, 6350 MiB
+GPU-<gpu03>, 2821664, 6348 MiB
+GPU-<gpu04>, 2821669, 6350 MiB
+GPU-<gpu05>, 2821674, 6384 MiB
+GPU-<gpu06>, 2821679, 6364 MiB
+GPU-<gpu07>, 2821684, 6354 MiB
+GPU-<gpu08>, 2821689, 6366 MiB

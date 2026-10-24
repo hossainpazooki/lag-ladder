@@ -1,0 +1,22 @@
+ENV {"torch": "2.14.1+cu130", "transformers": "5.20.2", "cuda": "13.0", "cuda_available": true, "device_name": "NVIDIA RTX PRO 4000 Blackwell", "python": "3.12.15", "platform": "Linux-4.18.0-553.144.1.el8_10.x86_64-x86_64-with-glibc2.28", "dtype": "float32", "model": "Qwen/Qwen2.5-1.5B-Instruct@989aa7980e4cf806f80c7fef2b1adb7bc71aa306", "model_commit": null}
+PROBE 10/200 42s
+PROBE 20/200 84s
+PROBE 30/200 118s
+PROBE 40/200 151s
+PROBE 50/200 189s
+PROBE 60/200 221s
+PROBE 70/200 262s
+PROBE 80/200 301s
+PROBE 90/200 323s
+PROBE 100/200 359s
+PROBE 110/200 393s
+PROBE 120/200 429s
+PROBE 130/200 464s
+PROBE 140/200 491s
+PROBE 150/200 528s
+PROBE 160/200 573s
+PROBE 170/200 609s
+PROBE 180/200 648s
+PROBE 190/200 690s
+PROBE 200/200 723s
+PROBE_DONE n 200 max_new 768 accuracy 64.5 [58.0, 71.0] cap 0.00 no_answer 0.00 hash_marker 0.10 boxed_marker 0.56 acc_boxed 41.0 loop 0.00 band accuracy-verdict

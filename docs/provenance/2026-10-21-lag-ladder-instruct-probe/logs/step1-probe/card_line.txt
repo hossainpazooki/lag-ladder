@@ -1,0 +1,3 @@
+name, memory.total [MiB], driver_version
+NVIDIA RTX PRO 4000 Blackwell, 24467 MiB, 595.91.07
+free on the shared scratch filesystem (df -h): 132T
