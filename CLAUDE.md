@@ -20,7 +20,8 @@ outcome, entry 0024 the ruling that adds the trainer's own text to (B)'s stateme
 dump-equivalence limit (absolute 2⁻⁵) after the sitting halted on the relative one, entry 0027 the outcome of the
 (C) sitting, entry 0028 the registration of the own run's second trainer seed (§14.3), entry 0029 its outcome
 (all five clauses held), entry 0030 the registration of the fourth text `agentic` (§14.4), entry 0031 the registration of
-the own run on Llama-3.2-3B (§14.5), and entry 0032 its outcome ((i-holds), (ii), (iii) HELD; (i) and (iv) FALSIFIED).
+the own run on Llama-3.2-3B (§14.5), entry 0032 its outcome ((i-holds), (ii), (iii) HELD; (i) and (iv) FALSIFIED), and entry 0033
+the pair-only re-pin at de6ce9e for the SmolLM3 family (`INSTRUMENT_SHA` stays 5d4aa4a).
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never

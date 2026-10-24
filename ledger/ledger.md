@@ -1532,3 +1532,59 @@ slope band for later families; SmolLM3-3B-Base (its pair and re-pin entry).
 
 **Consequences in this commit set:** `README.md`, `CLAUDE.md`. Records and the Hub backup under the hashes above; nothing in
 `results/` is committed. Landed ahead as their own commits: `732c8d4`, `54c4d48`.
+
+### 0033 — 2026-10-24 — Re-pin for one family: the instrument at de6ce9e (PR #4, the `smollm3-3b-base` identity pair); INSTRUMENT_SHA stays 5d4aa4a
+
+prior-entries-sha256: 181aa91654adf8436e6286954436a8cab8ff179099070dff9a5e85de23677f92
+
+**What it records.** kv-transfer-replication `main` moved from `5d4aa4a98b40f5ab37dd83ebb6b2ee802203994a` to
+`de6ce9e944d9914c1964be7227bce146c9d29c3a` by the merge of PR #4 (branch commit `8d2de2e`, 2026-10-24): one `Pair`,
+`smollm3-3b-base`, source and target `HuggingFaceTB/SmolLM3-3B-Base`, no revision and no local path on either side, with its
+comment; `kvt/pairs.py` is the only file touched (`git diff 5d4aa4a de6ce9e --stat`: 9 insertions; the committed blob
+`git show de6ce9e:kvt/pairs.py` sha256 `443e60fe…a463`). The four statistic-(A) paths the gate checks are byte-identical at M — the
+blobs `scripts/dump_kv.py 926bb13c…`, `kvt/data.py 42be71ed…`, `scripts/score_positions.py de8e71bd…`, `kvt/pertoken.py 847fdd01…`
+equal the pin's blobs digest for digest — which is the gate's own check
+(`upstream_gate`: pin an ancestor of HEAD and those paths unchanged), so every earlier configuration pinned at 5d4aa4a keeps passing
+on a checkout at M. The instrument's suite on the branch: 193 passed, as at the pin.
+
+**Which pin moves, and which does not.** `INSTRUMENT_SHA` in `src/lag_ladder/__init__.py` stays `5d4aa4a`: statistic (A) is
+closed (0010) on those bytes, the constant is read only by `tests/test_imports.py` against `UPSTREAM.md`, and every driver reads
+its configuration's `upstream_sha`. The SmolLM3 family pins M in `config/ownrun_smollm3.toml` (its registration entry), and
+`UPSTREAM.md`'s pin chain records M after 5d4aa4a as a pair-only re-pin. Nothing in the Qwen or Llama configurations changes.
+
+**Why the identity pair (R-F8, decided by a run).** `assert_shared_tokenizer` (`kvt/models.py` 127–131) compares `get_vocab()`
+between a pair's source and target before any token file or dump. Run on 2026-10-23 (transformers 5.15.1) with the post-trained
+`HuggingFaceTB/SmolLM3-3B` at `a07cc9a04f16…` as the target, it refused: `tokenizers differ: 128256 vs 128256 entries or
+different mapping` — the two `tokenizer.json` files share `model.vocab` (128,000 entries) and differ in `added_tokens` at ids
+128017 and 128018 (`<|reserved_special_token_9|>` / `<|reserved_special_token_10|>` in Base, `<code>` / `</code>` in the
+post-trained). Nothing in the own run reads a target (every dump is `--which source`, `--local-path` to a saved step), so the pair
+follows `olmo2-1b-rlvr1` (PR #3): source = target = Base; the source side is unpinned because `dump_kv` (77–80) refuses
+`--local-path` on a side the pair pins. The checkpoint revision is pinned by the registering entry and by each dump's
+`checkpoint_manifest.json`, as for the other families.
+
+**The model under the instrument.** SmolLM3ForCausalLM: 36 layers, 16 heads, `num_key_value_heads` 4, `head_dim` null so
+`kv_shape` takes 2048 / 16 = 128, vocab 128,256, `rope_theta` 5e6 present (`_rope_theta` resolves), `no_rope_layer_interval` 4:
+every fourth layer carries no rotary embedding. Statistic (B) is unaffected: `dump_kv` records K (the model's own cache) and V on
+every layer and `score_continuation.py` rebuilds the cache from them layer by layer, with no per-layer RoPE assumption.
+`K_stripped`, which statistic (A)'s scorer reads, is meaningless on the rope-free layers; (A) is closed (0010) and is not run on
+this pair. `check_matched_kv` passes trivially on an identity pair.
+
+**The token file, and one fact it exposes.** `scripts/prepare_tokens.py --pair smollm3-3b-base --n-seqs 50 --seq-len 1024
+--seed 0` at M wrote `data/tokens/smollm3-3b-base_n50_len1024_seed0.npy`, 50 × 1024 int64, 50 distinct rows, sha256
+`2a79dbe4c8b59f245d876426f2b930d36df8696c0dc9e91e9718ef220170af21` — **byte-identical to the Llama pair's held-out file**
+`llama3.2-3b-to-llama3.1-8b_n50_len1024_seed0.npy` (0031). The reason, read from the two `tokenizer.json` files (SmolLM3-3B-Base
+`ab4da6b2…` at `d78a42f7`, Llama-3.2-3B `79e3e522…` at `13afe5124825`): SmolLM3 ships the Llama 3 byte-level BPE — `model.vocab`
+equal (128,000 entries), all 280,147 merges equal in order, pre-tokenizer and normalizer equal; the files differ only in eight
+`added_tokens` (ids 128002, 128003 and 128011–128016: `<think>`, `</think>`, `<|im_start|>`, `<|im_end|>` and the tool tags,
+against Llama's reserved names) and in the
+post-processor (Llama prepends `<|begin_of_text|>`, SmolLM3 does not). `prepare_tokens` adds no special tokens (row 0 begins with
+id 49), so the FineWeb-Edu windows tokenize identically. Consequence, stated here so the registration can use it: the two families'
+held-out texts are the SAME fifty windows, and every held-out comparison between Llama-3.2-3B and SmolLM3-3B-Base is on identical
+tokens; the rollout texts remain each family's own samples. (SmolLM3's chat-template tokens are irrelevant to the own run: the
+base ships no template and the prompts are plain, as 0031.)
+
+**Not registered here.** The SmolLM3 own run (its entry pins the model at `d78a42f79198603e614095753484a04c10c2b940`, the
+rollout hashes and the seal); statistic (A) on this pair; any change to `INSTRUMENT_SHA`.
+
+**Consequences in this commit set:** `UPSTREAM.md` (M in the pin chain, pair-only, (A) paths byte-identical), `CLAUDE.md`
+(header line). No code; no config.

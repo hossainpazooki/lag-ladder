@@ -16,7 +16,10 @@ every sha below; `tests/test_imports.py` asserts this file names exactly those s
   entry-0036 pin, "RoPE spec from the model's rotary embedding"; 9ca6258) are named in ledger
   0001/0003/0004; `scripts/score_positions.py` and `kvt/pertoken.py` are byte-identical to both. Later
   re-pins come by numbered entry (the swap scorer for (C)); each new sha is recorded here and in
-  `config/*.toml` after it lands upstream. Scope (ruled 2026-09-24, entry 0002): the dump writer and the
+  `config/*.toml` after it lands upstream. Pair-only re-pin for one family (ledger 0033, 2026-10-24): `main` at
+  de6ce9e (`de6ce9e944d9…`; the full sha is in ledger 0033 and the config) after PR #4 (`kvt/pairs.py` only, the `smollm3-3b-base` identity pair); the four
+  (A) paths are byte-identical to 5d4aa4a's blobs, `INSTRUMENT_SHA` stays 5d4aa4a, and only `config/ownrun_smollm3.toml` pins
+  de6ce9e. Scope (ruled 2026-09-24, entry 0002): the dump writer and the
   per-token scorer for statistic (A). Statistic (B)'s log-prob scorer and (C)'s swap scorer are
   `src/lag_ladder/` code.
 - Local path (used by `config/seal.toml` as `${upstream}`): `../kv-transfer-replication`
