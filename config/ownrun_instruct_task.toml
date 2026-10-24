@@ -1,0 +1,69 @@
+# Statistic (C), "does the task notice", on the INSTRUCT-initialised own run (0035; 0025's layout). The reader at step g
+# answers GSM8K test prompts greedily under its own prompt cache (FRESH), the step-0 writer's (STALE), another test prompt's
+# (NEAR) and a held-out web prefix of the prompt's length (FAR); caches built live and rounded through float16;
+# `tools/task_swap.py` under the instrument's interpreter: raw argmax, stop on the tokenizer's eos — the decoder the Step-1
+# probe v2 was verified against token for token (the checkpoint's generation_config, repetition_penalty 1.1 and a two-token
+# eos list, never reaches it). UNREGISTERED until a numbered entry fixes every value below.
+#
+# Two departures from 0025, ruled 2026-10-24: max_new 768 (the Instruct policy reasons in LaTeX and `\boxed{}`; the probe
+# read 72.0 [65.5, 78.0] accuracy at cap 768 against 51.5 at cap 256 on 200 prompts), and two sealed clauses on accuracy
+# ((v) FRESH >= 50 points at every reader, (vi) the STALE - FRESH interval entirely below zero at g = 32) beside 0025's four
+# on flips; the answer rule is kept (last ####, else last number) with the probe's marker rates disclosed in the entry.
+#
+# The equivalence control's expected rollout (B1) is this run's own (B) reading at step_32 (0025 pinned 0018's): the
+# pointer below is resolved at run time from results/ownrun_instruct/summary.json, which the (B) stage writes first on
+# the same machine, and the value used is recorded in run.json. Dumps are the pair's TARGET side (target@local-step_0).
+
+[task]
+results_dir = "results/ownrun_instruct_task"
+upstream_path = "../kv-transfer-replication"
+upstream_sha = "5d4aa4a98b40f5ab37dd83ebb6b2ee802203994a"
+registered_by = ""
+seal = "ownrun-instruct-task"
+writer = "local:step_0"
+# Run order, not a statistic: the sealed clauses (ii)-(iv) read step_1 and step_32 alone, so those two run first and the
+# middle lags (descriptive; clause (i) touches them) follow. The outcome entry reads what ran.
+readers = ["local:step_1", "local:step_32", "local:step_2", "local:step_4", "local:step_8", "local:step_16"]
+# [{index, question, gold}] for every GSM8K test row, written by `task_swap.py prepare` and pinned at registration.
+prompts = "data/tokens/gsm8k_test_prompts.json"
+prompts_sha256 = "918c7e67f051d41f7b153911f0497bc62c82b76cb04ef84f6f5ee0e66ab22450"
+n_prompts = 1319
+# FAR prefixes: the held-out Qwen token file of 0008 (0012's pin), rows 40..49 cycled, cut to each prompt's length.
+far_tokens = "data/tokens/qwen2.5-1.5b-to-instruct_n50_len1024_seed0.npy"
+far_tokens_sha256 = "01bd7698f7413ab9a3b6958991487bbba626f5a8cc4f24142cd22091d96af747"
+far_seq = 40
+max_new = 768
+seed = 0
+
+[task.rule]
+# §4's accuracy bands with the sign fixed (points), descriptive under R-C22; the positive controls NEAR and FAR fire when
+# each flips at least control_min_flip_rate of the answers (the probes read 0.906 and 1.000 at g = 32).
+holds_abs_max = 1.0
+holds_ci_abs_max = 2.0
+degrades_max = -5.0
+degrades_ci_max = -2.0
+bootstrap_reps = 2000
+control_min_flip_rate = 0.5
+
+[task.controls]
+# The floor (FRESH built in float32 vs through float16) and the identity (FRESH twice) run on the first n_prompts prompts
+# of every reader. Floor limit 1% (13 of 1,319 per reader): both probes read 0 of 64, which bounds the rate at 4.6%
+# (rule of three), so 1% is a margin ten times under clause (ii)/(iii)'s 10%, not a measured ceiling (0025).
+n_prompts = 1319
+floor_max_flip_rate = 0.01
+# Dump equivalence, once per sitting before any cell: the writer's live cache of this run's rollout prompts against the
+# step-0 dump, and this run's rollout (B1) at step_32 reproduced through this tool (the pointer below; 0025 pinned 0018's).
+# The gap limit is absolute (0026 restating R-C21): 2^-5, one float16 ulp in the top binade the caches occupy. The two
+# probes and the sitting read 2^-7 (cu130) and 2^-6 (cu128). 0025's per-element relative limit (2^-10) halted the sitting
+# of 2026-10-16 at 0.33: the live-vs-dump discrepancy is float32 forward noise of ~1e-5 absolute, hundreds of float16 ulps
+# of a near-zero element, so no live cache could meet it. The relative gap and the share of differing elements are
+# descriptives in the record; the (B1) reproduction within 1e-3 is the material check.
+equivalence_max_abs_diff = 0.03125
+equivalence_b1_max_rel = 1e-3
+equivalence_reader = "local:step_32"
+equivalence_expect_b1 = { summary = "results/ownrun_instruct/summary.json", rung = "ownrun-instruct-rollout-lag-32", text = "rollout" }
+rollout_tokens = "data/tokens/qwen2.5-1.5b-instruct-ownrun_rollout_n10_seed0.npy"
+rollout_tokens_sha256 = "ROLLOUT_TOKENS_SHA256_PENDING"
+rollout_spans = "data/tokens/qwen2.5-1.5b-instruct-ownrun_rollout_n10_seed0.spans.json"
+rollout_spans_sha256 = "ROLLOUT_SPANS_SHA256_PENDING"
+rollout_dump_root = "results/distance/pairs/qwen2.5-1.5b-instruct-ownrun-rollout/dumps/target@local-step_0"
