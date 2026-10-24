@@ -153,3 +153,47 @@ def test_seal_readout_reads_the_four_clauses_on_flips(tmp_path):
     summary["lags"]["local:step_32"]["evaluable"] = False
     c = st.seal_readout(summary, tmp_path, "ownrun-task")["clauses"]
     assert c["i"]["verdict"] == "FALSIFIED" and c["iii"]["verdict"] == "UNREAD" and c["iv"]["verdict"] == "UNREAD"
+
+
+
+# --- 0035: two clauses the Instruct-initialised run seals on accuracy, which no earlier (C) seal could carry ---------
+
+def _task_seal(root, predictions):
+    (root / st.PREDICTIONS).mkdir(parents=True, exist_ok=True)
+    (root / st.PREDICTIONS / "x.json").write_text(json.dumps({"prediction": {"predictions": predictions}}), encoding="utf-8")
+
+
+def _lag(acc_fresh, delta, lo, hi, band="UNRESOLVED", evaluable=True):
+    return {"evaluable": evaluable, "acc_fresh": acc_fresh, "positive_controls_fire": True,
+            "arms": {"stale": {"flip_rate": 0.5, "flip_ci_low": 0.45, "flip_ci_high": 0.55,
+                               "delta": {"delta_points": delta, "ci_low": lo, "ci_high": hi}, "band": band}}}
+
+
+def test_fresh_accuracy_floor_clause_reads_acc_fresh_at_every_named_reader(tmp_path):
+    """(v): FRESH greedy accuracy (points) at least a floor at every named reader — the Instruct baseline the probe
+    read at 72.0 [65.5, 78.0]; UNREAD when a reader is withheld or missing."""
+    _task_seal(tmp_path, {"v_fresh_accuracy_at_least": {"readers": ["local:step_1", "local:step_32"], "at_least_points": 50.0}})
+    s = {"lags": {"local:step_1": _lag(71.2, -0.5, -2.0, 1.0), "local:step_32": _lag(68.0, -6.0, -8.5, -3.6)}}
+    c = st.seal_readout(s, tmp_path, "x")["clauses"]["v"]
+    assert c == {"readers": ["local:step_1", "local:step_32"], "at_least_points": 50.0,
+                 "acc_fresh": {"local:step_1": 71.2, "local:step_32": 68.0}, "verdict": "HELD"}
+    s["lags"]["local:step_32"]["acc_fresh"] = 49.9
+    assert st.seal_readout(s, tmp_path, "x")["clauses"]["v"]["verdict"] == "FALSIFIED"
+    s["lags"]["local:step_32"]["evaluable"] = False
+    assert st.seal_readout(s, tmp_path, "x")["clauses"]["v"]["verdict"] == "UNREAD"
+    del s["lags"]["local:step_32"]
+    assert st.seal_readout(s, tmp_path, "x")["clauses"]["v"]["verdict"] == "UNREAD"
+
+
+def test_degrades_at_lag_clause_reads_the_paired_delta_interval_entirely_below_zero(tmp_path):
+    """(vi): at the named reader the STALE − FRESH accuracy interval lies entirely below zero (ci_high < 0); the band
+    the summarizer assigned is reported beside it, not re-derived."""
+    _task_seal(tmp_path, {"vi_degrades_at_lag": {"reader": "local:step_32"}})
+    held = {"lags": {"local:step_32": _lag(68.0, -6.0, -8.5, -3.6, band="DEGRADES_C")}}
+    c = st.seal_readout(held, tmp_path, "x")["clauses"]["vi"]
+    assert c == {"reader": "local:step_32", "delta_points": -6.0, "interval": [-8.5, -3.6], "band": "DEGRADES_C",
+                 "verdict": "HELD"}
+    straddles = {"lags": {"local:step_32": _lag(68.0, -0.7, -2.0, 0.5)}}
+    assert st.seal_readout(straddles, tmp_path, "x")["clauses"]["vi"]["verdict"] == "FALSIFIED"
+    unevaluable = {"lags": {"local:step_32": _lag(68.0, -6.0, -8.5, -3.6, evaluable=False)}}
+    assert st.seal_readout(unevaluable, tmp_path, "x")["clauses"]["vi"]["verdict"] == "UNREAD"

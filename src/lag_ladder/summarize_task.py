@@ -245,6 +245,22 @@ def seal_readout(summary: dict, repo: Path, seal: str = "ownrun-task") -> dict |
                                 "intervals": {r: (None if s is None else [s["flip_ci_low"], s["flip_ci_high"]])
                                               for r, s in ((iv["first"], a), (iv["last"], b))},
                                 "verdict": verdict([ok])}
+    # 0035 (the Instruct-initialised run): two clauses on accuracy that no earlier (C) seal could carry, because the
+    # base policy read 4–12% FRESH; both read the lag's recomputed statistics, UNREAD when the lag is UNEVALUABLE.
+    v = P.get("v_fresh_accuracy_at_least")
+    if v:
+        lo = float(v["at_least_points"])
+        accs = {r: ((lags.get(r) or {}).get("acc_fresh") if (lags.get(r) or {}).get("evaluable") else None) for r in v["readers"]}
+        out["clauses"]["v"] = {"readers": list(v["readers"]), "at_least_points": lo, "acc_fresh": accs,
+                               "verdict": verdict([None if x is None else x >= lo for x in accs.values()])}
+    vi = P.get("vi_degrades_at_lag")
+    if vi:
+        s = stale(vi["reader"])
+        d = (s or {}).get("delta")
+        ok = None if d is None else float(d["ci_high"]) < 0.0
+        out["clauses"]["vi"] = {"reader": vi["reader"], "delta_points": None if d is None else d["delta_points"],
+                                "interval": None if d is None else [d["ci_low"], d["ci_high"]],
+                                "band": None if s is None else s.get("band"), "verdict": verdict([ok])}
     return out
 
 
