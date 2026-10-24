@@ -163,7 +163,8 @@ def resolve_expect_b1(cfg: TaskConfig, repo_root: Path) -> tuple[float, dict | N
     """The rollout (B1) the equivalence control must reproduce: the number the config pins (0025: 0018's step-32
     median), or, when the config points at a (B) summary (0035: no earlier entry's number exists for a new
     initialisation), that summary's rung and text median read now — the (B) stage runs before (C) on the same
-    machine. Refuses when the summary, the rung or the text is missing or withheld."""
+    machine, and the record carries the summary's sha256 beside the pointer. Refuses when the summary, the rung or the text is
+    missing or withheld."""
     eb = cfg.controls["equivalence_expect_b1"]
     if not isinstance(eb, dict):
         return float(eb), None
@@ -179,7 +180,7 @@ def resolve_expect_b1(cfg: TaskConfig, repo_root: Path) -> tuple[float, dict | N
     if m is None or float(m) <= 0:
         raise _refuse(f"{where}: the summary carries no positive median for that text")
     rel = Path(f).resolve().relative_to(Path(repo_root).resolve()).as_posix() if Path(f).resolve().is_relative_to(Path(repo_root).resolve()) else str(f)
-    return float(m), {"summary": rel, "rung": eb["rung"], "text": eb["text"]}
+    return float(m), {"summary": rel, "rung": eb["rung"], "text": eb["text"], "sha256": sha256_file_bytes(f)}
 
 
 def judge_equivalence(rec: dict, cfg: TaskConfig) -> dict:

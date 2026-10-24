@@ -275,7 +275,10 @@ def test_run_resolves_the_expected_b1_from_the_b_summary_and_records_it(repo, se
     assert float(eq[eq.index("--expect-b1") + 1]) == 0.0421
     rec = json.loads((cfg.results_dir / "run.json").read_text(encoding="utf-8"))
     assert rec["equivalence"]["passed"] is True and rec["equivalence"]["b1_expected"] == 0.0421
-    assert rec["equivalence"]["b1_expected_from"] == {"summary": "results/task_b/summary.json", "rung": "own-rollout-lag-32", "text": "rollout"}
+    import hashlib
+    digest = hashlib.sha256((repo / "results" / "task_b" / "summary.json").read_bytes()).hexdigest()
+    assert rec["equivalence"]["b1_expected_from"] == {"summary": "results/task_b/summary.json", "rung": "own-rollout-lag-32",
+                                                       "text": "rollout", "sha256": digest}
 
 
 def test_run_refuses_when_the_b_summary_or_its_rung_is_missing(repo, seal_cfg):
