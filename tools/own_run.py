@@ -34,6 +34,20 @@ ROW_LEN = 1024
 MIN_ROLLOUT_TOKENS = 64
 
 
+def decoding_spec(tok, *, do_sample: bool, temperature: float, max_new_tokens: int) -> dict:
+    """Every decoding parameter `generate` would otherwise read from the checkpoint's generation_config.json,
+    pinned here so a call decodes the same way on every checkpoint. Found 2026-10-24 on the Instruct probe:
+    Qwen2.5-1.5B-Instruct ships `repetition_penalty 1.1` and a two-token stop set in that file, and transformers
+    applies the penalty even under do_sample=False, so an unpinned call is not the decoder the statistic names. The
+    three base checkpoints of 0017–0034 ship no penalty and their eos equals the tokenizer's, so this spec is what
+    those rollouts ran under; the rule is per call, not per checkpoint. Recorded in the spans sidecar."""
+    eos = int(tok.eos_token_id)
+    pad = tok.pad_token_id if tok.pad_token_id is not None else eos
+    return {"do_sample": bool(do_sample), "temperature": float(temperature) if do_sample else 1.0,
+            "top_p": 1.0, "top_k": 0, "repetition_penalty": 1.0, "no_repeat_ngram_size": 0, "num_beams": 1,
+            "eos_token_id": eos, "pad_token_id": int(pad), "max_new_tokens": int(max_new_tokens)}
+
+
 # --- pure helpers -----------------------------------------------------------------------------------------------
 
 def keep_set(spec: str | None) -> frozenset[int]:
@@ -278,14 +292,18 @@ def cmd_sample_rollouts(a) -> int:
     ds = load_dataset("openai/gsm8k", "main", split="train")
     idx = select_prompt_indices(len(ds), a.n, a.seed)
     torch.manual_seed(a.seed)
+    spec = decoding_spec(tok, do_sample=True, temperature=a.temperature, max_new_tokens=a.max_new_tokens)
+    gc = model.generation_config
+    print("DECODING " + json.dumps({"spec": spec, "checkpoint_generation_config": {
+        k: getattr(gc, k, None) for k in ("repetition_penalty", "eos_token_id", "temperature", "top_p", "top_k")}}),
+          flush=True)
     rows, meta = [], []
     for i in idx:
         prompt, special = render_prompt(tok, ds[i]["question"], a.prompt_format, a.model)
         enc = tok(prompt, return_tensors="pt", add_special_tokens=special).to(a.device)
         pl = int(enc["input_ids"].shape[1])
         for attempt in range(5):
-            out = model.generate(**enc, do_sample=True, temperature=a.temperature, top_p=1.0, top_k=0,
-                                 max_new_tokens=a.max_new_tokens, pad_token_id=tok.pad_token_id or tok.eos_token_id)
+            out = model.generate(**enc, **spec)
             new = out[0, pl:].tolist()
             if tok.eos_token_id in new:
                 new = new[: new.index(tok.eos_token_id) + 1]
@@ -302,7 +320,7 @@ def cmd_sample_rollouts(a) -> int:
     tokens_out.parent.mkdir(parents=True, exist_ok=True); spans_out.parent.mkdir(parents=True, exist_ok=True)
     np.save(tokens_out, arr)
     spans.update({"model": a.model, "seed": a.seed, "temperature": a.temperature, "pad_id": int(pad_id),
-                  "system_line": SYSTEM_LINE, "prompt_format": a.prompt_format,
+                  "decoding": spec, "system_line": SYSTEM_LINE, "prompt_format": a.prompt_format,
                   "prompt_token_counts": count_stats([m["prefix_len"] for m in meta]), "prompts": meta})
     spans_out.write_text(json.dumps(spans, indent=1), encoding="utf-8")
     Path(a.excluded_out).write_text(json.dumps(idx), encoding="utf-8")

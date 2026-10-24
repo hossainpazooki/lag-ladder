@@ -145,3 +145,24 @@ def test_both_commands_take_prompt_format_with_chat_as_the_default():
     assert ap.parse_args(common_t + ["--prompt-format", "plain"]).prompt_format == "plain"
     with pytest.raises(SystemExit):
         ap.parse_args(common_t + ["--prompt-format", "markdown"])
+
+
+class _EosTok:
+    """A tokenizer that only knows its eos and pad ids (the decoding spec reads nothing else)."""
+    def __init__(self, eos, pad=None):
+        self.eos_token_id, self.pad_token_id = eos, pad
+
+
+def test_decoding_spec_pins_every_generation_config_parameter_and_the_sampler_passes_it():
+    """2026-10-24: `generate` fills what the call omits from the checkpoint's generation_config.json (Qwen2.5-1.5B-
+    Instruct ships repetition_penalty 1.1 there), so the sampler passes the whole spec and records it."""
+    s = own_run.decoding_spec(_EosTok(7, None), do_sample=True, temperature=1.0, max_new_tokens=256)
+    assert s == {"do_sample": True, "temperature": 1.0, "top_p": 1.0, "top_k": 0, "repetition_penalty": 1.0,
+                 "no_repeat_ngram_size": 0, "num_beams": 1, "eos_token_id": 7, "pad_token_id": 7,
+                 "max_new_tokens": 256}
+    g = own_run.decoding_spec(_EosTok(7, 0), do_sample=False, temperature=0.3, max_new_tokens=8)
+    assert g["do_sample"] is False and g["temperature"] == 1.0 and g["pad_token_id"] == 0   # a pad id of 0 is a pad id
+    assert g["eos_token_id"] == 7 and g["repetition_penalty"] == 1.0 and g["max_new_tokens"] == 8
+    src = (REPO_ROOT / "tools" / "own_run.py").read_text(encoding="utf-8")
+    calls = [line for line in src.splitlines() if ".generate(" in line]
+    assert calls and all("**spec" in line for line in calls), calls
