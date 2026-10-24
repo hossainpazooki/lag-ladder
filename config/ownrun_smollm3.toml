@@ -1,0 +1,168 @@
+# Statistic (B) at the operating lag — the own run on a THIRD FAMILY, SmolLM3-3B-Base (design §14.5, R-F1–R-F10 as ruled
+# 2026-10-23; re-pin 0033). Registered by 0034; `reader run` refuses while registered_by is empty or any *_PENDING pin remains.
+#
+# The recipe is 0031's unchanged (0017's with the plain prompt format; pins as 0029's sitting: trl==1.15.0
+# (dae7b6adc8d2729cfa8d21bc8480656ede769240), transformers 5.20.2, torch 2.14.1+cu130; lr 1e-6, beta 0, 16 prompts x 8
+# completions per step, T 1.0, 256-token completions, fp32 master weights, gradient checkpointing, trainer seed 0, 32 steps,
+# keep {0, 1, 2, 4, 8, 16, 32}, dumps every step). The base ships no chat template: `--prompt-format plain` on both commands.
+#
+# Instrument: the pair-only re-pin de6ce9e (0033) carries the identity pair `smollm3-3b-base` (PR #4); the four (A) paths are
+# byte-identical to 5d4aa4a's. Every fourth layer of SmolLM3 carries no RoPE; (B) rebuilds the cache from K and V per layer and
+# is unaffected; K_stripped (statistic (A), closed) is not read on this pair.
+#
+# Pairs: the held-out windows are the instrument's own for the identity pair (`prepare_tokens.py --pair smollm3-3b-base`,
+# FineWeb-Edu, 50 x 1024, seed 0) — BYTE-IDENTICAL to the Llama pair's file (0033: SmolLM3 ships the Llama 3 BPE), so the two
+# families read the same fifty held-out windows; rows 40..49 held out as 0017. The rollout rows are THIS family's step-0
+# samples of the same ten GSM8K prompts under the plain format; hashes pinned at registration. Controls per (reader, pair) as 0028.
+#
+# Labels carry `smollm3`; the trainer hook writes results/distance/ownrun/step_<g>.json on the pod — at home under
+# results/distance/ownrun_smollm3/.
+
+[trainer]
+# read by the pod script and the registering entry, not by the reader (the reader's tables are [reader.*])
+model = "HuggingFaceTB/SmolLM3-3B-Base@d78a42f79198603e614095753484a04c10c2b940"
+prompt_format = "plain"
+kvt_pair = "smollm3-3b-base"
+trl = "trl==1.15.0 (dae7b6adc8d2729cfa8d21bc8480656ede769240)"
+transformers = "5.20.2"
+torch = "2.14.1+cu130"
+seed = 0
+steps = 32
+keep = [0, 1, 2, 4, 8, 16, 32]
+
+[reader]
+results_dir = "results/ownrun_smollm3"
+upstream_path = "../kv-transfer-replication"
+upstream_sha = "de6ce9e944d9914c1964be7227bce146c9d29c3a"
+heldout = [40, 50]
+prefix_len = 768
+dtype = "float32"
+seed = 0
+registered_by = "0034"
+seal = "ownrun-smollm3"
+
+[reader.rule]
+statistic = "median over held-out sequences of the mean per-token KL(pi_fresh || pi_stale) over the continuation, per rung and text (design S13, ledger 0011)"
+holds_max = 1e-3
+degrades_min = 1e-1
+texts = ["corpus", "on-path"]
+generate_under = "stale"
+
+[reader.controls]
+per_pair = true
+identity_max_logit_diff = 1e-5
+scrambled_min = 1e-1
+floor_max_median_kl = 1e-4
+# 0022's far limit, and 0028's pre-committed rule: scrambled missed + far cleared = EVALUABLE under far.
+far_min = 1e-1
+evaluable_under_far = true
+
+# The held-out corpus windows: the instrument's own token file for the identity pair, built at de6ce9e (byte-identical to the Llama pair's).
+[[reader.pairs]]
+name = "smollm3-3b-base"
+tokens = "data/tokens/smollm3-3b-base_n50_len1024_seed0.npy"
+tokens_sha256 = "2a79dbe4c8b59f245d876426f2b930d36df8696c0dc9e91e9718ef220170af21"
+
+# The rollout rows (R-C6 on this family): prompt = prefix, sampled completion = continuation; hashes pinned at registration.
+[[reader.pairs]]
+name = "smollm3-3b-base-ownrun-rollout"
+tokens = "data/tokens/smollm3-3b-base-ownrun_rollout_n10_seed0.npy"
+tokens_sha256 = "b7b61d510f55f70254365bce46bedb639dfb2c95e4b13d25f654556858cf4ed4"
+spans = "data/tokens/smollm3-3b-base-ownrun_rollout_n10_seed0.spans.json"
+spans_sha256 = "743184512361015f6733055d6723739567d6407cff6eda8c0ef36e077db6de90"
+heldout = [0, 10]
+# 0022: rollout sequence i's far prefix is the held-out pair's reader dump of sequence 40 + i (this run's own dumps).
+far_pair = "smollm3-3b-base"
+
+# Lag rungs on the held-out corpus: writer step 0, reader step g. Labels fix the distance-file names.
+[[reader.rungs]]
+label = "ownrun-smollm3-lag-1"
+pair = "smollm3-3b-base"
+reader = "local:step_1"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_1"
+
+[[reader.rungs]]
+label = "ownrun-smollm3-lag-2"
+pair = "smollm3-3b-base"
+reader = "local:step_2"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_2"
+
+[[reader.rungs]]
+label = "ownrun-smollm3-lag-4"
+pair = "smollm3-3b-base"
+reader = "local:step_4"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_4"
+
+[[reader.rungs]]
+label = "ownrun-smollm3-lag-8"
+pair = "smollm3-3b-base"
+reader = "local:step_8"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_8"
+
+[[reader.rungs]]
+label = "ownrun-smollm3-lag-16"
+pair = "smollm3-3b-base"
+reader = "local:step_16"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_16"
+
+[[reader.rungs]]
+label = "ownrun-smollm3-lag-32"
+pair = "smollm3-3b-base"
+reader = "local:step_32"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_32"
+
+# The same lags on the rollout text (R-C4): the reader scores the step-0 sample under its own prompt cache and
+# under step 0's. The rollout pair's controls run per reader on rollout text (per_pair).
+[[reader.rungs]]
+label = "ownrun-smollm3-rollout-lag-1"
+pair = "smollm3-3b-base-ownrun-rollout"
+reader = "local:step_1"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_1"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-smollm3-rollout-lag-2"
+pair = "smollm3-3b-base-ownrun-rollout"
+reader = "local:step_2"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_2"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-smollm3-rollout-lag-4"
+pair = "smollm3-3b-base-ownrun-rollout"
+reader = "local:step_4"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_4"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-smollm3-rollout-lag-8"
+pair = "smollm3-3b-base-ownrun-rollout"
+reader = "local:step_8"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_8"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-smollm3-rollout-lag-16"
+pair = "smollm3-3b-base-ownrun-rollout"
+reader = "local:step_16"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_16"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-smollm3-rollout-lag-32"
+pair = "smollm3-3b-base-ownrun-rollout"
+reader = "local:step_32"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_32"
+texts = ["rollout"]

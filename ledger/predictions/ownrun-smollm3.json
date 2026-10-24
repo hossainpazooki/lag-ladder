@@ -1,0 +1,225 @@
+{
+  "pair": "ownrun-smollm3",
+  "prediction": {
+    "controls": "per (reader, pair) as 0028: float16 floor on the pair's texts, identity and scrambled on the pair's first text (rollout for the rollout pair); the rollout pair carries 0022's far control (the reader's own dump of held-out sequence 40 + i cut to the prompt's length, far_min 0.1) as evaluability insurance, pre-committed by evaluable_under_far = true: a reader whose rollout scrambled misses 0.1 but whose far clears it is EVALUABLE under far (unit marked evaluable_under = \"far\"); a reader that misses both is UNEVALUABLE and its rollout rungs read UNREAD in clauses (ii) and (iv)",
+    "descriptive_not_sealed": [
+      "the per-step distance curve against the prediction lr / RMS = 1e-6 / 5.125e-2 \u2248 1.95e-5 relative per step, saturation near 8.8e-5 to 9.0e-5 under the earlier families' shape (Llama: 5.0e-5 predicted, 4.71e-5 measured at step 1; Qwen 2.4e-5 / 2.29e-5)",
+      "per-lag ratios of every text's median to 0032's (Llama) and 0018's / 0029's (Qwen) at matched lag and at matched distance",
+      "the per-window join on held-out text against Llama (the same fifty windows, 0033): per-sequence mean KL at matched lag, both texts, as a figure with no verdict",
+      "the reward and entropy trajectories against 0032's (exact-match 0.045 \u2192 0.066 over steps 1\u20138 and 25\u201332; entropy 2.02 \u2192 1.74) and 0018's",
+      "rollout over scrambled and over far per lag; far over scrambled per reader",
+      "the plain-format prompt token counts beside Llama's (training 42\u2013239, median 84; rollout 67\u2013107) and 0017's 75\u2013117",
+      "the smoke's peak memory and seconds per step, and the kept-weights digest at step 0"
+    ],
+    "halting": "the step-0 safetensors the trainer saves must equal the Hub snapshot's weights before the first optimizer step: tools/weight_distance.py against HuggingFaceTB/SmolLM3-3B-Base@d78a42f79198603e614095753484a04c10c2b940 reads rel_delta_all 0 with 254 tensors compared (bf16 -> fp32 is exact), in the smoke and in the run, and the run's step-0 digest equals the smoke's; a different reading is an environment drift and the sitting stops before it bills the trajectory. The two-step smoke is the first stage of the sitting (R-F6 as ruled 2026-10-23; outputs discarded): it reads peak memory and seconds per step and aborts the sitting on OOM. A step-1 distance under 1e-6 stops the sitting before the reader run (0017); a floor over 1e-4 halts the reader run (0014); scrambled missed and far cleared = EVALUABLE under far; both missed = UNEVALUABLE, clauses (ii) and (iv) UNREAD at that lag",
+    "kind": "the own run (0017) on a third model family, SmolLM3-3B-Base, under 0017's recipe with the plain prompt format (design \u00a714.5, R-F1\u2013R-F10 ruled 2026-10-23; instrument re-pinned at de6ce9e by 0033); the clauses are 0031's forms unchanged; the held-out windows are byte-identical to the Llama pair's (0033), disclosed, not a clause",
+    "predictions": {
+      "i_backbone_quadratic": {
+        "fit": "least squares of log median (B1) on log rel_delta_all, per text",
+        "rungs": [
+          "ownrun-smollm3-lag-1",
+          "ownrun-smollm3-lag-2",
+          "ownrun-smollm3-lag-4",
+          "ownrun-smollm3-lag-8",
+          "ownrun-smollm3-lag-16",
+          "ownrun-smollm3-lag-32"
+        ],
+        "slope_in": [
+          1.5,
+          2.5
+        ],
+        "statement": "clause (i), second half: the slope of log median (B1) on log rel_delta_all over the six held-out lag rungs lies in [1.5, 2.5] on both texts (Qwen 2.26 / 2.19 and 2.13 / 2.05; Llama 2.3404 / 2.5063, the on-path slope 0.0063 past this bound, 0032; the band is kept as sealed on the first two families); the key name is the one summarize_reader reads (printed as i)",
+        "texts": [
+          "corpus",
+          "on-path"
+        ]
+      },
+      "i_heldout_holds_at_every_lag": {
+        "rungs": [
+          "ownrun-smollm3-lag-1",
+          "ownrun-smollm3-lag-2",
+          "ownrun-smollm3-lag-4",
+          "ownrun-smollm3-lag-8",
+          "ownrun-smollm3-lag-16",
+          "ownrun-smollm3-lag-32"
+        ],
+        "statement": "clause (i), first half: median (B1) <= 1e-3 (HOLDS_B) at every lag rung on both held-out texts, every rung above 2x its reader's floor; read by the summarizer as i-holds",
+        "texts": [
+          "corpus",
+          "on-path"
+        ]
+      },
+      "ii_rollout_lost_at_lag_1": {
+        "at_least": 0.001,
+        "rung": "ownrun-smollm3-rollout-lag-1",
+        "statement": "clause (ii), first half: the rollout median (B1) at g = 1 is at least 1e-3 \u2014 HOLDS_B is lost at the first optimizer step on this family's own text too (0018: 4.68e-3; 0029 within 3x of it; Llama 1.185e-3, 0032); read by the summarizer as ii-lost",
+        "text": "rollout"
+      },
+      "iii_rl_excess_over_0015_backbone": {
+        "against": "results/reader/summary.json",
+        "against_sha256": "5d76159485892f1dec5627b70b8e394ee6bda8d73aad1aedfe0c6b10045cfd29",
+        "at_least_factor": 10.0,
+        "backbone_pair": "olmo2-1b-rlvr1",
+        "distance_range": [
+          0.0001,
+          0.1
+        ],
+        "rungs": [
+          "ownrun-smollm3-lag-1",
+          "ownrun-smollm3-lag-2",
+          "ownrun-smollm3-lag-4",
+          "ownrun-smollm3-lag-8",
+          "ownrun-smollm3-lag-16",
+          "ownrun-smollm3-lag-32"
+        ],
+        "statement": "clause (iv), 0017's clause (iii) on this family: at every held-out lag rung whose whole-vector distance lies inside 0015's backbone range [1e-4, 1e-1], median (B1) >= 10x the OLMo backbone's median at the nearest 0015 noise rung by log distance, on both held-out texts; rungs outside the range are listed and not read; no rung inside = UNREAD. 0018 read it by hand on its one rung (11.1 / 7.88, FALSIFIED); 0032 read four rungs by the summarizer (lag 8 17.4 / 18.9 over, lags 4, 16, 32 under; FALSIFIED). Here the step-size prediction (lr / RMS \u2248 1.95e-5 per step, saturation \u2248 9e-5) puts every rung BELOW 1e-4, so the clause is expected UNREAD on this family, as \u00a714.5 allowed; rungs inside the range are read if the distance exceeds the prediction, lags below 1e-4 listed. Read by the summarizer as iii-excess, which refuses if the reference file's bytes moved",
+        "texts": [
+          "corpus",
+          "on-path"
+        ]
+      },
+      "iii_rollout_over_heldout": {
+        "at_least_factor": 1000.0,
+        "heldout_texts": [
+          "corpus",
+          "on-path"
+        ],
+        "pairs_of_rungs": {
+          "1": [
+            "ownrun-smollm3-rollout-lag-1",
+            "ownrun-smollm3-lag-1"
+          ],
+          "16": [
+            "ownrun-smollm3-rollout-lag-16",
+            "ownrun-smollm3-lag-16"
+          ],
+          "2": [
+            "ownrun-smollm3-rollout-lag-2",
+            "ownrun-smollm3-lag-2"
+          ],
+          "32": [
+            "ownrun-smollm3-rollout-lag-32",
+            "ownrun-smollm3-lag-32"
+          ],
+          "4": [
+            "ownrun-smollm3-rollout-lag-4",
+            "ownrun-smollm3-lag-4"
+          ],
+          "8": [
+            "ownrun-smollm3-rollout-lag-8",
+            "ownrun-smollm3-lag-8"
+          ]
+        },
+        "statement": "clause (ii), second half: at every lag the rollout median (B1) is at least 1e3x the same reader's median on corpus and on on-path text (Qwen seed 1: 1.3e4x to 2.5e4x on corpus, 2.5e4x to 4.5e4x on on-path; seed 2: 2.0e4x to 5.1e4x; Llama 1.9e3x to 5.8e3x, 0032); read by the summarizer as iii",
+        "text": "rollout"
+      },
+      "iv_controls_as_0020": {
+        "statement": "clause (iii): every (reader, pair) unit passes its controls under 0014's limits (float16 floor <= 1e-4, identity <= 1e-5, scrambled >= 0.1, far >= 0.1 on the rollout pair) or is EVALUABLE under far as pre-committed; no unit UNEVALUABLE. The readout reports which units were carried by far; read by the summarizer as iv",
+        "units": [
+          "local:step_1 @ smollm3-3b-base",
+          "local:step_1 @ smollm3-3b-base-ownrun-rollout",
+          "local:step_2 @ smollm3-3b-base",
+          "local:step_2 @ smollm3-3b-base-ownrun-rollout",
+          "local:step_4 @ smollm3-3b-base",
+          "local:step_4 @ smollm3-3b-base-ownrun-rollout",
+          "local:step_8 @ smollm3-3b-base",
+          "local:step_8 @ smollm3-3b-base-ownrun-rollout",
+          "local:step_16 @ smollm3-3b-base",
+          "local:step_16 @ smollm3-3b-base-ownrun-rollout",
+          "local:step_32 @ smollm3-3b-base",
+          "local:step_32 @ smollm3-3b-base-ownrun-rollout"
+        ]
+      }
+    },
+    "registering_entry": "0034",
+    "rollouts": {
+      "at_cap": 4,
+      "completion_lengths": [
+        133,
+        256,
+        256,
+        154,
+        228,
+        256,
+        202,
+        239,
+        122,
+        256
+      ],
+      "gsm8k_train_indices": [
+        123,
+        306,
+        562,
+        1309,
+        2014,
+        2298,
+        3816,
+        4754,
+        6077,
+        6349
+      ],
+      "n": 10,
+      "prompt_format": "plain",
+      "prompt_token_counts": {
+        "max": 106,
+        "median": 77,
+        "min": 66,
+        "n": 10
+      },
+      "sampled_on": "Mac mini Apple M6, CPU, torch 2.14.1, transformers 5.15.1, 2026-10-24, tools/own_run.py at e6aebe3",
+      "seed": 0,
+      "spans_sha256": "743184512361015f6733055d6723739567d6407cff6eda8c0ef36e077db6de90",
+      "temperature": 1.0,
+      "tokens_sha256": "b7b61d510f55f70254365bce46bedb639dfb2c95e4b13d25f654556858cf4ed4"
+    },
+    "rule": {
+      "at_floor_factor": 2.0,
+      "degrades_min": 0.1,
+      "far_min": 0.1,
+      "floor_max_median_kl": 0.0001,
+      "holds_max": 0.001,
+      "identity_max_logit_diff": 1e-05,
+      "scrambled_min": 0.1
+    },
+    "ruled": "2026-10-23; re-pin 0033 on 2026-10-24",
+    "statistic": "per rung and text, median over held-out sequences of the mean per-token KL(pi_fresh || pi_stale) over the continuation (B1), nats/token; x = whole-vector relative L2 weight distance of the reader (step g) to the writer (step 0), tools/weight_distance.py",
+    "texts": [
+      "corpus",
+      "on-path",
+      "rollout"
+    ],
+    "trajectory": {
+      "beta": 0.0,
+      "instrument_pair": "smollm3-3b-base",
+      "instrument_pin": "de6ce9e944d9914c1964be7227bce146c9d29c3a (0033; pairs.py only past 5d4aa4a)",
+      "keep": [
+        0,
+        1,
+        2,
+        4,
+        8,
+        16,
+        32
+      ],
+      "lr": 1e-06,
+      "master_dtype": "float32",
+      "max_completion_length": 256,
+      "model": "HuggingFaceTB/SmolLM3-3B-Base@d78a42f79198603e614095753484a04c10c2b940",
+      "prompt_format": "plain",
+      "prompt_template": "{SYSTEM_LINE}\\n\\nQuestion: {question}\\nAnswer:",
+      "prompts_x_completions": [
+        16,
+        8
+      ],
+      "seed": 0,
+      "steps": 32,
+      "temperature": 1.0,
+      "torch": "2.14.1+cu130",
+      "trainer": "trl==1.15.0@dae7b6adc8d2729cfa8d21bc8480656ede769240",
+      "transformers": "5.20.2",
+      "weight_rms_recomputed": "5.1248e-02 over 326 float tensors, 3,075,098,624 params, shards 7e270ac5\u2026 / c6a6e769\u2026 at d78a42f7"
+    }
+  },
+  "prior_artifacts": [],
+  "sealed_pre_fit": true
+}
