@@ -228,3 +228,65 @@ def test_probe_refuses_an_out_under_results_and_a_reader_the_config_does_not_nam
         task.probe(cfg, repo, out=repo / "results" / "probe", n=4, runner=FakeTaskSwap(), tools_dir=tools)
     with pytest.raises(task.Refusal, match="reader"):
         task.probe(cfg, repo, out=tmp_path / "p", n=4, reader="local:step_7", runner=FakeTaskSwap(), tools_dir=tools)
+
+
+
+# --- 0035: the expected (B1) for the equivalence control may come from the run's own (B) summary ---------------------
+
+EXPECT_FROM_SUMMARY = ('equivalence_expect_b1 = 0.08914',
+                       'equivalence_expect_b1 = { summary = "results/task_b/summary.json", rung = "own-rollout-lag-32", text = "rollout" }')
+
+
+def _write_b_summary(repo, median):
+    d = repo / "results" / "task_b"; d.mkdir(parents=True, exist_ok=True)
+    (d / "summary.json").write_text(json.dumps({"rungs": [
+        {"label": "own-rollout-lag-32", "withheld": False, "texts": {"rollout": {"b1": {"median_kl": median}}}}]}), encoding="utf-8")
+
+
+def test_task_config_accepts_the_expected_b1_as_a_pointer_into_the_b_summary(repo, seal_cfg):
+    """An Instruct-initialised run (0035) has no earlier entry's rollout (B1) to pin; the (B) stage of the same sitting
+    writes it first, so the config points at that summary's rung and text and the value is resolved at run time."""
+    cfg, _ = _setup_task(repo, seal_cfg)
+    cpath = repo / "config" / "task.toml"
+    base = cpath.read_text(encoding="utf-8")
+    cpath.write_text(base.replace(*EXPECT_FROM_SUMMARY), encoding="utf-8")
+    cfg = load_task_config(cpath, repo)
+    ptr = cfg.controls["equivalence_expect_b1"]
+    assert ptr == {"summary": repo / "results" / "task_b" / "summary.json", "rung": "own-rollout-lag-32", "text": "rollout"}
+    for bad in ['equivalence_expect_b1 = { summary = "results/x.json" }',
+                'equivalence_expect_b1 = { summary = "../x.json", rung = "r", text = "rollout" }',
+                'equivalence_expect_b1 = "0.1"']:
+        cpath.write_text(base.replace('equivalence_expect_b1 = 0.08914', bad), encoding="utf-8")
+        with pytest.raises(ValueError, match="equivalence_expect_b1"):
+            load_task_config(cpath, repo)
+    cpath.write_text(base, encoding="utf-8")
+
+
+def test_run_resolves_the_expected_b1_from_the_b_summary_and_records_it(repo, seal_cfg):
+    cfg, tools = _setup_task(repo, seal_cfg)
+    cpath = repo / "config" / "task.toml"
+    cpath.write_text(cpath.read_text(encoding="utf-8").replace(*EXPECT_FROM_SUMMARY), encoding="utf-8")
+    commit_all(repo, "point expect_b1 at the (B) summary")
+    cfg = load_task_config(cpath, repo)
+    _write_b_summary(repo, 0.0421)
+    fake = FakeTaskSwap(equivalence=lambda a: (2 ** -7, 0.33, float(a["--expect-b1"])))
+    task.run(cfg, repo, runner=fake, seal_cfg=seal_cfg, tools_dir=tools)
+    eq = fake.calls[0]
+    assert float(eq[eq.index("--expect-b1") + 1]) == 0.0421
+    rec = json.loads((cfg.results_dir / "run.json").read_text(encoding="utf-8"))
+    assert rec["equivalence"]["passed"] is True and rec["equivalence"]["b1_expected"] == 0.0421
+    assert rec["equivalence"]["b1_expected_from"] == {"summary": "results/task_b/summary.json", "rung": "own-rollout-lag-32", "text": "rollout"}
+
+
+def test_run_refuses_when_the_b_summary_or_its_rung_is_missing(repo, seal_cfg):
+    cfg, tools = _setup_task(repo, seal_cfg)
+    cpath = repo / "config" / "task.toml"
+    cpath.write_text(cpath.read_text(encoding="utf-8").replace(*EXPECT_FROM_SUMMARY), encoding="utf-8")
+    commit_all(repo, "point expect_b1 at the (B) summary")
+    cfg = load_task_config(cpath, repo)
+    with pytest.raises(task.Refusal, match="expected \\(B1\\)"):
+        task.run(cfg, repo, runner=FakeTaskSwap(), seal_cfg=seal_cfg, tools_dir=tools)
+    d = repo / "results" / "task_b"; d.mkdir(parents=True, exist_ok=True)
+    (d / "summary.json").write_text(json.dumps({"rungs": [{"label": "other", "withheld": False, "texts": {}}]}), encoding="utf-8")
+    with pytest.raises(task.Refusal, match="expected \\(B1\\)"):
+        task.run(cfg, repo, runner=FakeTaskSwap(), seal_cfg=seal_cfg, tools_dir=tools)

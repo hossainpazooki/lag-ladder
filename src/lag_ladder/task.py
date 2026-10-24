@@ -159,6 +159,29 @@ def _by_index(rows: list[dict]) -> dict[int, dict]:
     return out
 
 
+def resolve_expect_b1(cfg: TaskConfig, repo_root: Path) -> tuple[float, dict | None]:
+    """The rollout (B1) the equivalence control must reproduce: the number the config pins (0025: 0018's step-32
+    median), or, when the config points at a (B) summary (0035: no earlier entry's number exists for a new
+    initialisation), that summary's rung and text median read now — the (B) stage runs before (C) on the same
+    machine. Refuses when the summary, the rung or the text is missing or withheld."""
+    eb = cfg.controls["equivalence_expect_b1"]
+    if not isinstance(eb, dict):
+        return float(eb), None
+    f = Path(eb["summary"])
+    where = f"expected (B1) for the equivalence control: {eb['rung']} / {eb['text']} in {f.name}"
+    if not f.exists():
+        raise _refuse(f"{where}: the (B) summary {f} does not exist; the (B) stage must run first")
+    s = json.loads(f.read_text(encoding="utf-8"))
+    e = next((e for e in s.get("rungs", []) if e.get("label") == eb["rung"]), None)
+    if e is None or e.get("withheld"):
+        raise _refuse(f"{where}: the rung is missing or withheld in the summary")
+    m = e.get("texts", {}).get(eb["text"], {}).get("b1", {}).get("median_kl")
+    if m is None or float(m) <= 0:
+        raise _refuse(f"{where}: the summary carries no positive median for that text")
+    rel = Path(f).resolve().relative_to(Path(repo_root).resolve()).as_posix() if Path(f).resolve().is_relative_to(Path(repo_root).resolve()) else str(f)
+    return float(m), {"summary": rel, "rung": eb["rung"], "text": eb["text"]}
+
+
 def judge_equivalence(rec: dict, cfg: TaskConfig) -> dict:
     """The limit is on the absolute gap (R-C21 as restated by 0026: 2^-5, one float16 ulp in the top binade the caches
     occupy); the relative gap and the share of differing elements are descriptives — the live-vs-dump discrepancy is
@@ -212,16 +235,19 @@ def run(cfg: TaskConfig, repo_root: Path, *, runner=subprocess.run, seal_cfg=Non
             out = job_dir(cfg, j)
             out.mkdir(parents=True, exist_ok=True)
             if j.kind == "equivalence":
+                expect_b1, expect_from = resolve_expect_b1(cfg, repo_root)
                 _call(cfg, repo_root, ["equivalence", "--writer", j.writer, "--dump-root", str(Path(cfg.controls["rollout_dump_root"]).resolve()),
                                        "--tokens", str(Path(cfg.controls["rollout_tokens"]).resolve()),
                                        "--spans", str(Path(cfg.controls["rollout_spans"]).resolve()),
-                                       "--reader", j.reader, "--expect-b1", repr(float(cfg.controls["equivalence_expect_b1"])),
+                                       "--reader", j.reader, "--expect-b1", repr(expect_b1),
                                        "--out", str(out.resolve())], runner, tools_dir)
                 eq_path = out / "equivalence.json"
                 if not eq_path.exists():
                     raise _refuse(f"{TOOL} did not write {eq_path}")
                 eq = json.loads(eq_path.read_text(encoding="utf-8"))
                 record["equivalence"] = judge_equivalence(eq, cfg)
+                if expect_from is not None:
+                    record["equivalence"]["b1_expected_from"] = expect_from
                 record["jobs"].append({"kind": "equivalence", "reader": j.reader, "dir": out.relative_to(cfg.results_dir).as_posix(),
                                        "file_sha256": sha256_file_bytes(eq_path), "done": True})
                 if not record["equivalence"]["passed"]:

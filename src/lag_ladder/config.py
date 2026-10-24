@@ -609,8 +609,18 @@ def load_task_config(path: Path, repo_root: Path) -> TaskConfig:
         raise ValueError(f"{path.name} [task.controls] floor_max_flip_rate must be in [0, 1)")
     if not (0 < float(controls["equivalence_max_abs_diff"]) < 1) or not (0 < float(controls["equivalence_b1_max_rel"]) < 1):
         raise ValueError(f"{path.name} [task.controls] equivalence limits out of range")
-    if float(controls["equivalence_expect_b1"]) <= 0:
-        raise ValueError(f"{path.name} [task.controls] equivalence_expect_b1 must be positive")
+    eb = controls["equivalence_expect_b1"]
+    if isinstance(eb, dict):
+        # 0035: a run with no earlier entry's rollout (B1) points at its own (B) summary's rung and text; the driver
+        # resolves the value at run time (the (B) stage precedes (C) on the same machine) and records it in run.json
+        if set(eb) != {"summary", "rung", "text"} or not all(isinstance(v, str) and v for v in eb.values()):
+            raise ValueError(f"{path.name} [task.controls] equivalence_expect_b1 as a pointer needs exactly summary, rung, text")
+        sp = eb["summary"]
+        if PurePosixPath(sp).is_absolute() or PureWindowsPath(sp).is_absolute() or ".." in PurePosixPath(sp).parts:
+            raise ValueError(f"{path.name} [task.controls] equivalence_expect_b1.summary must be a relative path under the repository")
+        controls["equivalence_expect_b1"] = {"summary": root / sp, "rung": eb["rung"], "text": eb["text"]}
+    elif isinstance(eb, bool) or not isinstance(eb, (int, float)) or float(eb) <= 0:
+        raise ValueError(f"{path.name} [task.controls] equivalence_expect_b1 must be a positive number or a {{summary, rung, text}} pointer")
     controls["equivalence_reader"] = _local_spec(controls["equivalence_reader"], f"{path.name} [task.controls] equivalence_reader")
     controls["rollout_tokens"] = _rel_under_upstream(controls["rollout_tokens"], f"{path.name} [task.controls] rollout_tokens", upstream)
     controls["rollout_spans"] = _rel_under_upstream(controls["rollout_spans"], f"{path.name} [task.controls] rollout_spans", upstream)
