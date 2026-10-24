@@ -1680,3 +1680,106 @@ the statement-of-record ruling for the families (after this run).
 **Consequences in this commit set:** `config/ownrun_smollm3.toml` (`registered_by`, the two rollout hashes),
 `ledger/predictions/ownrun-smollm3.json` + `.sha256`, `README.md`, `CLAUDE.md`. Landed ahead: 0033 (the re-pin, `UPSTREAM.md`);
 `config/ownrun_smollm3.toml` UNREGISTERED with its `[trainer]` table.
+
+### 0035 — 2026-10-24 — The own run from an Instruct initialisation registered, both halves: statistic (B) at lags 1–32 and statistic (C) at cap 768 on a GRPO trajectory of Qwen2.5-1.5B-Instruct
+
+prior-entries-sha256: 750ccd0332f82a192450aac178b986d0e5a1e080dd50e3f57fa14882684ab39e
+
+**Registers** two configurations, now `registered_by = "0035"`: `config/ownrun_instruct.toml` (statistic (B), 0031's layout) and
+`config/ownrun_instruct_task.toml` (statistic (C), 0025's layout, two departures below), as the brief of 2026-10-21 proposed and
+the rulings of 2026-10-24 fixed. Policy `Qwen/Qwen2.5-1.5B-Instruct@989aa7980e4cf806f80c7fef2b1adb7bc71aa306` (bf16 release
+shard, 1,543,714,304 parameters; the same architecture and tokenizer as the base of 0017–0029); TRL 1.15.0 (`dae7b6ad…`),
+transformers 5.20.2, torch 2.14.1+cu130 as 0029's and 0032's sittings ran them; learning rate 1e-6, no reference-KL term, 16
+prompts × 8 completions per step, temperature 1.0, 256-token completions, fp32 master weights, gradient checkpointing, no vLLM,
+trainer seed 0, 32 optimizer steps, weights kept at {0, 1, 2, 4, 8, 16, 32}, both token sets dumped from every step through the
+pinned instrument `5d4aa4a`. The pair `qwen2.5-1.5b-to-instruct` pins neither side, so the trained checkpoint is dumped as the
+pair's TARGET (`--kvt-which target`; dumps filed under `target@local-step_<g>`, the keys the config names): no instrument change,
+no re-pin. Prompts under the checkpoint's chat template with 0017's system line (`--prompt-format chat`, as 0017). Rule, bands and
+limits 0012's as amended by 0013 and 0014; reader seed 0. The run is on external compute under its own hands; nothing on that
+side needs a token (the model and GSM8K are public), and the records come back as tars with digests.
+
+**Five rulings, 2026-10-24.** (1) *Decoding pinned per call.* The checkpoint's `generation_config.json` ships `repetition_penalty
+1.1`, `temperature 0.7`, `top_p 0.8`, `top_k 20` and a two-token eos list; `generate` fills whatever a call omits from it. The
+sampler passes the full spec (`decoding_spec()`: `do_sample`, T 1.0, `top_p 1.0`, `top_k 0`, `repetition_penalty 1.0`,
+`no_repeat_ngram_size 0`, `num_beams 1`, eos the tokenizer's) and records it in the spans sidecar; the three base checkpoints of
+0017–0034 ship none of this, so their registered rollouts are what the spec says. (2) *The stop set is the tokenizer's eos
+everywhere.* TRL 1.15.0 unions the checkpoint's eos list into the trainer's stop set (grpo_trainer.py 398–405 at `dae7b6ad`);
+`GRPOConfig.generation_kwargs = {eos_token_id: tokenizer eos}` overrides it (1116–1131), a no-op on the base families, printed
+on the trainer's `DECODING` line; (C)'s decoder (`task_swap._greedy`, raw argmax, stop on the tokenizer's eos) never read the file.
+(3) *Cap 768 for (C).* The Instruct policy reasons in LaTeX and answers in `\boxed{}`; under (C)'s decoder the Step-1 probe read
+accuracy 72.0 [65.5, 78.0] at cap 768 against 51.5 at cap 256 on 200 GSM8K test prompts (a penalised decoder had read 64.5 and
+44.5 — the finding behind ruling 1). (4) *The answer rule is kept*: the number after the last `####`, else the last number; the
+probe's marker rates at cap 768 under (C)'s decoder (plain argmax, n = 200) are disclosed here: `####` written in 3.0%, `\boxed{}`
+in 59.0%, no answer 0.0%, none at the cap; accuracy 72.0 by the registered rule against 41.0 by the last `\boxed{}` (the
+registered rule reads the number after the last `####`, else the last number); at cap 256,
+45.5% ran to the cap with `####` in 2.5% and `\boxed{}` in 25.0%; the penalised decoder of ruling 1 had written `####` in 10.5%
+at 768. The first-`\boxed{}` answer stays a descriptive beside the registered one. (5) *The shared windows, disclosed.* The held-out pair is 0017's registered file (`01bd7698…`), so the
+Instruct run reads the same fifty FineWeb-Edu windows as both Qwen seeds — a comparison across initialisations on identical
+tokens, as 0034 disclosed for SmolLM3 against Llama; a disclosure, not a clause.
+
+**(B) cells.** Writer cache at step 0, reader at step g ∈ {1, 2, 4, 8, 16, 32}. Held-out pair `qwen2.5-1.5b-to-instruct`
+(`data/tokens/qwen2.5-1.5b-to-instruct_n50_len1024_seed0.npy`, `01bd7698f7413ab9a3b6958991487bbba626f5a8cc4f24142cd22091d96af747`;
+sequences 40–49), corpus and greedy on-path texts. Rollout pair `qwen2.5-1.5b-instruct-ownrun-rollout`: GSM8K train prompts
+{123, 306, 562, 1309, 2014, 2298, 3816, 4754, 6077, 6349} (0017's; excluded from the batches), one completion each sampled from
+the Instruct step-0 policy at temperature 1.0 under the pinned sampler, ≥ 64 tokens — token file
+`qwen2.5-1.5b-instruct-ownrun_rollout_n10_seed0.npy` `79a65f8c…`, spans `….spans.json`
+`429a5323…` (carrying the decoding block: temperature 1.0, top_p 1.0, top_k 0, repetition_penalty 1.0, eos 151645, cap 256), `qwen2.5-1.5b-instruct-ownrun_rollout_excluded.json` beside them
+(sampled on the Mac mini, CPU, torch 2.14.1, transformers 5.15.1, 2026-10-24, at 3add994); prompt token counts under the template
+75–117, median 88 — 0017's range exactly, the same tokenizer and template on the same ten prompts; completion lengths 75–256
+tokens, 4 of ten at the 256-token cap, every row sampled at the first attempt (≥ 64 tokens). Controls per (reader, pair) as 0028, the rollout pair
+with 0022's far control and `evaluable_under_far = true`. Twelve rungs `ownrun-instruct-lag-<g>` and
+`ownrun-instruct-rollout-lag-<g>`; 660 jobs, the planner's count.
+
+**(B) distance axis and prediction.** Rungs placed by the trainer's save hook against the saved step 0. The released weights'
+whole-vector RMS is 4.173e-2 (recomputed from the shard, 338 float tensors; the base's 4.2e-2), so lr / RMS puts one Adam step
+near 2.40e-5 relative (the base measured 2.29e-5) and, under the shape every earlier run showed, step 32 near 1.05e-4 to 1.1e-4:
+at most lag 32 inside 0015's backbone range, as on the base, and clause (iv) below reads UNREAD if it falls under 1e-4.
+
+**(B) seal** (`ledger/predictions/ownrun-instruct.json`, pre-fit; 0031's clauses, the summarizer reads every one). (i) Held-out
+HOLDS_B at every lag on both texts, every rung above 2× floor (`i_heldout_holds_at_every_lag`), and the slope of log median (B1)
+on log distance over the six held-out rungs in [1.5, 2.5], both texts (`i_backbone_quadratic`; base 2.26 / 2.19 and 2.13 / 2.05,
+Llama 2.3404 / 2.5063). (ii) Rollout median (B1) ≥ 1e-3 at g = 1 (`ii_rollout_lost_at_lag_1`; base 4.68e-3, Llama 1.185e-3) and
+≥ 1e3× the same reader's held-out median at every lag (`iii_rollout_over_heldout`). (iii) Every (reader, pair) unit passes its
+controls or is EVALUABLE under far (`iv_controls_as_0020`). (iv) At every held-out rung inside [1e-4, 1e-1], (B1) ≥ 10× 0015's
+nearest OLMo noise rung, both texts (`iii_rl_excess_over_0015_backbone`, machine-readable against `summary.json` `5d761594…`).
+Descriptive: the per-step distance curve against 2.40e-5; per-lag ratios to 0018 and 0029 (the same windows, tokenizer and
+prompts) and to 0032; the per-window join against seeds 1 and 2; reward and entropy trajectories; the prompt token counts.
+
+**(C) cells and seal** (`config/ownrun_instruct_task.toml`; `ledger/predictions/ownrun-instruct-task.json`, pre-fit). Reader at
+kept step g, writer step 0; per prompt of GSM8K test (all 1,319; prompts file `918c7e67…`) four greedy generations of ≤ 768 new
+tokens under an injected prompt cache — FRESH, STALE, NEAR, FAR — built live and rounded through float16, `tools/task_swap.py`
+under the instrument's interpreter; controls per reader as 0025 (float16 floor ≤ 0.01, identity 0, NEAR and FAR each ≥ 0.5 flips),
+dump equivalence once per sitting at the absolute 2⁻⁵ (0026) with the rollout (B1) at step_32 reproduced within 1e-3 relative
+against THIS run's (B) summary (`results/ownrun_instruct/summary.json`, rung `ownrun-instruct-rollout-lag-32`), which the (B)
+stage writes first on the same machine — the config points at it and `task run` records the value used, with the summary's
+sha256 beside the pointer (`b1_expected_from`: recorded with its digest; 0025 pinned 0018's number, a new initialisation has none). Clauses: 0025's four on flips unchanged in form — (i) NEAR and FAR fire at every g; (ii)
+STALE flips ≥ 10% at g = 1; (iii) ≥ 10% at g = 32; (iv) the g = 1 flip interval entirely below the g = 32 interval — plus two on
+accuracy that the base policy (4–12% FRESH) could not carry: (v) FRESH accuracy under the registered rule ≥ 50 points at every
+reader (`v_fresh_accuracy_at_least`; the brief's decision rule, the probe's 72.0 as the prior at step 0); (vi) at g = 32 the paired
+STALE − FRESH accuracy interval lies entirely below zero (`vi_degrades_at_lag`; the band the summarizer assigns, DEGRADES_C at
+Δ ≤ −5 with the upper end ≤ −2, reported beside it). g = 1 is not sealed on accuracy: 0027 read Δ −0.76 [−2.05, +0.53] there on the
+base and the flip symmetry at the first step is unknown on this policy; its Δ is descriptive. (ii)–(vi) are blind; (i) is the
+form 0027 confirmed on the base.
+
+**Halting and reading.** 0031's rules for (B): the step-0 safetensors must equal the snapshot by value (`weight_distance.py`:
+`rel_delta_all` 0, 338 tensors, none only on one side) in the smoke and the run, and the run's digest must equal the smoke's; the
+two-step smoke is the sitting's first stage; a step-1 distance under 1e-6 stops the sitting; a floor over 1e-4 halts the reader
+run; scrambled and far both missed = UNEVALUABLE. The step-0 digest the smoke prints is pinned in the outcome entry. 0025's rules
+for (C): the floor, identity and equivalence limits halt; a reader whose NEAR or FAR does not fire is UNEVALUABLE. A halt is a
+result; nothing is loosened on the machine.
+
+**Run.** One sitting on external compute, no caps of ours: setup (`setup_run.sh`: instrument at `5d4aa4a`, this repository at the
+registration commit, three venvs, the gates), the smoke, the trajectory with the save hook, the 660 (B) jobs and the pod-side
+summary, the (C) equivalence and six cells runs and their summary, then three tars with digests (`instruct-results-final.tgz`,
+`instruct-task-final.tgz`, `instruct-aux-final.tgz`) sent back; kept weights and dumps stay there until the digests are confirmed.
+Every number is recomputed at home before anything is written.
+
+**Not registered here.** Statistic (C) at cap 256 on this policy; a second trainer seed; the sliding writer; `agentic`; the
+statement-of-record ruling for the families and initialisations (after SmolLM3 and this run).
+
+**Consequences in this commit set:** `config/ownrun_instruct.toml` and `config/ownrun_instruct_task.toml` (`registered_by`, the
+rollout hashes), `ledger/predictions/ownrun-instruct.json` + `.sha256`, `ledger/predictions/ownrun-instruct-task.json` +
+`.sha256`, `README.md`, `CLAUDE.md`. Landed ahead as their own commits: `tools/own_run.py` (`--kvt-which {source,target}` threaded
+into the dump command and the dump key; `GRPOConfig.generation_kwargs` pinning the stop set, with the trainer's `DECODING` line)
+with tests; `summarize_task`'s `v` and `vi` readouts with tests; `task`'s run-time resolution of the equivalence (B1) from a
+(B) summary the config points at, recorded with the summary's digest, with tests; the two configurations UNREGISTERED.

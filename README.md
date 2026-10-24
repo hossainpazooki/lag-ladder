@@ -53,7 +53,9 @@ rendered plain because the base ships no chat template. Held-out text HOLDS_B at
 0.006 past the sealed 2.5), the policy's own text UNRESOLVED from the first step at 2e3× to 6e3× held-out text (Qwen: 1e4× to
 5e4×); every control passed; the excess over isotropic noise at matched distance 3.5× to 19× against the 10× sealed on every rung.
 A third family is registered (0034, not yet run; instrument re-pinned pair-only at de6ce9e by 0033): SmolLM3-3B-Base under the same
-recipe and plain prompts, its held-out windows byte-identical to Llama's because SmolLM3 ships the Llama 3 tokenizer.
+recipe and plain prompts, its held-out windows byte-identical to Llama's because SmolLM3 ships the Llama 3 tokenizer. An
+Instruct-initialised run is registered (0035, not yet run; both halves, on external compute): Qwen2.5-1.5B-Instruct under 0017's
+recipe, statistic (B) at lags 1–32 and statistic (C) at a 768-token cap with two clauses on accuracy.
 
 ## How a rung is measured
 
