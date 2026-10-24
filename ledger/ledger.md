@@ -1783,3 +1783,73 @@ rollout hashes), `ledger/predictions/ownrun-instruct.json` + `.sha256`, `ledger/
 into the dump command and the dump key; `GRPOConfig.generation_kwargs` pinning the stop set, with the trainer's `DECODING` line)
 with tests; `summarize_task`'s `v` and `vi` readouts with tests; `task`'s run-time resolution of the equivalence (B1) from a
 (B) summary the config points at, recorded with the summary's digest, with tests; the two configurations UNREGISTERED.
+
+### 0036 — 2026-10-24 — Outcome: the agentic text on the own run (0030); all four sealed clauses HELD
+
+prior-entries-sha256: 3cd422e79c8d7e5aee12a5bd234d69125fcbdca901080014355d63a4e4c2fc36
+
+**Run.** The 1,200 jobs of 0030 (`config/ownrun_agentic.toml`, instrument `5d4aa4a`) ran on one A40 48 GB (secure cloud)
+under torch 2.14.1+cu130, transformers 5.20.2, at this repository's `ebe5ee4` — the registering commit itself (suite
+267 passed, 4 skipped, 9 seals OK, `reader gate ok`, plan 1,200) — without a halt. Seed 1's seven kept weights were restored from the private
+backup and hashed to its manifest (`MANIFEST_CHECK rc 0`; step-0 provenance `3779c0b9…794d`); the step-0 → step-1 distance re-derived
+on the pod read 2.2895683763734974e-05, 0018's figure to the digit, and the six rung distance files equal the sealed pins (`distance_must_equal`) at
+relative 0 — all before the first dump. Seven dumps of the fifty sequences through the pinned instrument (writer `source@local-step_0`,
+readers `source@local-step_g`), 350 per-sequence calls at 1024–1073 s per fifty (≈ 21.1 s each, the fp32 checkpoint
+reloaded per call; the per-call cost is the budget's miss, 2.1 h of dumps against the ≈ 0.6–2 h assumed); the reader run
+16:01:06–19:10:43Z, 9.48 s/job (0018's A100: 11.8). Every (reader, pair) unit passed its controls on the agentic text under 0014's limits:
+float16 floors 5.77e-8 to 6.73e-8 nats/token (limit 1e-4), identity max |Δlogit| 0 and KL 0 (limit 1e-5), scrambled 0.854 to 0.859
+(limit 0.1; 0018's 0.55 on held-out text, 0029's 0.12 — the next-row prefix under the suite-blocked rows, coding medians 0.994–0.996,
+workflow 0.716–0.717); none UNEVALUABLE. Records: `agentic-results-final.tgz` `d5317591…d44a` (1,200
+reports, `run.json` `f883149e…`, the pod's summary `9dcb7cac…`), `agentic-aux-final.tgz` `55c08818…20fa` (six rung distance
+files, `dist-check.json`, the 350 dump `meta.json`, every pod log and rc file); digests equal both ends (evidence folder
+`2026-10-24-pod-sitting-agentic/`). The home summarizer's `summary.json` (`d492009f…`) equals the pod's in every rung median.
+Backup to the private dataset under `ownrun-agentic/` (R-C7): the 350 dumps, both tars, the token file and its manifest, the six
+distance files, `dist-check.json`, a `SHA256SUMS`, and the dataset's `NOTICE` and `LICENSES.txt` beside them (0030's licence rule) —
+8 commits, 10,863 files, `manifest: 10,863 wanted, 0 missing, 0 lfs-sha mismatches`, `MANIFEST_OK` (20:21Z;
+the pod's `upload.log` verdict lines as read over ssh before the close, `upload-transcript.txt` `40fd23df…`), and the operator's read-token listing of `ownrun-agentic/` on the dataset at 20:50Z (10,864 files: `SHA256SUMS` + its 10,863 entries, 1,550 per dump step, 0 missing, 0 extra; 10,153 LFS digests each equal to its `SHA256SUMS` line, the 710 small JSON files the Hub stores outside LFS present by name only; `hub-listing.json` `94048762…`);
+all off-repository. **Disclosed:** the home-side watchdog (sitting ceiling $5, account kill set to the campaign figure plus $6, TTL
+re-armed from 6 h to 8 h at the first dump step's clock mark, `--no-drain`) was killed by the operator's host at ≈ 19:20Z, after
+`RUN_RC 0` (19:10:43Z) and before the pull (19:21:56Z); the pod ran unwatched for the pull, the upload and the close, under the
+operator's eye, and no scored output was at risk — every report was on disk and pulled with digests. Sitting 6 h 49 min from `up` (13:33:54Z) to `PROVEN GONE` (20:23:09Z), under the registered ceiling.
+
+**Reading** — median (B1), nats/token, at distance x (0018's); bands HOLDS_B ≤ 1e-3, DEGRADES_B ≥ 1e-1. *Agentic text*: lag
+1 (2.29e-5) 3.61e-6; 2 (3.52e-5) 7.56e-6; 4 (5.27e-5) 2.20e-5; 8 (7.48e-5) 4.84e-5; 16 (9.55e-5) 9.42e-5; 32 (1.05e-4) 1.76e-4 — HOLDS_B at every lag, every rung 60× to 2620× its reader's floor; ESS/N 0.997, 0.995, 0.984, 0.959, 0.910, 0.845;
+the reader's argmax agreeing with its fresh cache on 99.9% (lag 1) to 99.5% (lag 32) of tokens; pooled p90 8.76e-6 (lag 1) to 4.59e-4 (lag 32), pooled max
+5.74e-4 to 0.0226. *By suite* (coding rows 0–24 / workflow rows 25–49, descriptive): 1: 3.93e-6 / 3.46e-6; 2: 8.24e-6 / 6.82e-6; 4: 2.42e-5 / 2.17e-5; 8: 5.52e-5 / 4.48e-5; 16: 1.11e-4 / 8.30e-5; 32: 2.14e-4 / 1.58e-4 — the two suites read within
+1.4× of each other at every lag, no suite above 1e-3. *Against seed 1's texts at the same lag* (0018's `results/ownrun/summary.json`, `f3b8f00ff6ed…`): 14.6× to 26.5× the corpus
+median (lags 1–32: 17.6, 14.6, 15.3, 17.0, 19.4, 26.5), 26× to 50× the on-path median, and 1/506 to 1/1723 of the rollout median
+(1298, 1723, 1335, 1319, 943, 506× below it); against seed 2's corpus (0029's `results/ownrun_seed2/summary.json`, `3e051800b225…`) 16.0× to 38.1×. The agentic text draws more than held-out prose
+and three orders less than the trainer's own prompts, and the gap to prose is widest at the last lag (the ratio to corpus sits at 15–19× through lag 16 and
+27× at lag 32); the quadratic law holds along the trajectory (slope 2.48). The first continuation position reads a median 3.29e-6 (lag 1) to 1.63e-4 (lag 32)
+against the rung medians above — the stale-prompt profile of 0018, in miniature.
+
+**The seal (`ownrun-agentic`, `876ab109…`), read by the summarizer** (clauses in 0030's numbering; the summarizer's keys in
+parentheses). (i) HELD (`iv_controls_as_0020`): all six (reader, pair) units passed, none UNEVALUABLE. (ii) HELD
+(`i_heldout_holds_at_every_lag`): median (B1) on `agentic` ≤ 1e-3 at every lag, every rung above 2× its reader's floor — the
+reading lands with held-out text. (iii) HELD (`iii_lands_with`, margin one decade): at every lag the agentic median is closer in
+log10 to seed 1's corpus median than to its rollout median, by 1: 1.25 / 3.11; 2: 1.16 / 3.24; 4: 1.18 / 3.13; 8: 1.23 / 3.12; 16: 1.29 / 2.97; 32: 1.42 / 2.70 decades (corpus / rollout), the margin
+1.28 to 2.07 decades; **the reading lands with held-out text, not with the trainer's prompts**, in those words. (iv) HELD
+(`i_backbone_quadratic`): slope of log median (B1) on log distance over the six rungs 2.4784 on `agentic`, inside [1.5, 2.5] by
+0.0216 (seed 1: 2.26 corpus, 2.19 on-path; seed 2: 2.13, 2.05; Llama 2.34, 2.51). **Disclosed, as 0032 disclosed its drift:** the
+summarizer the sitting ran (`ebe5ee4`, the registering commit) built `slope_fit` over the rule-level texts only, so the per-rung
+text `agentic` received no fit and this clause read UNREAD on the pod and at home (`slope: {"agentic": null}`); `3add994`
+(`fix(summarize_reader): fit the slope over every text the rungs carry`, with a synthetic test), landed after the sitting, produces the
+registered definition — 0030's "slope of log median (B1) on log rel_delta_all over the six rungs … on the agentic text" — and
+the verdict here is its output on the same 1,200 reports at home (`summary.json` `d9131524…`), equal to `ebe5ee4`'s in
+every rung median and every other clause. The fix changes which texts get a fit, not any fitted number.
+
+**What the reading says.** An agent-serving benchmark's own text — the opening 1,024 tokens of coding and workflow trajectories,
+nothing the trainer saw — draws from seed 1's readers a stale-cache injury that sits with held-out prose, not with the trainer's
+prompts: HOLDS_B at every lag to 32 GRPO steps, 15× to 27× the corpus reading and three orders under the rollout reading.
+The two sentences of 0018 hold on this text in kind: the cache a pipelined trainer serves is HOLDS_B on text it did not train on,
+and the one text that loses the band remains the trainer's own. New here, descriptive: the agentic text is the most sensitive
+held-out text the own run has read (above corpus and on-path at every lag, the excess widest at lag 32), and the two suites
+agree within 1.4×; the slope 2.48 is the steepest the own run has read on held-out text and sits
+0.02 under the band's edge, where Llama's on-path 2.51 fell 0.006 past it (0032).
+
+**Not ruled here.** The slope band for later texts (two readings within 0.03 of its upper edge); the per-window join with linear-ceiling's mapper reading
+of the same fifty windows (its 0064; a figure, no verdict); the long-form agentic cell (windows past the opening); a seed-2 sibling.
+
+**Consequences in this commit set:** `README.md`, `CLAUDE.md`. Records and the Hub backup under the hashes above; nothing in
+`results/` is committed. Landed ahead as its own commit: `3add994` `src/lag_ladder/summarize_reader.py` (slope over every text the rungs
+carry) with `tests/test_summarize_reader.py`.
