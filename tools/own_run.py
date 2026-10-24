@@ -331,7 +331,8 @@ def cmd_train(a) -> int:
     if a.prompt_format == "chat":
         prompt_tokens = [len(tok.apply_chat_template(p, tokenize=True, add_generation_prompt=True)) for p in ds["prompt"]]
     else:
-        prompt_tokens = [len(ids) for ids in tok(ds["prompt"])["input_ids"]]
+        # a datasets Column is not a list[str] to the tokenizer (the 2026-10-24 smoke failed here); materialise it
+        prompt_tokens = [len(ids) for ids in tok(list(ds["prompt"]))["input_ids"]]
     prompt_token_counts = count_stats(prompt_tokens)
     print(f"PROMPT_FORMAT {a.prompt_format} prompt_token_counts {json.dumps(prompt_token_counts)}", flush=True)
 
