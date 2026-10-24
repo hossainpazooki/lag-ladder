@@ -166,3 +166,58 @@ def test_decoding_spec_pins_every_generation_config_parameter_and_the_sampler_pa
     src = (REPO_ROOT / "tools" / "own_run.py").read_text(encoding="utf-8")
     calls = [line for line in src.splitlines() if ".generate(" in line]
     assert calls and all("**spec" in line for line in calls), calls
+
+
+# --- 0035: the Instruct-initialised run dumps the pair's TARGET side; the trainer's stop set is the tokenizer's eos ----
+
+def test_dump_command_takes_which_side_and_defaults_to_source():
+    cmd = own_run.dump_command(Path("py"), Path("kvt"), Path("ckpt"), Path("s.npy"), Path("o"))
+    assert cmd[cmd.index("--which") + 1] == "source"
+    cmd = own_run.dump_command(Path("py"), Path("kvt"), Path("ckpt"), Path("s.npy"), Path("o"), which="target")
+    assert cmd[cmd.index("--which") + 1] == "target"
+    with pytest.raises(ValueError, match="which"):
+        own_run.dump_command(Path("py"), Path("kvt"), Path("ckpt"), Path("s.npy"), Path("o"), which="both")
+
+
+def test_dump_key_names_the_side_the_checkpoint_is_dumped_as():
+    assert own_run.dump_key("source", 3) == "source@local-step_3"
+    assert own_run.dump_key("target", 0) == "target@local-step_0"
+
+
+def test_step_artifacts_files_dumps_under_the_which_side(tmp_path):
+    """The hook's dump directory is <pair>/dumps/<which>@local-step_<g>/seq<i>, so a config's writer_dump and
+    reader_dump of `target@local-step_<g>` find the Instruct run's dumps (0035); the default stays `source@…`."""
+    ll = tmp_path / "ll"; ll.mkdir()
+    calls = []
+    hook = own_run.StepArtifacts(lag_ladder=ll, kvt_root=tmp_path, kvt_python=Path("py"), tool_python=Path("py"),
+                                 heldout_tokens=tmp_path / "h.npy", heldout_seqs=range(0, 1), heldout_pair="hp",
+                                 rollout_tokens=tmp_path / "r.npy", rollout_seqs=range(0, 1), rollout_pair="rp",
+                                 labels={}, keep=frozenset({0}), log=tmp_path / "log", kvt_pair="pair", kvt_which="target")
+    hook._run = lambda cmd, cwd=None: calls.append(cmd)
+    np.save(tmp_path / "h.npy", np.arange(8, dtype=np.int64).reshape(1, 8))
+    np.save(tmp_path / "r.npy", np.arange(8, dtype=np.int64).reshape(1, 8))
+    ckpt = tmp_path / "checkpoint-0"; ckpt.mkdir(); (ckpt / "model.safetensors").write_bytes(b"w")
+    hook.process(0, ckpt)
+    outs = [Path(c[c.index("--out") + 1]) for c in calls]
+    assert len(outs) == 2 and all(o.parent.name == "target@local-step_0" for o in outs)
+    assert all(c[c.index("--which") + 1] == "target" for c in calls)
+
+
+def test_trainer_generation_kwargs_pin_the_stop_set_to_the_tokenizer_eos():
+    """TRL 1.15.0 unions the checkpoint's generation_config eos list with the tokenizer's (grpo_trainer.py 398–405 at
+    dae7b6ad); Qwen2.5-1.5B-Instruct ships a two-token list there. `generation_kwargs` overrides the GenerationConfig
+    TRL builds (grpo_trainer.py 1129–1131), so the trainer's stop set is the tokenizer's eos alone, as the sampler's."""
+    class T:
+        eos_token_id = 151645
+        pad_token_id = 151643
+    assert own_run.trainer_generation_kwargs(T()) == {"eos_token_id": 151645}
+
+
+def test_train_cli_takes_kvt_which_with_source_default():
+    ap = own_run.build_parser()
+    common_t = ["train", "--model", "m", "--lag-ladder", "l", "--kvt", "k", "--kvt-python", "p", "--heldout-tokens", "h",
+                "--rollout-tokens", "r", "--excluded-indices", "x", "--config", "c", "--out", "o"]
+    assert ap.parse_args(common_t).kvt_which == "source"
+    assert ap.parse_args(common_t + ["--kvt-which", "target"]).kvt_which == "target"
+    with pytest.raises(SystemExit):
+        ap.parse_args(common_t + ["--kvt-which", "both"])

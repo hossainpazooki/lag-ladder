@@ -119,14 +119,36 @@ def select_prompt_indices(n_total: int, k: int, seed: int) -> list[int]:
     return sorted(int(i) for i in rng.choice(n_total, size=k, replace=False))
 
 
+KVT_SIDES = ("source", "target")
+
+
 def dump_command(kvt_python: Path, kvt_root: Path, ckpt: Path, tokens_npy: Path, out: Path,
-                 kvt_pair: str = KVT_PAIR) -> list[str]:
+                 kvt_pair: str = KVT_PAIR, which: str = "source") -> list[str]:
     """`scripts.dump_kv` for one sequence file, as the (B) sittings ran it (float32 forward, stride 1). The
-    instrument refuses a checkpoint that is not KV-matched to the pair's source (head dim, layers), so the pair
-    must be the one whose source is the trained model."""
-    return [str(kvt_python), "-m", "scripts.dump_kv", "--pair", kvt_pair, "--which", "source",
+    instrument refuses a checkpoint that is not KV-matched to the pair's `which` side (head dim, layers), so the
+    pair must be the one whose `which` side is the trained model: `source` for 0017–0034, `target` for the
+    Instruct-initialised run (0035: `qwen2.5-1.5b-to-instruct` pins neither side, so `--local-path` is allowed on
+    its target)."""
+    if which not in KVT_SIDES:
+        raise ValueError(f"which must be one of {KVT_SIDES}, not {which!r}")
+    return [str(kvt_python), "-m", "scripts.dump_kv", "--pair", kvt_pair, "--which", which,
             "--local-path", str(ckpt), "--tokens", str(tokens_npy), "--stride", "1", "--dtype", "float32",
             "--out", str(out)]
+
+
+def dump_key(which: str, step: int) -> str:
+    """The dump directory a saved step is filed under, and the `writer_dump` / `reader_dump` key a config names:
+    `<which>@local-step_<g>` (0017's `source@local-step_<g>`; 0035's `target@local-step_<g>`)."""
+    return f"{which}@local-step_{int(step)}"
+
+
+def trainer_generation_kwargs(tok) -> dict:
+    """GRPOConfig.generation_kwargs: the trainer's stop set is the tokenizer's eos alone. TRL 1.15.0 otherwise unions
+    the checkpoint's generation_config eos list with the tokenizer's (grpo_trainer.py 398–405 at dae7b6ad) and
+    builds its GenerationConfig from explicit values that `generation_kwargs` overrides (1116–1131); Qwen2.5-1.5B-
+    Instruct ships a two-token list there, the base checkpoints of 0017–0034 ship the tokenizer's eos, so this is a
+    no-op on them and the sampler's stop set on the Instruct run."""
+    return {"eos_token_id": int(tok.eos_token_id)}
 
 
 def distance_command(python: Path, lag_ladder: Path, writer_ckpt: Path, reader_ckpt: Path, out: Path) -> list[str]:
@@ -176,9 +198,12 @@ class StepArtifacts:
     def __init__(self, *, lag_ladder: Path, kvt_root: Path, kvt_python: Path, tool_python: Path,
                  heldout_tokens: Path, heldout_seqs: range, heldout_pair: str,
                  rollout_tokens: Path, rollout_seqs: range, rollout_pair: str,
-                 labels: dict[int, list[str]], keep: frozenset[int], log: Path, kvt_pair: str = KVT_PAIR):
+                 labels: dict[int, list[str]], keep: frozenset[int], log: Path, kvt_pair: str = KVT_PAIR,
+                 kvt_which: str = "source"):
         self.ll, self.kvt, self.kvt_py, self.tool_py = lag_ladder, kvt_root, kvt_python, tool_python
-        self.kvt_pair = kvt_pair
+        if kvt_which not in KVT_SIDES:
+            raise ValueError(f"kvt_which must be one of {KVT_SIDES}, not {kvt_which!r}")
+        self.kvt_pair, self.kvt_which = kvt_pair, kvt_which
         self.heldout = (heldout_tokens, heldout_seqs, heldout_pair)
         self.rollout = (rollout_tokens, rollout_seqs, rollout_pair)
         self.labels, self.keep, self.log = labels, keep, log
@@ -208,10 +233,10 @@ class StepArtifacts:
         for tokens, seqs, pair in (self.heldout, self.rollout):
             per_seq = write_per_seq_tokens(tokens, self.ll / "results" / "distance" / "pairs" / pair / "tokens", seqs)
             for i, p in zip(seqs, per_seq):
-                out = self.ll / "results" / "distance" / "pairs" / pair / "dumps" / f"source@local-{name}" / f"seq{i}"
+                out = self.ll / "results" / "distance" / "pairs" / pair / "dumps" / dump_key(self.kvt_which, step) / f"seq{i}"
                 if (out / "meta.json").exists():
                     continue
-                self._run(dump_command(self.kvt_py, self.kvt, kept, p, out, self.kvt_pair), cwd=self.kvt)
+                self._run(dump_command(self.kvt_py, self.kvt, kept, p, out, self.kvt_pair, which=self.kvt_which), cwd=self.kvt)
         if step > 0:
             # every step's distance to step 0 (the trajectory on the axis), then a copy under each rung label
             # the config gives this step, where summarize_reader reads it (0015's layout)
@@ -374,7 +399,7 @@ def cmd_train(a) -> int:
                          heldout_seqs=range(a.heldout[0], a.heldout[1]), heldout_pair=a.heldout_pair,
                          rollout_tokens=Path(a.rollout_tokens).resolve(), rollout_seqs=range(0, a.n_rollouts),
                          rollout_pair=a.rollout_pair, labels=labels, keep=keep_set(a.keep), log=out_dir / "steps.log",
-                         kvt_pair=a.kvt_pair)
+                         kvt_pair=a.kvt_pair, kvt_which=a.kvt_which)
     out_dir.mkdir(parents=True, exist_ok=True)
     step0 = out_dir / "checkpoint-0"
     model.save_pretrained(step0, safe_serialization=True)
@@ -388,13 +413,21 @@ def cmd_train(a) -> int:
                 hook.process(int(state.global_step), ckpt)
             return control
 
+    gen_kwargs = trainer_generation_kwargs(tok)
+    gc = model.generation_config
+    print("DECODING " + json.dumps({"trainer": {"temperature": a.temperature, "top_p": 1.0, "top_k": 0,
+                                                "repetition_penalty": 1.0, "max_completion_length": a.max_completion_length,
+                                                "generation_kwargs": gen_kwargs, "kvt_which": a.kvt_which},
+                                    "checkpoint_generation_config": {k: getattr(gc, k, None) for k in
+                                                                     ("repetition_penalty", "eos_token_id", "temperature", "top_p", "top_k")}}),
+          flush=True)
     cfg = GRPOConfig(output_dir=str(out_dir), learning_rate=a.lr, beta=a.beta, num_generations=a.num_generations,
                      per_device_train_batch_size=a.num_generations,
                      gradient_accumulation_steps=a.prompts_per_step, max_steps=a.steps,
                      max_completion_length=a.max_completion_length, temperature=a.temperature,
                      save_strategy="steps", save_steps=1, save_only_model=True, logging_steps=1, seed=a.seed,
                      bf16=False, fp16=False, gradient_checkpointing=True, report_to=[], use_vllm=False,
-                     log_completions=False)
+                     log_completions=False, generation_kwargs=gen_kwargs)
     trainer = GRPOTrainer(model=model, processing_class=tok, reward_funcs=[exact, fmt], args=cfg,
                           train_dataset=ds, callbacks=[DumpOnSave()])
 
@@ -445,7 +478,9 @@ def build_parser() -> argparse.ArgumentParser:
     t.add_argument("--lag-ladder", required=True); t.add_argument("--kvt", required=True); t.add_argument("--kvt-python", required=True)
     t.add_argument("--heldout-tokens", required=True); t.add_argument("--heldout", type=int, nargs=2, default=(40, 50))
     t.add_argument("--heldout-pair", default=KVT_PAIR, help="the lag-ladder pair name the held-out dumps are filed under")
-    t.add_argument("--kvt-pair", default=KVT_PAIR, help="the instrument pair whose `source` is the trained model (KV-matched)")
+    t.add_argument("--kvt-pair", default=KVT_PAIR, help="the instrument pair whose --kvt-which side is the trained model (KV-matched)")
+    t.add_argument("--kvt-which", choices=KVT_SIDES, default="source",
+                   help="which side of the pair the trained model is; dumps are filed under <which>@local-step_<g> (0035: target)")
     t.add_argument("--rollout-tokens", required=True); t.add_argument("--n-rollouts", type=int, default=10)
     t.add_argument("--rollout-pair", default="qwen2.5-1.5b-ownrun-rollout")
     t.add_argument("--excluded-indices", required=True, help="excluded_train_indices.json from sample-rollouts")
