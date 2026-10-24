@@ -18,7 +18,7 @@
 results_dir = "results/ownrun_instruct_task"
 upstream_path = "../kv-transfer-replication"
 upstream_sha = "5d4aa4a98b40f5ab37dd83ebb6b2ee802203994a"
-registered_by = ""
+registered_by = "0035"
 seal = "ownrun-instruct-task"
 writer = "local:step_0"
 # Run order, not a statistic: the sealed clauses (ii)-(iv) read step_1 and step_32 alone, so those two run first and the

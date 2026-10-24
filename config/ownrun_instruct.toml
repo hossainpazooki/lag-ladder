@@ -1,6 +1,6 @@
 # Statistic (B) at the operating lag — the own run from an INSTRUCT initialisation, Qwen2.5-1.5B-Instruct (0035; the
-# Instruct-initialised run of the 2026-10-21 brief, to run on external compute in parallel with the families). UNREGISTERED
-# until a numbered entry fixes every value below; `reader run` refuses while registered_by is empty or any *_PENDING pin remains.
+# Instruct-initialised run of the 2026-10-21 brief, to run on external compute in parallel with the families). Registered by
+# 0035; `reader run` refuses while registered_by is empty or any *_PENDING pin remains.
 #
 # The recipe is 0017's unchanged (tools/own_run.py, the same arguments; pins as 0029's sitting: trl==1.15.0
 # (dae7b6adc8d2729cfa8d21bc8480656ede769240), transformers 5.20.2, torch 2.14.1+cu130; lr 1e-6, beta 0, 16 prompts x 8
@@ -37,7 +37,7 @@ heldout = [40, 50]
 prefix_len = 768
 dtype = "float32"
 seed = 0
-registered_by = ""
+registered_by = "0035"
 seal = "ownrun-instruct"
 
 [reader.rule]

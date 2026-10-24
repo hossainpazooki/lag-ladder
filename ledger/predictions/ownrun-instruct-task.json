@@ -1,0 +1,87 @@
+{
+  "pair": "ownrun-instruct-task",
+  "prediction": {
+    "controls": "per reader, before its cells: float16 floor (FRESH in float32 vs through float16) flip rate <= 0.01, identity (FRESH twice) zero flips, positive controls NEAR and FAR each flip >= 0.5 of the answers; once per sitting: dump equivalence, live step-0 cache vs the step-0 dump of 0017's ten rollout prompts, relative gap <= 2^-10 per element (one float16 ulp) and 0018's rollout (B1) at step_32 reproduced within 1e-3 relative",
+    "decoding": "task_swap._greedy: raw argmax, stop on the tokenizer's eos, cap 768; the decoder the Step-1 probe v2 was verified against token for token",
+    "descriptive_not_sealed": [
+      "the accuracy difference STALE - FRESH per lag with its interval and the section 4 bands",
+      "FRESH accuracy per reader (both probes: 4 of 64 at step_32, 48 of 64 at the cap)",
+      "the first-#### answer beside the registered one; the cap and no-answer rates per arm",
+      "the first-divergence position; the rank correlation of per-prompt flips with (B1) on the fresh path",
+      "flip rates at g in {2, 4, 8, 16}; NEAR against FAR"
+    ],
+    "equivalence_expect_b1": "resolved at run time from this run's (B) summary (results/ownrun_instruct/summary.json, rung ownrun-instruct-rollout-lag-32, text rollout): the Instruct run has no earlier entry's rollout (B1) to pin",
+    "kind": "statistic (C) on the Instruct-initialised own run (0035): 0025's four clauses on flips unchanged in form, plus two on accuracy that the base policy (4-12% FRESH) could not carry; cap 768 (the Instruct policy reasons in LaTeX and \\boxed{}; the Step-1 probe under (C)'s decoder read 72.0 [65.5, 78.0] at cap 768 on 200 prompts, 51.5 at cap 256); the answer rule is kept (last ####, else last number) with the probe's marker rates disclosed in the entry",
+    "max_new": 768,
+    "n_prompts": 1319,
+    "predictions": {
+      "i_positive_controls_fire": {
+        "note": "clause (i), 0025's form; on the base 0027 read NEAR and FAR fire at every reader",
+        "readers": [
+          "local:step_1",
+          "local:step_2",
+          "local:step_4",
+          "local:step_8",
+          "local:step_16",
+          "local:step_32"
+        ],
+        "statement": "at every kept step NEAR and FAR each change the greedy final answer on at least half the prompts"
+      },
+      "ii_flip_rate_at_first_lag": {
+        "at_least": 0.1,
+        "note": "clause (ii), 0025's form; the base read 0.710 at g = 1 (0027); BLIND here",
+        "reader": "local:step_1",
+        "statement": "at g = 1 the step-0 cache changes the greedy final answer on at least 10% of the prompts: the output is not reproducible from the first optimizer step"
+      },
+      "iii_flip_rate_at_last_lag": {
+        "at_least": 0.1,
+        "note": "clause (iii), 0025's form; the base read 0.869 at g = 32 (0027); BLIND here",
+        "reader": "local:step_32",
+        "statement": "at g = 32 the step-0 cache changes the greedy final answer on at least 10% of the prompts"
+      },
+      "iv_flip_growth": {
+        "first": "local:step_1",
+        "last": "local:step_32",
+        "note": "clause (iv), 0025's form; BLIND; the base read 0.710 [0.686, 0.735] below 0.869 [0.851, 0.886]",
+        "statement": "the flip rate grows with lag: the g = 1 bootstrap interval lies entirely below the g = 32 interval"
+      },
+      "v_fresh_accuracy_at_least": {
+        "at_least_points": 50.0,
+        "note": "the step-0 policy is the probe's; every trained reader is BLIND",
+        "readers": [
+          "local:step_1",
+          "local:step_2",
+          "local:step_4",
+          "local:step_8",
+          "local:step_16",
+          "local:step_32"
+        ],
+        "statement": "clause (v): FRESH greedy accuracy under the registered answer rule is at least 50 points at every reader (the brief's decision rule: >= 50% makes the accuracy band verdict-bearing; the Step-1 probe read 72.0 [65.5, 78.0] at cap 768 under (C)'s decoder on 200 prompts); read by the summarizer as v"
+      },
+      "vi_degrades_at_lag": {
+        "note": "BLIND",
+        "reader": "local:step_32",
+        "statement": "clause (vi): at g = 32 the paired accuracy difference STALE - FRESH has its bootstrap interval entirely below zero (ci_high < 0): the stale prompt cache costs accuracy at the operating lag on a policy that can solve the task; the band the summarizer assigns (DEGRADES_C needs delta <= -5 points with ci_high <= -2) is reported beside it. g = 1 is NOT sealed on accuracy: the base read -0.76 [-2.05, +0.53] there (0027) and the flip symmetry at the first step is unknown on this policy, so the g = 1 delta is descriptive; read by the summarizer as vi"
+      }
+    },
+    "probes": {
+      "first_results_tar_sha256": "a007049e9209dca81b8d463a0d97e50ec2c3001fe1aa46157bb4154132d68b8c",
+      "prompts_sha256": "918c7e67f051d41f7b153911f0497bc62c82b76cb04ef84f6f5ee0e66ab22450",
+      "second_results_tar_sha256": "5bd9e076d6b3b544481bfb809aff7e522aa79fdffc81909bb6c35d297d9bdf75"
+    },
+    "registering_entry": "0035",
+    "rule": {
+      "bootstrap_reps": 2000,
+      "control_min_flip_rate": 0.5,
+      "equivalence_b1_max_rel": 0.001,
+      "equivalence_max_rel_diff": 0.0009765625,
+      "floor_max_flip_rate": 0.01,
+      "max_new": 256,
+      "n_prompts": 1319
+    },
+    "ruled": "2026-10-15",
+    "statistic": "per reader at kept step g, the answer-flip rate between the STALE arm (the step-0 writer's prompt cache) and FRESH (the reader's own) over the 1,319 GSM8K test prompts, greedy, 256 new tokens; the answer is the run's reward extraction (the number after the last #### marker, else the last number; None when none); a seeded bootstrap over prompts (2,000 reps) carries the interval. The accuracy difference STALE - FRESH in points is descriptive."
+  },
+  "prior_artifacts": [],
+  "sealed_pre_fit": true
+}
