@@ -1853,3 +1853,79 @@ of the same fifty windows (its 0064; a figure, no verdict); the long-form agenti
 **Consequences in this commit set:** `README.md`, `CLAUDE.md`. Records and the Hub backup under the hashes above; nothing in
 `results/` is committed. Landed ahead as its own commit: `3add994` `src/lag_ladder/summarize_reader.py` (slope over every text the rungs
 carry) with `tests/test_summarize_reader.py`.
+
+### 0037 — 2026-10-28 — Outcome: the own run on SmolLM3-3B-Base (0034); of the sealed clauses (i-holds), (ii), (iii), (iv) HELD, (i) FALSIFIED, the backbone excess UNREAD as predicted
+
+prior-entries-sha256: 8af9d729271909fe0aeb10f13d79412997ebda6d266dd7015fb69d803b32020f
+
+**Run.** The trajectory and the 660 jobs of 0034 (`config/ownrun_smollm3.toml`, instrument `5d4aa4a` with the pair at `de6ce9e`,
+0033) ran on one A100-SXM4-80GB (community cloud) under torch 2.14.1+cu130, transformers 5.20.2, TRL 1.15.0, without a halt, at
+this repository's registering commit `a4c9f1e` exactly (suite 275 passed, 5 skipped; eleven `OK <pair>` lines from `seal verify`; `reader plan` 660 jobs). Setup
+passed at the first attempt (`SETUP_DONE` 21:41Z). The two-step smoke (R-F6, the sitting's first stage, outputs discarded) read:
+step-1 distance 1.8636e-5 against the registered prediction of ≈ 1.95e-5 (lr / RMS 5.1248e-2), step-2 2.3323e-5; 714 s per step on
+two prompts; peak CUDA memory 52.1 GB of 80. The step-0 safetensors the trainer saved equal the Hub snapshot by value in the smoke
+and in the run — `tools/weight_distance.py` against `HuggingFaceTB/SmolLM3-3B-Base@d78a42f7…` (shards `7e270ac5…`, `c6a6e769…`):
+`rel_delta_all` 0.0, 326 tensors compared (the seal's halting sentence says 254, Llama's count carried into it; its own
+`weight_rms` line says 326; the condition read was `rel_delta_all` 0 with none only on either side), none only on either side —
+and hash to the same digest in both, `0e732db9…8f6d`. Step-1
+distance of the run 1.8688e-5 (the stop rule did not fire). Training prompts under the plain format: 7,463 prompts, 41–238 tokens,
+median 83 (Llama 42–239, median 84: the same BPE); the rollout prompts 66–106. The run's 32 steps took 785 s each including the
+per-step dumps (train and save ≈ 4 min, the twenty `dump_kv` subprocesses ≈ 9 min, each reloading the 12 GB checkpoint), peak CUDA
+memory 52.5 GB. Every (reader, pair) unit passed its controls under 0014's limits, none carried by far: held-out pair, float16
+floors 8.4e-9 to 1.8e-8 nats/token (the twelve (reader, text) medians over ten sequences each, corpus and on-path), identity 0,
+scrambled 0.533 to 0.541; rollout pair, floors 1.2e-8 to 1.9e-8, identity 0, scrambled 0.395 to 0.499 (limit 0.1), far 0.582 to
+0.727 (1.46× to 1.56× scrambled). Records: `smollm3-results-final.tgz` `f1cf8a82…1f65` (660 reports, `run.json` `8e28feb0…`, the
+pod's summary), `smollm3-aux-final.tgz` `dd63b0d9…0539` (7 provenances, 32 step distances, 12 rung placements, trainer log, run
+config, the two step-0 comparisons, pod logs); digests equal both ends (`remote.sha256` on the pod, `sha256sum` at home; evidence
+folder `2026-10-25-pod-sitting-smollm3/`), pulled by ssh with the pod live. The chain's upload stage failed before its
+first commit (`UPLOAD_RC 1`: one `sha256sum` argv over every staged file exceeded the kernel's argument limit — SmolLM3's 36 layers
+stage more dump files than Llama's 28 did), so the pod's `summary.json` carries no manifest digests; the manifest is now hashed
+in-process and the operator's re-run, under the dataset write token pasted into that shell alone, backed up the kept
+weights {0, 1, 2, 4, 8, 16, 32} with the model card beside them, every step's dumps, the token files, the tars and the manifest to the
+private dataset under `ownrun-smollm3-3b/`: 25,809 files in 17 commits, 0 missing, 0 LFS-sha mismatches, 24,444 LFS-verified,
+`MANIFEST_OK`; all off-repository. The pod's own
+summary refused as expected (`iii-excess` needs 0015's `results/reader/summary.json`, which lives only at home); the record is the
+home summarizer's `summary.json` (`5438a8cf…`) on the pulled reports.
+
+**Trajectory.** Whole-vector relative distance to step 0: 1.8688e-5 (step 1), 2.8670e-5 (2), 4.2809e-5 (4), 6.1017e-5 (8), 7.8626e-5
+(16), 8.6450e-5 (32) — concave and saturating (d32/d1 = 4.63; Llama 4.5, Qwen 4.6), flat from about step 20 (8.2713e-5), and below
+0015's backbone range [1e-4, 1e-1] at every step, as 0034's RMS prediction said (≈ 1.95e-5 per step, saturation near 1e-4). Means
+over steps 1–8 and over 25–32, every figure from the trainer log: exact-match reward 0.460 → 0.808 (Llama 0.045 → 0.066; Qwen
+0.030 → 0.148); the format term 0.065 → 0.190; completion entropy 0.826 → 0.317 (Llama 2.02 → 1.74); mean completion length 123 →
+122 tokens, the share of completions at the 256-token cap 0.135 → 0.058. The step-0 policy's own batch (logged at step 1) answers GSM8K at 13% exact-match
+under the plain prompt (steps 2 / 4 / 8: 0.188 / 0.445 / 0.734); the steps 1–8 mean is 0.46 and the policy sharpens hard; the weights
+move 0.4× Llama's distance while doing so.
+
+**Reading** — median (B1), nats/token, at distance x; bands HOLDS_B ≤ 1e-3, DEGRADES_B ≥ 1e-1. *Held-out text* (corpus / on-path):
+lag 1 (x 1.87e-5) 3.41e-7 / 2.48e-7; 2 (2.87e-5) 1.04e-6 / 6.94e-7; 4 (4.28e-5) 2.93e-6 / 1.93e-6; 8 (6.10e-5) 7.20e-6 / 4.70e-6;
+16 (7.86e-5) 1.40e-5 / 9.51e-6; 32 (8.65e-5) 1.99e-5 / 1.50e-5 — HOLDS_B at every lag, every rung at least 22× its reader's floor;
+slope of log median on log x over the six rungs 2.6172 (corpus), 2.6184 (on-path). *Rollout text* (the step-0 policy's own GSM8K
+completions under the plain prompt, prompt cache stale, completion teacher-forced): lag 1 2.514e-3; 2 6.07e-3; 4 1.57e-2; 8 4.17e-2;
+16 5.74e-2; 32 8.44e-2 — UNRESOLVED at every lag, 4.1e3× to 7.4e3× the same reader on corpus and 5.6e3× to 1.0e4× on on-path (Llama
+1.9e3× to 5.8e3×; Qwen seed 1 1.3e4× to 4.5e4×), the reader's argmax agreeing with its fresh cache on 98.5% (lag 1) to 91.6% (lag
+32) of rollout tokens (Llama 98.6% to 91.6%).
+
+**The seal (`ownrun-smollm3`, `3c26822e…`).** (i-holds) HELD: HOLDS_B at all six held-out rungs on both texts, all above 2× floor.
+(i) FALSIFIED: both slopes lie above the sealed upper bound 2.5 — corpus 2.6172 and on-path 2.6184 (Llama 2.34 / 2.51, Qwen 2.26 /
+2.19 and 2.13 / 2.05); the third family's slope is the steepest and the first with both texts outside the band. (ii) HELD, both
+halves: rollout median at g = 1 is 2.514e-3 ≥ 1e-3 (`ii-lost`; 2.5× the line, Llama 1.19e-3, Qwen 4.68e-3), and rollout ≥ 1e3×
+held-out at every lag on both texts (`iii`). (iii) HELD: all twelve control units passed, none carried by far (`iv`). (iv) UNREAD
+(`iii-excess`, read against 0015's `summary.json` `5d761594…`): every rung's distance lies below 1e-4 (1.87e-5 to 8.65e-5), none
+inside [1e-4, 1e-1], so the clause has nothing to read — the reading 0034 predicted from the step size, on record there as expected.
+
+**What the reading says.** On a third family the two sentences of 0018 and 0024 hold in kind: held-out text is HOLDS_B at every
+lag and grows as a power of distance along the trajectory, and the trainer's own text loses HOLDS_B at the first optimizer step
+and sits three to four orders above held-out text at every lag. In degree the family moves two things. The slope is 2.62 on both
+texts, past the quadratic band that Qwen set (2.05–2.26) and Llama grazed (2.51): the three families now read 2.05–2.26, 2.34–2.51 and 2.62,
+ordered as their step-32 distances are not (Llama 2.1e-4, Qwen ≈ 1e-4, SmolLM3 8.6e-5), so the exponent is a property of the
+family and not of how far the weights moved. And the gap between the policy's text and held-out text is 4e3×–1e4× here, between
+Llama's 2e3×–6e3× and Qwen's 1e4×–5e4×: the rollout medians of the three families at lag 32 lie within 1.5× of each other (6.1e-2,
+8.4e-2, 8.9e-2) while their held-out corpus medians at lag 32 span 3× (2.1e-5, 2.0e-5, 6.7e-6), so the gap is set by the held-out side. The
+excess-over-noise clause is unread at this step size, as registered; it stays read on Llama alone (3.5×–19×) and Qwen (11× corpus / 7.9× on-path).
+The size and prompt-format confounds §14.5 names are unchanged, and the fifty held-out windows are Llama's (0034's disclosure):
+SmolLM3's held-out medians against Llama's are a same-token comparison, 0.54× to 0.95× at equal lag.
+
+**Not ruled here.** Whether 0016's and 0024's statements of record gain the two families (the ruling §14.5 reserves for after
+SmolLM3); the slope band for later families, now 2.05–2.62 across three; the Instruct-initialised run (0035, external compute).
+
+**Consequences in this commit set:** `README.md`, `CLAUDE.md`. Records and the Hub backup under the hashes above; nothing in `results/` is committed. Nothing landed ahead: the run was at the registering commit.
