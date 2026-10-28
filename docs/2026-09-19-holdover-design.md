@@ -290,6 +290,8 @@ that achieves f* (the `[STRETCH]` of 0023). Each is a Limitations sentence; ARR 
 Oct 12 is dropped (R6). The ARR October kill table of the 09-19 draft is retired; the next venue is decided
 on the pilot's result — ARR December cycle or ICML if (C) has something to say, MLSys if only (A)/(B) do,
 a short note if nothing does.
+Ruled 2026-10-23 and 2026-10-27: this record and linear-ceiling's are ONE paper; its first public form is the LCFM
+camera-ready (2026-11-13), the full paper goes to the next reviewed venue; the venue question above is closed by that.
 
 Inherited blockers (09-02 §7–8): upstream `Pair` revision / local-path field — landed (ledger 0003/0004);
 no scorer exists for teacher-forced log-probs or generation under a supplied cache; (B)'s bounds blank.
@@ -1121,5 +1123,7 @@ its two bf16 one-pass floors, at cached rows 767 and 768, lie within a factor of
 above 2× its unit's floor (0020/0030's convention); HOLDS_B and DEGRADES_B are not read on bf16 hybrids — with blind
 order clauses on fresh windows (FULL-STALE ≥ max(MLA-STALE, KDA-STALE); KDA-STALE ≥ MLA-STALE; FULL / (MLA + KDA) in
 [0.5, 1.5]) and the four bf16 arm cells above disclosed as the prior. It is drafted as its own registration entry with its
-seal and `config/kimi_hybrid.toml`, and takes its number after the §14.5 families (post-deadline). float32 is a
+seal and `config/kimi_hybrid.toml`, and takes its number after the §14.5 families
+(ruled 2026-10-26: the registration precedes the camera-ready's cut; the sitting follows the three linear-ceiling
+sittings). float32 is a
 reference for this family, never a run dtype: 192 GB of weights.
