@@ -23,7 +23,8 @@ dump-equivalence limit (absolute 2⁻⁵) after the sitting halted on the relati
 the own run on Llama-3.2-3B (§14.5), entry 0032 its outcome ((i-holds), (ii), (iii) HELD; (i) and (iv) FALSIFIED), entry 0033
 the pair-only re-pin at de6ce9e for the SmolLM3 family (`INSTRUMENT_SHA` stays 5d4aa4a), entry 0034 the registration of the own run
 on SmolLM3-3B-Base, entry 0035 the registration of the Instruct-initialised own run (Qwen2.5-1.5B-Instruct), both halves, and
-entry 0036 the outcome of the agentic text (all four clauses HELD).
+entry 0036 the outcome of the agentic text (all four clauses HELD), and entry 0037 the outcome of the own run on SmolLM3-3B-Base
+((i-holds), (ii), (iii), (iv) HELD; (i) FALSIFIED; the backbone excess UNREAD).
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never
@@ -190,7 +191,11 @@ g = 1 to 6.14e-2 at g = 32, 1.9e3×–5.8e3× held-out ((ii) HELD); (iii) HELD; 
 in-range rungs, one of four over 10× ((iv) FALSIFIED). Hub `ownrun-llama3.2-3b/` (20,537 files). **0033 re-pins pair-only at de6ce9e**
 (PR #4, `smollm3-3b-base`; `INSTRUMENT_SHA` stays) and **0034 registers the own run on SmolLM3-3B-Base** (`config/ownrun_smollm3.toml`,
 seal `ownrun-smollm3`; the same fifty held-out windows as Llama's, disclosed; step size predicted 1.95e-5 so clause (iv) is expected
-UNREAD; not yet run). **0035 registers the Instruct-initialised own run** (`config/ownrun_instruct.toml` + `config/ownrun_instruct_task.toml`,
+UNREAD). **0037 reads it**: one A100 sitting at the registering commit `a4c9f1e`, no halt, step 0 equal to the snapshot by value (326
+tensors) and digest, step 1 at 1.8688e-5 against the ≈ 1.95e-5 prediction, step 32 at 8.645e-5; all twelve control units passed;
+held-out HOLDS_B at every lag, slopes 2.6172 / 2.6184 ((i) FALSIFIED); rollout 2.51e-3 at g = 1 to 8.44e-2 at g = 32, 4.1e3×–1.0e4×
+held-out ((ii), (iii) HELD); (iv) HELD; every rung below 1e-4 so the backbone excess is UNREAD as predicted. Hub `ownrun-smollm3-3b/`
+(25,809 files). **0035 registers the Instruct-initialised own run** (`config/ownrun_instruct.toml` + `config/ownrun_instruct_task.toml`,
 seals `ownrun-instruct` / `ownrun-instruct-task`; Qwen2.5-1.5B-Instruct@989aa79 under 0017's recipe with chat prompts, the Instruct side
 dumped as `target`, 0017's fifty held-out windows, disclosed; (C) at cap 768 with (v) FRESH accuracy ≥ 50 points at every reader and
 (vi) STALE below FRESH at g = 32, g = 1 accuracy descriptive; the equivalence (B1) read from the run's own (B) summary and recorded with
