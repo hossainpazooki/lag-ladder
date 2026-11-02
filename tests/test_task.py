@@ -21,7 +21,7 @@ upstream_sha = "{sha}"
 registered_by = "{reg}"
 seal = "ownrun-task"
 writer = "local:step_0"
-readers = ["local:step_1", "local:step_32"]
+readers = {readers}
 prompts = "data/tokens/gsm8k_test.json"
 prompts_sha256 = "{psha}"
 n_prompts = 12
@@ -56,7 +56,8 @@ rollout_dump_root = "results/distance/pairs/ownrun-rollout/dumps/source@step_200
 LEDGER_0030 = "\n### 0030 — 2026-10-16 — statistic (C) registered (test)\n\nprior-entries-sha256: x\n\nregisters config/task.toml.\n"
 
 
-def _setup_task(repo, seal_cfg, *, registered="0030", seal=True):
+def _setup_task(repo, seal_cfg, *, registered="0030", seal=True, readers=("local:step_1", "local:step_32"),
+                predictions=None):
     cfg_r, tools = _setup_rollout(repo, seal_cfg)
     up = repo.parent / "upstream"
     prompts = [{"index": i, "question": f"q{i}", "gold": str(i * 2)} for i in range(12)]
@@ -65,17 +66,18 @@ def _setup_task(repo, seal_cfg, *, registered="0030", seal=True):
     psha = hashlib.sha256(ppath.read_bytes()).hexdigest()
     qsha = hashlib.sha256((up / "data" / "tokens" / "qwen.npy").read_bytes()).hexdigest()
     ssha = hashlib.sha256((up / "data" / "tokens" / "qwen.spans.json").read_bytes()).hexdigest()
-    for step in (0, 1, 32):
+    for step in sorted({0, 32, *(int(r.rsplit("_", 1)[1]) for r in readers)}):
         d = repo / "results" / "distance" / "checkpoints" / f"step_{step}"
         d.mkdir(parents=True, exist_ok=True)
         (d / "model.safetensors").write_bytes(b"w" * (step + 1)); (d / "config.json").write_text("{}")
     sha = git(up, "rev-parse", "HEAD").strip()
     cpath = repo / "config" / "task.toml"
-    cpath.write_text(TASK_CONFIG.format(sha=sha, reg=registered, psha=psha, qsha=qsha, ssha=ssha), encoding="utf-8")
+    cpath.write_text(TASK_CONFIG.format(sha=sha, reg=registered, psha=psha, qsha=qsha, ssha=ssha,
+                                        readers=json.dumps(list(readers))), encoding="utf-8")
     lpath = repo / "ledger" / "ledger.md"
     lpath.write_text(lpath.read_text(encoding="utf-8") + LEDGER_0030, encoding="utf-8")
     if seal:
-        write_prediction("ownrun-task", {"registering_entry": "0030", "predictions": {}}, seal_cfg)
+        write_prediction("ownrun-task", {"registering_entry": "0030", "predictions": predictions or {}}, seal_cfg)
     (tools / "task_swap.py").write_text("# stand-in\n")
     commit_all(repo, "register task")
     return load_task_config(cpath, repo), tools
@@ -137,6 +139,48 @@ def test_run_writes_the_record_and_passes_the_tool_the_contract_arguments(repo, 
     assert (out / "stale.jsonl").exists() and len((out / "fresh32.jsonl").read_text().splitlines()) == 8
     assert rec["prompts_sha256"] == cfg.prompts_sha256 and rec["jobs"][0]["kind"] == "equivalence"
     assert rec["equivalence"]["max_rel_diff"] == 0.0 and rec["equivalence"]["max_abs_diff"] == 0.0 and rec["equivalence"]["limit"] == 2 ** -5 and rec["equivalence"]["passed"] is True
+
+
+THREE = ("local:step_1", "local:step_32", "local:step_2")
+
+
+def test_run_with_a_reader_filter_runs_the_equivalence_then_only_the_named_readers_in_config_order(repo, seal_cfg):
+    # 2026-11-02 ruling 3: the first sitting runs (C) at steps 1 and 32 only and stops; the filter is run order, not a
+    # statistic: the same jobs and records for the readers it names, and the record says which readers ran
+    cfg, tools = _setup_task(repo, seal_cfg, readers=THREE)
+    fake = FakeTaskSwap()
+    rec = task.run(cfg, repo, runner=fake, seal_cfg=seal_cfg, tools_dir=tools, readers=["local:step_32", "local:step_1"])
+    assert [c[2] for c in fake.calls] == ["equivalence", "cells", "cells"]
+    assert [c[c.index("--reader") + 1] for c in fake.calls[1:]] == ["local:step_1", "local:step_32"]
+    assert rec["readers"] == list(THREE) and rec["readers_run"] == ["local:step_1", "local:step_32"]
+    assert rec["finished"] and rec["halted"] is None and [j["reader"] for j in rec["jobs"]] == ["local:step_32", "local:step_1", "local:step_32"]
+    assert not (cfg.results_dir / "readers" / "local_step_2").exists()
+    assert set(rec["controls"]) == {"local:step_1", "local:step_32"}
+
+
+def test_run_without_a_filter_records_every_reader_as_run(repo, seal_cfg):
+    cfg, tools = _setup_task(repo, seal_cfg, readers=THREE)
+    rec = task.run(cfg, repo, runner=FakeTaskSwap(), seal_cfg=seal_cfg, tools_dir=tools)
+    assert rec["readers_run"] == list(THREE) and len(rec["jobs"]) == 4
+
+
+def test_run_refuses_a_reader_filter_that_is_empty_repeated_or_names_a_reader_the_config_does_not(repo, seal_cfg):
+    cfg, tools = _setup_task(repo, seal_cfg, readers=THREE)
+    for bad, msg in (([], "empty"), (["local:step_1", "local:step_1"], "twice"), (["local:step_4"], "not one of")):
+        fake = FakeTaskSwap()
+        with pytest.raises(task.Refusal, match=msg):
+            task.run(cfg, repo, runner=fake, seal_cfg=seal_cfg, tools_dir=tools, readers=bad)
+        assert fake.calls == []                                     # refused before anything runs
+
+
+def test_cli_passes_the_reader_filter_to_run_and_refuses_it_on_other_commands(monkeypatch, repo, seal_cfg):
+    seen = {}
+    monkeypatch.setattr(task, "load_task_config", lambda path, root: "cfg")
+    monkeypatch.setattr(task, "run", lambda cfg, root, readers=None: seen.setdefault("readers", readers) and
+                        {"jobs": [], "equivalence": None, "readers_run": readers})
+    assert task.main(["run", "--config", "x.toml", "--readers", "local:step_1,local:step_32"]) == 0
+    assert seen["readers"] == ["local:step_1", "local:step_32"]
+    assert task.main(["plan", "--config", "x.toml", "--readers", "local:step_1"]) == 2
 
 
 def test_run_halts_when_the_live_cache_differs_from_the_dump(repo, seal_cfg):

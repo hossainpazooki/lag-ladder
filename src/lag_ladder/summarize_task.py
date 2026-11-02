@@ -162,7 +162,10 @@ def summarize(cfg: TaskConfig, root: Path | None = None, out: Path | None = None
         raise _refuse(f"the run halted: {run_rec['halted']}")
     summary = {"registered_by": cfg.registered_by, "upstream_sha": cfg.upstream_sha, "rule": dict(cfg.rule),
                "controls_cfg": {k: (v.as_posix() if isinstance(v, Path) else v) for k, v in cfg.controls.items()},
-               "equivalence": run_rec.get("equivalence"), "lags": {}, "seal_readout": None}
+               "equivalence": run_rec.get("equivalence"), "lags": {}, "seal_readout": None,
+               # a run under the reader filter (2026-11-02) covers some readers; a record from before it covers all
+               "readers_registered": list(run_rec.get("readers", [])),
+               "readers_run": list(run_rec.get("readers_run", run_rec.get("readers", [])))}
     if not summary["equivalence"] or not summary["equivalence"].get("passed"):
         raise _refuse("the dump-equivalence control did not pass; nothing below is comparable with (B)")
     for j in run_rec.get("jobs", []):
@@ -272,6 +275,10 @@ def render(s: dict) -> str:
     lines.append(f"dump equivalence: max_abs_diff {eq['max_abs_diff']:.3e} (limit {eq['limit']}; max_rel_diff "
                  f"{eq['max_rel_diff']:.3e}, share differing {eq.get('share_differing')}), (B1) rel gap "
                  f"{eq['b1_rel_gap']} -> {'ok' if eq['passed'] else 'FAILED'}")
+    reg, ran = s.get("readers_registered") or [], s.get("readers_run") or []
+    if reg and len(ran) < len(reg):
+        lines.append(f"readers run: {len(ran)} of {len(reg)} registered ({', '.join(ran)}); "
+                     f"not run: {', '.join(r for r in reg if r not in ran)}")
     for reader, lag in s["lags"].items():
         c = lag["controls"]
         lines.append(f"reader {reader}: n {lag['n']} acc_fresh {lag['acc_fresh']:.1f}; floor flip {c['floor_flip_rate']:.3f} "

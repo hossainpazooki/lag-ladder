@@ -62,7 +62,7 @@ entry 0036 the outcome of the agentic text (all four clauses HELD), and entry 00
 .venv/Scripts/python.exe -m lag_ladder.summarize_distance        # rungs by measured distance; refuses on mismatch
 .venv/Scripts/python.exe -m lag_ladder.reader plan|check|run|probe [--config config/ownrun.toml]   # statistic (B)
 .venv/Scripts/python.exe -m lag_ladder.summarize_reader [--config config/ownrun.toml]
-.venv/Scripts/python.exe -m lag_ladder.task plan|check|run|probe [--config config/ownrun_task.toml]   # statistic (C), §15; probe: --out OUTSIDE results/, --n 64 [--max-new N overrides the config's cap]
+.venv/Scripts/python.exe -m lag_ladder.task plan|check|run|probe [--config config/ownrun_task.toml]   # statistic (C), §15; probe: --out OUTSIDE results/, --n 64 [--max-new N overrides the config's cap]; run: [--readers a,b] runs the equivalence then only those readers, in the config's order (run order, not a statistic; `run.json` and the summary record `readers_run`)
 .venv/Scripts/python.exe -m lag_ladder.summarize_task [--config config/ownrun_task.toml]
 ```
 On macOS/Linux the interpreter is `.venv/bin/python`. The project pins Python 3.12.

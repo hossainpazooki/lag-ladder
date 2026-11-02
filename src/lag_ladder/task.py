@@ -63,12 +63,27 @@ class Plan:
     jobs: tuple[Job, ...]
 
 
-def plan(cfg: TaskConfig) -> Plan:
+def plan(cfg: TaskConfig, readers: list[str] | None = None) -> Plan:
+    """`readers` (2026-11-02, LL 0035's first sitting): run order only — the equivalence, then the cells jobs of the
+    named readers in the config's order; None means every reader. The jobs and records are the config's."""
     jobs = [Job("equivalence", cfg.controls["equivalence_reader"], cfg.writer)]
     idx = list(range(cfg.n_prompts))
-    for r in cfg.readers:
+    for r in select_readers(cfg, readers):
         jobs.append(Job("cells", r, cfg.writer, idx, int(cfg.controls["n_prompts"])))
     return Plan(tuple(jobs))
+
+
+def select_readers(cfg: TaskConfig, readers: list[str] | None) -> list[str]:
+    if readers is None:
+        return list(cfg.readers)
+    if not readers:
+        raise _refuse("the reader filter is empty; omit it to run every reader")
+    for r in readers:
+        if readers.count(r) > 1:
+            raise _refuse(f"the reader filter names {r!r} twice")
+        if r not in cfg.readers:
+            raise _refuse(f"filter reader {r!r} is not one of the config's readers {list(cfg.readers)}")
+    return [r for r in cfg.readers if r in readers]
 
 
 def job_dir(cfg: TaskConfig, j: Job) -> Path:
@@ -216,13 +231,15 @@ def judge_controls(out: Path, control_n: int, cfg: TaskConfig) -> dict:
 # --- run -----------------------------------------------------------------------------------------------------------
 
 def run(cfg: TaskConfig, repo_root: Path, *, runner=subprocess.run, seal_cfg=None, upstream_check=check_upstream,
-        tools_dir: Path = TOOLS) -> dict:
+        tools_dir: Path = TOOLS, readers: list[str] | None = None) -> dict:
+    run_readers = select_readers(cfg, readers)                     # a bad filter refuses before the gate or any job
     assert_ready(cfg, repo_root, seal_cfg=seal_cfg, upstream_check=upstream_check, tools_dir=tools_dir)
-    p = plan(cfg)
+    p = plan(cfg, readers)
     cfg.results_dir.mkdir(parents=True, exist_ok=True)
     rec_path = cfg.results_dir / RUN_RECORD
     record = {"registered_by": cfg.registered_by, "upstream_sha": cfg.upstream_sha, "seed": cfg.seed,
-              "writer": cfg.writer, "readers": list(cfg.readers), "n_prompts": cfg.n_prompts, "max_new": cfg.max_new,
+              "writer": cfg.writer, "readers": list(cfg.readers), "readers_run": run_readers,
+              "n_prompts": cfg.n_prompts, "max_new": cfg.max_new,
               "config_sha256": sha256_file_bytes(cfg.config_path), "prompts_sha256": cfg.prompts_sha256,
               "far_tokens_sha256": cfg.far_tokens_sha256,
               "started": datetime.now(timezone.utc).isoformat(timespec="seconds"), "finished": None,
@@ -379,9 +396,15 @@ def main(argv=None) -> int:
     ap.add_argument("--n", type=int, default=64, help="probe: the first n prompts")
     ap.add_argument("--reader", default=None, help="probe: the reader spec; default the config's last reader")
     ap.add_argument("--max-new", type=int, default=None, help="probe: override the config's max_new")
+    ap.add_argument("--readers", default=None,
+                    help="run: comma-separated reader specs to run (in the config's order) after the equivalence; "
+                         "default every reader")
     a = ap.parse_args(argv)
     cfg = load_task_config(Path(a.config), REPO_ROOT)
     try:
+        if a.readers is not None and a.command != "run":
+            raise _refuse("--readers applies to run only")
+        readers = None if a.readers is None else [r.strip() for r in a.readers.split(",") if r.strip()]
         if a.command == "probe":
             if not a.out:
                 raise _refuse("probe needs --out (outside results/)")
@@ -406,8 +429,8 @@ def main(argv=None) -> int:
             assert_ready(cfg, REPO_ROOT)
             print("task gate ok")
             return 0
-        rec = run(cfg, REPO_ROOT)
-        print(f"finished: {len(rec['jobs'])} jobs; equivalence {rec['equivalence']}")
+        rec = run(cfg, REPO_ROOT, readers=readers)
+        print(f"finished: {len(rec['jobs'])} jobs; readers run {rec['readers_run']}; equivalence {rec['equivalence']}")
         return 0
     except Refusal as e:
         print(str(e), file=sys.stderr)

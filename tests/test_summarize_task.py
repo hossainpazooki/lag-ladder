@@ -120,6 +120,33 @@ def test_summary_marks_a_lag_unevaluable_when_a_positive_control_flips_too_few_a
     assert g32["evaluable"] is True
 
 
+def test_summary_reads_two_of_three_readers_and_leaves_the_every_reader_clauses_unread(repo, seal_cfg):
+    # 2026-11-02 rulings 4-5: the first sitting's (C) outcome is the two sealed readers plus the equivalence; clauses that
+    # name every reader read UNREAD until the remaining readers run, the one-reader clauses read now
+    from lag_ladder import task
+    from tests.fake_task_swap import FakeTaskSwap
+    from tests.test_task import THREE, _setup_task
+    preds = {"i_positive_controls_fire": {"readers": list(THREE)},
+             "ii_flip_rate_at_first_lag": {"reader": "local:step_1", "at_least": 0.1},
+             "iii_flip_rate_at_last_lag": {"reader": "local:step_32", "at_least": 0.1},
+             "v_fresh_accuracy_at_least": {"readers": list(THREE), "at_least_points": 40.0}}
+    cfg, tools = _setup_task(repo, seal_cfg, readers=THREE, predictions=preds)
+    task.run(cfg, repo, runner=FakeTaskSwap(), seal_cfg=seal_cfg, tools_dir=tools, readers=["local:step_1", "local:step_32"])
+    s = st.summarize(cfg)
+    assert list(s["lags"]) == ["local:step_1", "local:step_32"] and s["readers_run"] == ["local:step_1", "local:step_32"]
+    assert s["readers_registered"] == list(THREE)
+    c = s["seal_readout"]["clauses"]
+    assert c["i"]["verdict"] == "UNREAD" and c["i"]["fire"]["local:step_2"] is None and c["i"]["fire"]["local:step_32"] is True
+    assert c["v"]["verdict"] == "UNREAD" and c["v"]["acc_fresh"]["local:step_1"] == pytest.approx(50.0)
+    assert c["ii"]["verdict"] in ("HELD", "FALSIFIED") and c["iii"]["verdict"] in ("HELD", "FALSIFIED")
+    assert "readers run: 2 of 3" in st.render(s)
+    # the second sitting runs the whole config over the same results tree; the summary then covers every reader
+    task.run(cfg, repo, runner=FakeTaskSwap(), seal_cfg=seal_cfg, tools_dir=tools)
+    s2 = st.summarize(cfg)
+    assert set(s2["lags"]) == set(THREE) and s2["seal_readout"]["clauses"]["i"]["verdict"] == "HELD"
+    assert "readers run" not in st.render(s2)
+
+
 def test_summary_refuses_a_record_hash_mismatch(repo, seal_cfg):
     cfg = _run(repo, seal_cfg)
     p = cfg.results_dir / "readers" / "local_step_1" / "stale.jsonl"
