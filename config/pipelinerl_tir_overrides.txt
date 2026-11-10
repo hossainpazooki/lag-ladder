@@ -1,0 +1,32 @@
+# PipelineRL `--config-name=tir` overrides for the PL-tir production run (design 2026-11-09 §4, R3, R4, RC2; upstream
+# pinned at 58d393458625ad63ed539f2dcd072c85700c557f, unmodified). One Hydra override per line; `#` lines and blank
+# lines are comments. The pod script appends the two machine values on the command line, never here: the run directory
+# and the local snapshot directory of Qwen/Qwen2.5-1.5B-Instruct at revision 989aa7980e4cf806f80c7fef2b1adb7bc71aa306.
+# Before the run starts, the pod script prints the resolved config (`--cfg job --resolve`) and asserts every value below
+# in it: conf/tir.yaml's own `_self_` block sets policy_loss gspo, seq_parallel 8 and 1024 passes after `finetune=grpo`,
+# so each is overridden explicitly rather than inherited.
+#
+# Recipe: GRPO with PPO-clip, 8 attempts per prompt, 128 samples per optimizer step (128 passes x batch 1 over all lead
+# trainers = 16 prompts x 8), constant lr 1e-6 with no warmup, 96 steps; 1,024-token turns with max_model_len 8192 and
+# seq_length 8192; every listed step saved under finetune/intermediate/<step> (the final step lands in finetune/current).
+finetune=grpo
+finetune.rl.policy_loss=ppo
+finetune.attempts=8
+finetune.learning_rate=1e-6
+finetune.lr_scheduler_type=constant_with_warmup
+finetune.num_warmup_steps=0
+finetune.gradient_accumulation_passes=128
+finetune.train_batch_size=1
+finetune.max_train_steps=96
+finetune.save_checkpoint_steps=1000
+finetune.also_save_steps=[1,2,4,8,16,32,64,65,66,68,72,80,96]
+finetune.keep_intermediate_checkpoints=true
+finetune.seq_length=8192
+finetune.seq_parallel=1
+llm.parameters.max_tokens=1024
+test_llm.parameters.max_tokens=1024
+vllm_config.vllm_kwargs.max_model_len=8192
+train_dataset_names=[gsm8k_train]
+test_dataset_names=[gsm8k_test]
+wandb.use_wandb=false
+seed=42

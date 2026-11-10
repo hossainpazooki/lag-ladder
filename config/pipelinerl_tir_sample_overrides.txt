@@ -1,0 +1,13 @@
+# The 50-prompt frozen-text sample (design 2026-11-09 §5.1): upstream's own actor at the init checkpoint with weight
+# updates disabled (`debug.mode=actor` launches actor, environment and actor_llm only, launch.py:686-687 at the pin;
+# the actor_llm gets --disable-weight-updates, launch.py:230-231; no streams_from is needed in this mode, launch.py:673-677).
+# Appended AFTER pipelinerl_tir_overrides.txt on the same command line, so these three lines win; everything else is the
+# production recipe. The pod script appends the machine values: a FRESH sample directory (never the production run's:
+# the actor would load finetune/current from it, actor.py:814-818) and the same snapshot directory.
+# `pltir_frozen50` is the custom dataset `tools/pipelinerl_stream.py prompts` writes; the pod script copies it to
+# <PipelineRL checkout>/datasets/custom/pltir_frozen50.jsonl, where load_datasets.py:236-272 resolves a name no loader
+# knows. One attempt per prompt, drawn with replacement by the train loop (actor.py:312, 489), until the stream tool's
+# `episodes` command reports every frozen prompt covered; the operator then stops the launch.
+debug.mode=actor
+finetune.attempts=1
+train_dataset_names=[pltir_frozen50]
