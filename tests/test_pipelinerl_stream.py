@@ -195,3 +195,48 @@ def test_cli_episodes_exits_3_on_a_half_written_last_line_and_reports_it(tmp_pat
     assert ps.main(args) == 0
     out = capsys.readouterr().out
     assert "kept 3/3 lines 3 " in out and "partial 0 missing []" in out
+
+
+UNICODE_BREAKS = "tool output \u2028 a \u2029 b \u0085 c café"   # str.splitlines() breaks on the first three
+
+
+def test_cli_episodes_writes_ascii_so_unicode_line_breaks_in_turn_text_keep_one_record_per_line(tmp_path, capsys):
+    """Upstream writes stream lines with orjson, which leaves non-ASCII raw (pipelinerl/streams.py:275-276 at the pin), and
+    model or sandbox text can hold U+2028, U+2029 or U+0085. The episodes file is read back with str.splitlines() (here,
+    and by the off-pod fidelity gate that consumes it), which breaks on all three, so the file is written ASCII: json escapes them."""
+    gsm = tmp_path / "gsm8k.json"
+    gsm.write_text(json.dumps(PROMPTS), encoding="utf-8")
+    idx = ps.draw_frozen(20, 3, 0)
+    frozen = tmp_path / "frozen.json"
+    frozen.write_text(json.dumps({"seed": 0, "n": 3, "total": 20, "indices": idx}), encoding="utf-8")
+    eps = [_episode(i, f"g{i}") for i in idx]
+    eps[0][1]["text"] += UNICODE_BREAKS                                   # a later turn's text, as a tool result
+    shard = tmp_path / "streams" / "actor" / "0" / "0" / "0.jsonl"
+    shard.parent.mkdir(parents=True)
+    shard.write_bytes(("\n".join(json.dumps(e, ensure_ascii=False) for e in eps) + "\n").encode("utf-8"))  # raw, as orjson
+    epf = tmp_path / "episodes.jsonl"
+    assert ps.main(["episodes", "--streams", str(tmp_path / "streams" / "actor"), "--gsm8k", str(gsm), "--frozen", str(frozen),
+                    "--out", str(epf)]) == 0
+    assert "kept 3/3 lines 3 " in capsys.readouterr().out
+    raw = epf.read_bytes()
+    assert raw.isascii() and raw.count(b"\n") == 3
+    lines = epf.read_text(encoding="utf-8").splitlines()
+    assert len(lines) == 3 and json.loads(lines[0])["turns"][1]["text"].endswith(UNICODE_BREAKS)   # the text round-trips
+    tok, sp = tmp_path / "ag.npy", tmp_path / "ag.spans.json"
+    assert ps.main(["ag-prompt", "--episodes", str(epf), "--row-len", "32", "--pad-id", "0", "--tokens-out", str(tok),
+                    "--spans-out", str(sp)]) == 0
+    assert np.load(tok).shape == (3, 32)
+
+
+def test_ag_prompt_splits_the_episodes_file_on_newline_only(tmp_path):
+    """An episodes file left non-ASCII by another writer: a raw U+2028, U+2029 or U+0085 sits inside a JSON string and is
+    not a record boundary, so ag-prompt splits on newline only."""
+    eps = [ps.episode_from(_episode(i, f"g{i}"), {p["question"]: p for p in PROMPTS})[0] for i in (2, 4)]
+    eps[0]["turns"][0]["text"] += UNICODE_BREAKS
+    epf = tmp_path / "episodes.jsonl"
+    epf.write_bytes("".join(json.dumps(e, ensure_ascii=False) + "\n" for e in eps).encode("utf-8"))
+    assert len(epf.read_text(encoding="utf-8").splitlines()) == 5                 # the planted breaks are live
+    tok, sp = tmp_path / "ag.npy", tmp_path / "ag.spans.json"
+    assert ps.main(["ag-prompt", "--episodes", str(epf), "--row-len", "16", "--pad-id", "0", "--tokens-out", str(tok),
+                    "--spans-out", str(sp)]) == 0
+    assert np.load(tok).shape == (2, 16) and json.loads(sp.read_text(encoding="utf-8"))["prefix_len"] == [10, 10]

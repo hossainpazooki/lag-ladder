@@ -13,6 +13,8 @@ commands, no model:
              rest counted. Writes pltir-episode-v1 JSONL sorted by index and prints the coverage; exit 3 while a frozen
              prompt is missing, so the operator loops on it and stops the actor at exit 0. The actor may be writing
              meanwhile, so a shard's unterminated last line that does not parse is counted as `partial` and skipped.
+             The episodes file is ASCII: json escapes the U+2028, U+2029 and U+0085 that model or sandbox text may hold
+             and str.splitlines() would break a record on.
   ag-prompt  the first turn of every episode as the `ag-prompt` rollout pair: tokens = the turn's input_ids (the
              rendered system + tools + question prompt followed by the first assistant turn), prefix_len = its
              prompt_tokens, padded to --row-len with --pad-id through own_run.pad_rows; prints the two sha256 the
@@ -229,7 +231,7 @@ def cmd_episodes(a) -> int:
     kept, counts = collect_episodes(stream_files(a.streams), by_q)
     with open(a.out, "w", encoding="utf-8", newline="\n") as f:
         for i in sorted(kept):
-            f.write(json.dumps(kept[i], ensure_ascii=False) + "\n")
+            f.write(json.dumps(kept[i], ensure_ascii=True) + "\n")   # ASCII: no Unicode line break inside a record
     missing = sorted(fz - set(kept))
     print(f"EPISODES kept {len(kept)}/{len(fz)} lines {counts['lines']} groups {counts['groups']} duplicates {counts['duplicates']} "
           f"incomplete {counts['incomplete']} not_frozen {counts['not_frozen']} bad_turn {counts['bad_turn']} "
@@ -238,7 +240,8 @@ def cmd_episodes(a) -> int:
 
 
 def cmd_ag_prompt(a) -> int:
-    episodes = [json.loads(l) for l in Path(a.episodes).read_text(encoding="utf-8").splitlines() if l.strip()]
+    lines = Path(a.episodes).read_text(encoding="utf-8").split("\n")   # newline only: splitlines() also breaks on U+2028
+    episodes = [json.loads(l) for l in lines if l.strip()]
     arr, spans = pad_rows(ag_prompt_rows(episodes), a.row_len, a.pad_id)
     np.save(a.tokens_out, arr)
     _write_json(a.spans_out, spans)
