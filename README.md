@@ -115,14 +115,18 @@ pipelined trainer (a few steps) is below the published chain's stride and was th
 restricts the statement to the held-out texts it names: on the trainer's own text (0018) the reader's KL is not
 predicted by weight distance. Entry 0024 adds that text to the record, on one seed: on the trainer's own prompts (B1)
 leaves HOLDS_B at the first optimizer step and by sixteen steps reads three quarters of a different prompt's cache and
-one seventh of an information-free one, with the floor, near and far controls of 0021 and 0023 behind it. (C) is not
-ruled on.
+one seventh of an information-free one, with the floor, near and far controls of 0021 and 0023 behind it. Entry 0038
+extends that clause to three base families (Qwen2.5-1.5B on two trainer seeds, Llama-3.2-3B, SmolLM3-3B-Base): held-out
+text is HOLDS_B at every lag with an exponent that belongs to the family (2.05 to 2.62, steeper than the backbone's 2.0),
+and on the trainer's own text (B1) leaves HOLDS_B at the first step and reads 6.1e-2 to 9.3e-2 at lag 32, 1.9e3× to
+5.1e4× held-out text. The Instruct initialisation (0035) has not run. (C) is not ruled on.
 
 **The own run is complete (ledger 0017, 0018).** Qwen2.5-1.5B trained by GRPO for 32 steps (lr 1e-6, no
 reference-KL term, GSM8K); the reader at step g ∈ {1, 2, 4, 8, 16, 32} reads the step-0 cache. The weights moved
 2.3e-5 (step 1) to 1.05e-4 (step 32), concave and nearly flat after step 20, while reward rose fivefold. On
-held-out text (B1) is HOLDS_B at every lag, 2.0e-7 to 6.7e-6 nats/token on corpus, and grows as the square of
-distance (slopes 2.26 and 2.19), so the backbone's law holds a decade below where 0015 measured it. On the
+held-out text (B1) is HOLDS_B at every lag, 2.0e-7 to 6.7e-6 nats/token on corpus, and grows as a power of distance
+(slopes 2.26 and 2.19, inside the sealed [1.5, 2.5]) a decade below where 0015 measured the backbone; entry 0038 reads
+the exponent, here and in each family, as a description, not a law, and the quadratic law stays the backbone's. On the
 policy's own prompts the same readers read 4.7e-3 (lag 1) to 8.9e-2 (lag 32): UNRESOLVED at every lag, four
 orders of magnitude above held-out text, with the stale-prompt profile (KL largest at the first continuation
 token, falling a hundredfold by position 50). Of the four sealed clauses, HOLDS_B at the operating lag and the
@@ -137,7 +141,8 @@ enters the statement of record is a ruling not yet taken: the scrambled control 
 (another GSM8K prompt, 0.12 against held-out text's 0.55), so entry 0022 registers a far control — a web prefix of the
 prompt's length, carrying no information about it — and entry 0023 reads it: 0.45 to 0.67, 3.6 to 5.8 times the near
 control; the step-0 cache at lag 16 to 32 moves the reader one seventh as far as an information-free cache and three
-quarters as far as a different GSM8K prompt's. Both sealed clauses held; one seed remains the caveat.
+quarters as far as a different GSM8K prompt's. Both sealed clauses held; 0029's second seed and 0038's families answer
+the one-seed caveat for base initialisations.
 
 The ledger holds the founding record (chassis provenance, inherited definitions, the first rulings), the
 ruling that the instrument serves statistic (A) only, two re-pins of the instrument, the registrations with
@@ -147,9 +152,10 @@ retained off-repository with the hashes the entries state.
 
 **Citing.** For statistic (A), cite this repository at the commit that carries ledger entry 0010 (tag
 `statistic-a-closed`); name entries 0006 and 0009 for the numbers and 0001 for the statistic's provenance.
-For statistic (B), cite the commit that carries entry 0016 (tag `statistic-b-closed`), read with 0019 and 0024; name
-0015 for the ladder's numbers and 0011 for the statistic. For the own run, name 0018 for the numbers, 0017 for the
-registration and 0021 and 0023 for the controls on rollout text.
+For statistic (B), cite the commit that carries entry 0016 (tag `statistic-b-closed`), read with 0019, 0024 and 0038;
+name 0015 for the ladder's numbers and 0011 for the statistic. For the own run, name 0018 for the numbers, 0017 for the
+registration and 0021 and 0023 for the controls on rollout text; for the second seed and the two other families, 0029,
+0032 and 0037.
 
 ## How the record stays auditable
 

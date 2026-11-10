@@ -24,7 +24,8 @@ the own run on Llama-3.2-3B (§14.5), entry 0032 its outcome ((i-holds), (ii), (
 the pair-only re-pin at de6ce9e for the SmolLM3 family (`INSTRUMENT_SHA` stays 5d4aa4a), entry 0034 the registration of the own run
 on SmolLM3-3B-Base, entry 0035 the registration of the Instruct-initialised own run (Qwen2.5-1.5B-Instruct), both halves, and
 entry 0036 the outcome of the agentic text (all four clauses HELD), and entry 0037 the outcome of the own run on SmolLM3-3B-Base
-((i-holds), (ii), (iii), (iv) HELD; (i) FALSIFIED; the backbone excess UNREAD).
+((i-holds), (ii), (iii), (iv) HELD; (i) FALSIFIED; the backbone excess UNREAD), and entry 0038 the three base families in (B)'s
+statement of record (held-out HOLDS_B at every lag; the trainer's own text UNRESOLVED from the first step).
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never
@@ -199,4 +200,7 @@ held-out ((ii), (iii) HELD); (iv) HELD; every rung below 1e-4 so the backbone ex
 seals `ownrun-instruct` / `ownrun-instruct-task`; Qwen2.5-1.5B-Instruct@989aa79 under 0017's recipe with chat prompts, the Instruct side
 dumped as `target`, 0017's fifty held-out windows, disclosed; (C) at cap 768 with (v) FRESH accuracy ≥ 50 points at every reader and
 (vi) STALE below FRESH at g = 32, g = 1 accuracy descriptive; the equivalence (B1) read from the run's own (B) summary and recorded with
-its digest; to run on external compute, both halves; not yet run).
+its digest; to run on external compute, both halves; not yet run). **0038 adds the three base families to (B)'s statement of
+record**: held-out HOLDS_B at every lag, exponent 2.05–2.62 by family, a description and not a law (two of the three past the
+[1.5, 2.5] they sealed); rollout out of HOLDS_B at g = 1 (1.2e-3–4.7e-3) and 6.1e-2–9.3e-2 at g = 32, 1.9e3×–5.1e4× held-out;
+excess over noise 3.5×–19× where read.

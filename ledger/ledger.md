@@ -1929,3 +1929,33 @@ SmolLM3's held-out medians against Llama's are a same-token comparison, 0.54× t
 SmolLM3); the slope band for later families, now 2.05–2.62 across three; the Instruct-initialised run (0035, external compute).
 
 **Consequences in this commit set:** `README.md`, `CLAUDE.md`. Records and the Hub backup under the hashes above; nothing in `results/` is committed. Nothing landed ahead: the run was at the registering commit.
+
+### 0038 — 2026-11-09 — Statistic (B) on three base families: held-out text HOLDS_B at every lag, the trainer's own text UNRESOLVED from the first step
+
+prior-entries-sha256: 97b2ce78b36b8d95db1cdad0794c0d0ca8e784b7da9a81366d60e246cc5cf04d
+
+**Amendment to the statement of record.** 0032 and 0037 left open whether the statement of record for statistic (B) (0016, read
+with 0019 and 0024) gains the families. It is read with this clause appended after 0024's: *on three base families under 0017's
+recipe (GRPO on GSM8K, 32 optimizer steps at learning rate 1e-6) — Qwen2.5-1.5B on two trainer seeds under its chat template
+(0018, 0029), Llama-3.2-3B and SmolLM3-3B-Base under plain prompts (0032, 0037) — held-out text is HOLDS_B at every lag from 1 to
+32 on both texts, and (B1) there grows as a power of whole-vector distance whose exponent is a property of the family: 2.05 to
+2.26 (Qwen), 2.34 to 2.51 (Llama), 2.62 (SmolLM3). The exponents are steeper than the backbone's 2.0 (0016) and not ordered by
+step-32 distance (SmolLM3 8.6e-5, Qwen 1.05e-4 and 1.06e-4, Llama 2.1e-4); they are a description, not a law. On the trainer's
+own text every run leaves HOLDS_B at the first optimizer step (1.2e-3 to 4.7e-3 nats/token) and reads 6.1e-2 to 9.3e-2 at lag
+32, UNRESOLVED at every lag and 1.9e3× to 5.1e4× the same readers' held-out reading. The four lag-32 rollout medians span a
+factor of 1.5 while the held-out corpus medians span 4.5 (4.6e-6 to 2.1e-5), so the gap between the two texts is set by the
+held-out side. Every control unit passed on every run (on seed 1's rollout text, 0021 and 0023). Where the excess of trained
+directions over isotropic noise at matched distance was read (Qwen seed 1 on one rung, Llama on four), it was 3.5× to 19×, not
+uniformly 10× or more; seed 2's step 32 (1.06e-4) lies inside the backbone's range but 0028 registered agreement clauses only, so
+its excess is unread; every SmolLM3 step lies below the backbone's range, so its excess is unread.* 0024's qualifier "on one seed
+of one 1.5B model" is answered by this clause for base initialisations. 0024's numbers and the rest of 0016, 0019 and 0024 stand
+as written, and 0016's quadratic law stays the isotropic backbone's. Where 0018, 0021, 0032 and 0036 write that the quadratic law
+holds along the trajectory (the name 0030 gives its clause (iv)), the phrase is read as the sealed slope band [1.5, 2.5] and each
+entry's own slopes, not as 0016's law beyond the isotropic backbone. Two of the three families fell outside the [1.5, 2.5] they
+sealed (0032 on on-path, 0037 on both texts).
+
+**What this entry does not claim.** Anything about model size or prompt format: 3B against 1.5B and plain prompts against a chat
+template are both confounded with family, and nothing here separates them; the fifty held-out windows are Llama's for both 3B
+bases (0034's disclosure). Anything about an Instruct initialisation (0035, registered, not yet run), statistic (C) on the
+families, `agentic` on the 3B bases, a cache older than 32 steps, or any quantity a trainer computes. The rollout number is a
+reader's, on text the trainer serves.
