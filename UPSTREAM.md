@@ -42,6 +42,37 @@ every sha below; `tests/test_imports.py` asserts this file names exactly those s
 - When pinned: record the author sha (and a fork sha only if a fork ever becomes necessary); the gate
   asserts the trainer paths are unchanged from the author sha.
 
+### PipelineRL — pinned for the agentic arm (design 2026-11-09, reduced scope)
+
+- Pin: https://github.com/ServiceNow/PipelineRL at `58d393458625ad63ed539f2dcd072c85700c557f` (`main`, last pushed
+  2026-08-05, Apache-2.0), the sha observed on 2026-09-22 above. Unmodified: every run changes it through
+  Hydra overrides only (`config/pipelinerl_tir_overrides.txt`, `config/pipelinerl_tir_sample_overrides.txt`). PipelineRL is
+  never imported, vendored or executed from lag-ladder; the pod scripts run it in its own environment and lag-ladder
+  reads its stream files and checkpoints. The producer's recipe values live in `config/pipelinerl_tir.toml` `[trainer]`.
+- Facts the driver `tools/task_swap_tir.py` and the stream tool `tools/pipelinerl_stream.py` depend on, read raw at the
+  pin (`{sourceRepo: ServiceNow/PipelineRL, commitSha: 58d3934…}`):
+
+| Fact | filePath (at the pin) |
+|---|---|
+| TIR system prompt (a YAML `\|` block at :8-28, 20 lines, so the text ends with one newline; sha256 `7ee8c06e…c12b41`), `task_template: "{task}"`, `agent_max_loops: 3`, `sandbox_endpoint: ${oc.env:SANDBOX_ENDPOINT,…}` (an environment variable, loopback default), `sandbox_timeout: 10.0`; `_self_` sets `finetune.rl.policy_loss: gspo`, `seq_parallel: 8`, `gradient_accumulation_passes: 1024`, `vllm_config.vllm_kwargs.max_model_len: 32000`, `llm.parameters.max_tokens: 16000` | `conf/tir.yaml`:8-30, 55-56, 65-79, 84-90 |
+| Defaults: `seed: 42`, `llm.parameters` (`max_tokens: 8192`, `temperature: 1.0`), `enable-prefix-caching: false`, `eval_every_n_versions: 78000`, `attempts: ${finetune.attempts}`, `debug.mode: ""`, `streams_from`, `wandb.use_wandb: true` | `conf/base.yaml`:7, 46-55, 66, 89, 107, 110-111, 124 |
+| Finetune defaults: `train_batch_size: 1`, lr 1e-6, cosine, 50 warmup steps, 1024 passes, `max_train_steps`, `seq_length: 12000`, `save_checkpoint_steps: 100`, `keep_intermediate_checkpoints`, `also_save_steps: []`, `use_safetensors: true`, `seq_parallel`, `attempts: 8`, `rl.policy_loss: reinforce`; `grpo.yaml`: `attempts: 8`, `rl.policy_loss: ppo`. Samples per optimizer step = `gradient_accumulation_passes × train_batch_size` over all lead trainers (`finetune_loop.py:629-637`; the passes must divide by the trainer count, :340-342), so 128 passes × 1 = 128 samples = 16 prompts × 8 attempts whatever the GPU split | `conf/finetune/base.yaml`:31, 37, 41, 43, 45, 53, 63, 69, 71, 85, 86, 88, 96, 101; `conf/finetune/grpo.yaml`; `pipelinerl/finetune_loop.py`:340-342, 629-637 |
+| Tool schema (`run_python_code`, `MathAnswer`), blocked-code patterns, sandbox output formatting (`[stderr]`, `[execution timed out]`, `[no output]`, `[execution error: …]`), `_parse_tool_arguments` fallbacks, tool messages `Answer submitted: …` / `Unknown tool: …`, the turn loop (messages = system + `task_template.format(task=problem["task"])`, the prompt rendered each turn with the tools, `min_generation_tokens = 256`, break on no tool calls, break after `MathAnswer`), `gold = problem["answer"]`, and `text.finished = ctx.submitted_final_answer` on every turn's TrainingText | `pipelinerl/domains/tir/rollouts.py`:25-37, 40-66, 69-116, 119-149, 152-188, 253-365 |
+| Training text: `labels` = generated token ids, masked with `MASKED_TOKEN_ID = -100` over the prompt; `input_ids = prompt_token_ids + labels`; `prompt_tokens` = vLLM's prompt count; `finished = finish_reason != "length"` (overridden by the TIR rollout, above); vLLM calls use `logprobs: 1`, `include_stop_str_in_output: True`, `skip_special_tokens: False`; the chat kwargs carry `tools` | `pipelinerl/async_llm.py`:103-105, 215-346; `pipelinerl/rollouts.py`:13 (`TrainingText`) |
+| Hermes parser: `<tool_call>(.*?)</tool_call>\|<tool_call>(.*)` (DOTALL), ids `call_<i>`, `arguments = json.dumps(args, ensure_ascii=False)`, malformed JSON skipped, `content` = the whole model output when no final-response wrapper; the `<tool_calls>` aggregate and bare-JSON paths tried first | `pipelinerl/rl_tool_parser_plugin.py`:18-40, 57-67, 75-201 |
+| Actor: `random.seed(cfg.seed)`; train loop `random_iter` (with replacement), test loop never starts under `debug.mode`; `attempts = cfg.attempts if is_training else 1`; metadata `model_version`, `rollout_index`, `step_index`; one stream line per group = the list of every turn's TrainingText; topics `actor` / `actor_test`; the actor model is `finetune/current` if it exists, else `model_path` | `pipelinerl/actor.py`:186, 212-223, 298-299, 312, 345, 489, 786, 796-799, 814-818, 865 |
+| Custom datasets: a name with no loader resolves to `datasets/custom/<name>.jsonl` (cwd or repo root), rows keep their keys and get `source_dataset`, `source_id`, `dataset`; `id = row index` | `pipelinerl/domains/math/load_datasets.py`:204-272, 558-562 |
+| GSM8K loaders: `task = question`, `answer = answer.split("####")[1]`, ids in row order | `pipelinerl/domains/math/load_datasets.py`:75-83, 446-458 |
+| Checkpoints: `output_dir/finetune/current` and `intermediate/<step>`; `time_to_save = (step % save_checkpoint_steps == 0 or step in also_save_steps) and not time_to_stop`, so the final step is written to `current` only; intermediates kept only under `keep_intermediate_checkpoints`; safetensors | `pipelinerl/finetune_loop.py`:353-354, 604-605, 855-858, 1004-1019, 1039-1053; `conf/finetune/base.yaml`:71 |
+| `debug.mode` disables weight updates and `debug.mode=actor` launches actor + environment + actor_llm only; the actor's `streams_from` and the finetune job are not started | `pipelinerl/launch.py`:194-198, 230-231, 673-677, 686-687 |
+| Streams: file backend `<output_dir>/streams/<topic>/<instance>/<partition>/<shard_id>.jsonl`, one JSON line per write | `pipelinerl/streams.py`:52-59, 238-243, 249-277 |
+| Chat template at the model revision: with `tools`, the system turn carries the tool schema inside `<tools>…</tools>`; an assistant turn with `tool_calls` is `content` then `<tool_call>\n{"name": …, "arguments": <arguments \| tojson>}\n</tool_call>` per call (a second JSON encoding of the arguments string); a `tool` message is rendered inside a `user` turn as `<tool_response>\n…\n</tool_response>`; eos `<\|im_end\|>`, pad `<\|endoftext\|>`, no bos | `Qwen/Qwen2.5-1.5B-Instruct@989aa798…` (the full revision is in `config/pipelinerl_tir.toml`; this file carries the three pins only, `tests/test_imports.py`), `tokenizer_config.json` (`chat_template`) |
+| Stack: torch ~2.10.0, vllm 0.18.1, transformers ~4.57, deepspeed ~0.18, Python ≥ 3.12, extra `tir = ["sandbox-fusion>=0.3.7"]`; flash-attn 2.8.3 | `pyproject.toml`; `README.md` |
+
+- The SandboxFusion REST shape the driver's client reproduces (`POST <endpoint>/run_code` with `{code, language,
+  run_timeout}`; response `{status, message, run_result: {status, stdout, stderr, return_code}}`) is from the
+  `sandbox-fusion` 0.3.7 SDK (`src/sandbox_fusion/client.py:85-94`, `models.py:28-40, 92-116`), read, not installed.
+
 ## 3. Chassis — copied from `linear-ceiling` with provenance
 
 - Repo: https://github.com/hossainpazooki/linear-ceiling, read at

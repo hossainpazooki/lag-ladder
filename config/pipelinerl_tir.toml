@@ -1,0 +1,161 @@
+# B1-min on the PipelineRL TIR arm (design 2026-11-09, decision 5): statistic (B) at lags 1-32 from the init checkpoint of
+# a 96-step PipelineRL run of Qwen2.5-1.5B-Instruct on GSM8K train with the TIR tool loop (run_python_code through
+# SandboxFusion, MathAnswer). UNREGISTERED: `registered_by` is empty and the ag-prompt hashes are *_PENDING until the
+# 50-prompt actor-mode sample exists; `reader run` refuses until a numbered entry fixes them.
+#
+# The producer is upstream PipelineRL at the pin below, unmodified, under the Hydra overrides in `overrides`; the pod
+# script reads this [trainer] table, the reader reads only [reader.*]. Checkpoints are the bf16 weights PipelineRL saved
+# (`intermediate/<step>`, the final step from `current`), copied under results/distance/checkpoints/pltir-step_<g>; step 0
+# is the HF snapshot at the pinned revision. The pair `qwen2.5-1.5b-to-instruct` pins neither side (0035), so the trained
+# weights are dumped as its TARGET under the keys target@local-pltir-step_<g>, distinct from 0035's target@local-step_<g>.
+# The ag-prompt pair is the policy's own first assistant turn on the 50 frozen GSM8K test prompts, sampled by upstream's
+# actor in debug.mode=actor at step 0: prefix = system prompt + tool schema + question (the rendered turn-0 prompt),
+# continuation = the first assistant turn as generated. Controls per (reader, pair): floor, identity, scrambled (0020's
+# three; the design's NULL control has no definition in this repository and is an open item, not a config value).
+
+[trainer]
+producer = "https://github.com/ServiceNow/PipelineRL"
+producer_sha = "58d393458625ad63ed539f2dcd072c85700c557f"
+config_name = "tir"
+overrides = "config/pipelinerl_tir_overrides.txt"
+sample_overrides = "config/pipelinerl_tir_sample_overrides.txt"
+system_prompt = "config/pipelinerl_tir_system_prompt.txt"
+model = "Qwen/Qwen2.5-1.5B-Instruct@989aa7980e4cf806f80c7fef2b1adb7bc71aa306"
+kvt_pair = "qwen2.5-1.5b-to-instruct"
+kvt_which = "target"
+checkpoint_prefix = "pltir-step_"
+steps = 96
+keep = [0, 1, 2, 4, 8, 16, 32, 64, 65, 66, 68, 72, 80, 96]
+dump_steps = [0, 1, 2, 4, 8, 16, 32]
+frozen_seed = 0
+frozen_n = 50
+
+[reader]
+results_dir = "results/pipelinerl_tir"
+upstream_path = "../kv-transfer-replication"
+upstream_sha = "5d4aa4a98b40f5ab37dd83ebb6b2ee802203994a"
+heldout = [40, 50]
+prefix_len = 768
+dtype = "float32"
+seed = 0
+registered_by = ""
+seal = "pipelinerl-tir"
+
+[reader.rule]
+statistic = "median over held-out sequences of the mean per-token KL(pi_fresh || pi_stale) over the continuation, per rung and text (design S13, ledger 0011)"
+holds_max = 1e-3
+degrades_min = 1e-1
+texts = ["corpus", "on-path"]
+generate_under = "stale"
+
+[reader.controls]
+per_pair = true
+identity_max_logit_diff = 1e-5
+scrambled_min = 1e-1
+floor_max_median_kl = 1e-4
+
+# The held-out corpus windows: 0008's Qwen token file, the same fifty windows 0017-0035 read; sequences 40..49.
+[[reader.pairs]]
+name = "qwen2.5-1.5b-to-instruct"
+tokens = "data/tokens/qwen2.5-1.5b-to-instruct_n50_len1024_seed0.npy"
+tokens_sha256 = "01bd7698f7413ab9a3b6958991487bbba626f5a8cc4f24142cd22091d96af747"
+
+# The ag-prompt rows: the 50 frozen prompts' turn-0 input_ids from upstream's stream; spans {prefix_len = the rendered
+# prompt length, length = prompt + first assistant turn}. Hashes pinned at registration from the sampled file.
+[[reader.pairs]]
+name = "qwen2.5-1.5b-instruct-pltir-agprompt"
+tokens = "data/tokens/qwen2.5-1.5b-instruct-pltir_agprompt_n50_seed0.npy"
+tokens_sha256 = "AGPROMPT_TOKENS_PENDING"
+spans = "data/tokens/qwen2.5-1.5b-instruct-pltir_agprompt_n50_seed0.spans.json"
+spans_sha256 = "AGPROMPT_SPANS_PENDING"
+heldout = [0, 50]
+
+[[reader.rungs]]
+label = "pltir-lag-1"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:pltir-step_1"
+writer_dump = "target@local-pltir-step_0"
+reader_dump = "target@local-pltir-step_1"
+
+[[reader.rungs]]
+label = "pltir-lag-2"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:pltir-step_2"
+writer_dump = "target@local-pltir-step_0"
+reader_dump = "target@local-pltir-step_2"
+
+[[reader.rungs]]
+label = "pltir-lag-4"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:pltir-step_4"
+writer_dump = "target@local-pltir-step_0"
+reader_dump = "target@local-pltir-step_4"
+
+[[reader.rungs]]
+label = "pltir-lag-8"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:pltir-step_8"
+writer_dump = "target@local-pltir-step_0"
+reader_dump = "target@local-pltir-step_8"
+
+[[reader.rungs]]
+label = "pltir-lag-16"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:pltir-step_16"
+writer_dump = "target@local-pltir-step_0"
+reader_dump = "target@local-pltir-step_16"
+
+[[reader.rungs]]
+label = "pltir-lag-32"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:pltir-step_32"
+writer_dump = "target@local-pltir-step_0"
+reader_dump = "target@local-pltir-step_32"
+
+[[reader.rungs]]
+label = "pltir-agprompt-lag-1"
+pair = "qwen2.5-1.5b-instruct-pltir-agprompt"
+reader = "local:pltir-step_1"
+writer_dump = "target@local-pltir-step_0"
+reader_dump = "target@local-pltir-step_1"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "pltir-agprompt-lag-2"
+pair = "qwen2.5-1.5b-instruct-pltir-agprompt"
+reader = "local:pltir-step_2"
+writer_dump = "target@local-pltir-step_0"
+reader_dump = "target@local-pltir-step_2"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "pltir-agprompt-lag-4"
+pair = "qwen2.5-1.5b-instruct-pltir-agprompt"
+reader = "local:pltir-step_4"
+writer_dump = "target@local-pltir-step_0"
+reader_dump = "target@local-pltir-step_4"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "pltir-agprompt-lag-8"
+pair = "qwen2.5-1.5b-instruct-pltir-agprompt"
+reader = "local:pltir-step_8"
+writer_dump = "target@local-pltir-step_0"
+reader_dump = "target@local-pltir-step_8"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "pltir-agprompt-lag-16"
+pair = "qwen2.5-1.5b-instruct-pltir-agprompt"
+reader = "local:pltir-step_16"
+writer_dump = "target@local-pltir-step_0"
+reader_dump = "target@local-pltir-step_16"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "pltir-agprompt-lag-32"
+pair = "qwen2.5-1.5b-instruct-pltir-agprompt"
+reader = "local:pltir-step_32"
+writer_dump = "target@local-pltir-step_0"
+reader_dump = "target@local-pltir-step_32"
+texts = ["rollout"]
