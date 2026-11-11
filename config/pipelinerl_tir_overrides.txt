@@ -9,6 +9,13 @@
 # Recipe: GRPO with PPO-clip, 8 attempts per prompt, 128 samples per optimizer step (128 passes x batch 1 over all lead
 # trainers = 16 prompts x 8), constant lr 1e-6 with no warmup, 96 steps; 1,024-token turns with max_model_len 8192 and
 # seq_length 8192; every listed step saved under finetune/intermediate/<step> (the final step lands in finetune/current).
+#
+# `finetune.rl.overlong_filtering` is stated explicitly: conf/tir.yaml:90 sets it true over conf/finetune/base.yaml:114's
+# false, so it is a registered value, not an inheritance (pipelinerl/finetune/rl/__init__.py:89, :252-255, :541-552 at the
+# pin). At the pin this flag masks no row of this run: rows carry no finish_reason and every row's input_ids holds the EOS
+# id from the chat-templated prompt, so an episode cut by max_tokens or the turn limit enters the loss with the reward it
+# received; the logged overflow counts episodes with no final answer and is not a mask (read from the source at the pin,
+# not observed at runtime: pipelinerl/finetune/rl/__init__.py:541-552, pipelinerl/rollouts.py:13-49, pipelinerl/actor.py:650-651, pipelinerl/domains/tir/rollouts.py:363-365, pipelinerl/async_llm.py:324 and pipelinerl/finetune/data.py:117-123).
 finetune=grpo
 finetune.rl.policy_loss=ppo
 finetune.attempts=8
@@ -23,6 +30,7 @@ finetune.also_save_steps=[1,2,4,8,16,32,64,65,66,68,72,80,96]
 finetune.keep_intermediate_checkpoints=true
 finetune.seq_length=8192
 finetune.seq_parallel=1
+finetune.rl.overlong_filtering=true
 llm.parameters.max_tokens=1024
 test_llm.parameters.max_tokens=1024
 vllm_config.vllm_kwargs.max_model_len=8192

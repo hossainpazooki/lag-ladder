@@ -20,6 +20,7 @@ PRODUCTION = {
     "finetune.keep_intermediate_checkpoints": "true",
     "finetune.seq_length": "8192",
     "finetune.seq_parallel": "1",
+    "finetune.rl.overlong_filtering": "true",
     "llm.parameters.max_tokens": "1024",
     "test_llm.parameters.max_tokens": "1024",
     "vllm_config.vllm_kwargs.max_model_len": "8192",
