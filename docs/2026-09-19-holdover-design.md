@@ -127,9 +127,15 @@ Added 2026-10-09 *[checked]*: **Olmo 3 (2512.13961) §4.4.3** follows PipelineRL
 without invalidating the KV cache … up to 4x faster with the same resources, without hurting accuracy" —
 and its Table 23 has no accuracy column; **Motif 3 (2608.09119) §5.2.2** "retain the existing KV cache rather
 than recomputing it after each update", no measurement. **CacheReforge (2609.30884)**: stale KV under continual
-LoRA updates at serving time, a per-layer sensitivity/drift statistic deciding reuse vs bounded recompute,
-KL only (Qwen2.5-1.5B/7B, 16K QA) — the adapter-time precedent of (iv), without RL, task units, a lag axis or
-a null arm. **"Aborted but Not Forgotten" (2608.15939)**: a "same-token/different-cache audit" — identical
+LoRA updates at serving time (a rank-8 adapter evolved by answer-supervised updates, base frozen), a per-layer
+sensitivity/drift statistic deciding reuse, bounded or full affected-suffix recompute (Qwen2.5-1.5B/7B-Instruct, 4K/16K controlled,
+16K HotpotQA/2WikiMQA). It reads first-step KL and full-answer task score at adapter-version gaps 0–32, and
+top-1 agreement in its recovery evaluations, so it has a lag axis and task units; its runtime statistic is
+calibrated to a joint KL / top-1 / task-score safety label (the KL correlations it reports, RQ3, are for offline
+propagation proxies: hidden-state, key, value and final suffix-attention-input error). The adapter-time
+precedent of (iv), without RL or a null arm. Corrected 2026-11-11 *[checked]* against v1: this entry said "KL
+only" and "without … task units, a lag axis".
+**"Aborted but Not Forgotten" (2608.15939)**: a "same-token/different-cache audit" — identical
 decision-step tokens, cached prefix stale or rebuilt — on the *context* axis (same weights, a discarded
 branch), seven families 3.8B–36B; the construction of (i), one axis over. **UniRL #94** (Tencent) measured
 keeping the radix cache across syncs as flat on single-turn DAPO because "cross-sync KV is stale; the real
@@ -140,8 +146,9 @@ the axis.
 
 So the field is split by assertion — keep the stale cache (PipelineRL, Magistral, Nemotron, Olmo 3) or
 reset it (AReaL, Laguna, AsyncOPD, StaleFlow), or design around it (DORA) — and the only measurement
-under either position is one KL figure to lag 32 on one 7B run. Nobody reports where "it does not
-matter" stops being true, and nobody reports it in task units. That disagreement is the paper's opening.
+under either position is one KL figure to lag 32 on one 7B run. In RL, nobody reports where "it does not
+matter" stops being true, and nobody reports it in task units; CacheReforge (above) does both, for
+supervised adapter updates at serving time. That disagreement is the paper's opening.
 
 Novelty *(proposed, to be attacked before any GPU spend)*:
 **(i)** a paired, same-token contrast at a single clean cache age, **on the weights axis**. PipelineRL's two
@@ -153,12 +160,15 @@ claim the axis and the clean age, not the contrast.
 **(ii)** range, *not* the existence of a ladder. Within lags ≤ 32 a ladder is prior art (PipelineRL
 Fig. 7); what is new is the tail beyond it (OLMo, 200–2400), a second model family, and the NULL arm —
 no prior report asks whether the effect is about RL updates or about any weight delta of that size.
-**(iii)** fixed-policy paired task accuracy as the read-out. Prior read-outs are a sampling-distribution KL
-(PipelineRL) and an undocumented training outcome (Magistral). Do not claim "first task-level evidence"
-without that qualifier.
+**(iii)** fixed-policy paired task accuracy as the read-out. Prior read-outs in RL are a sampling-distribution KL
+(PipelineRL) and an undocumented training outcome (Magistral); outside RL, CacheReforge reads a paired
+fresh-vs-stale task score under adapter updates. Do not claim "first task-level evidence" without both
+qualifiers (in RL, under policy updates).
 **(iv)** whether a cheap tensor-space statistic (f*, no generation needed) predicts the task-level loss —
-i.e. τ calibrated in task units. Untouched in RL and in task units; CacheReforge (2609.30884) is the
-adapter-time precedent of a statistic that decides recompute, read against KL. (iv) is the contribution an NLP reviewer
+i.e. τ calibrated in task units. Nothing exists in RL. Outside RL, CacheReforge (2609.30884) decides recompute
+on a weight distance scaled by a calibrated sensitivity, q_ℓ = s_ℓ · ‖θ_t − θ_ℓ^anchor‖₂, each s_ℓ calibrated to a
+joint KL / top-1 / task-score safety label, so task units already enter a recompute statistic's calibration there.
+What still holds: no prior statistic is shown to predict the task-level loss itself. (iv) is the contribution an NLP reviewer
 can use, and it is also the gap Carryover's reviewers will raise; it is also the item with nothing to
 predict if (C) is flat, so it cannot carry the paper alone.
 
