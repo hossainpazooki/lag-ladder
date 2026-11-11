@@ -25,7 +25,9 @@ the pair-only re-pin at de6ce9e for the SmolLM3 family (`INSTRUMENT_SHA` stays 5
 on SmolLM3-3B-Base, entry 0035 the registration of the Instruct-initialised own run (Qwen2.5-1.5B-Instruct), both halves, and
 entry 0036 the outcome of the agentic text (all four clauses HELD), and entry 0037 the outcome of the own run on SmolLM3-3B-Base
 ((i-holds), (ii), (iii), (iv) HELD; (i) FALSIFIED; the backbone excess UNREAD), and entry 0038 the three base families in (B)'s
-statement of record (held-out HOLDS_B at every lag; the trainer's own text UNRESOLVED from the first step).
+statement of record (held-out HOLDS_B at every lag; the trainer's own text UNRESOLVED from the first step), and entry 0039 the
+outcome of the Instruct-initialised own run ((B): (i), (ii), (iii) HELD, the backbone excess UNREAD; (C) HALTED at the dump
+equivalence, the halt kept as the result).
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never
@@ -200,7 +202,16 @@ held-out ((ii), (iii) HELD); (iv) HELD; every rung below 1e-4 so the backbone ex
 seals `ownrun-instruct` / `ownrun-instruct-task`; Qwen2.5-1.5B-Instruct@989aa79 under 0017's recipe with chat prompts, the Instruct side
 dumped as `target`, 0017's fifty held-out windows, disclosed; (C) at cap 768 with (v) FRESH accuracy ≥ 50 points at every reader and
 (vi) STALE below FRESH at g = 32, g = 1 accuracy descriptive; the equivalence (B1) read from the run's own (B) summary and recorded with
-its digest; to run on external compute, both halves; not yet run). **0038 adds the three base families to (B)'s statement of
+its digest; (B) run and (C) halted at the dump equivalence, on our own pod; read by 0039). **0038 adds the three base families to (B)'s statement of
 record**: held-out HOLDS_B at every lag, exponent 2.05–2.62 by family, a description and not a law (two of the three past the
 [1.5, 2.5] they sealed); rollout out of HOLDS_B at g = 1 (1.2e-3–4.7e-3) and 6.1e-2–9.3e-2 at g = 32, 1.9e3×–5.1e4× held-out;
-excess over noise 3.5×–19× where read.
+excess over noise 3.5×–19× where read. **0039 reads 0035**: one A100 sitting on our own pod (a departure from external compute,
+ruled 2026-11-02) at `2d7feeb` (one code commit past the registering `13fffd9`: `--readers`, run order only), step 0 equal to the
+snapshot by value (338 tensors), the same digest in smoke and run, step 1 at 2.2034e-5 against ≈ 2.40e-5, step 32 at 9.823e-5; the instrument's venv at
+transformers 5.22.2 where seed 2's ran 5.20.2 (disclosed); all twelve control units passed; held-out HOLDS_B at every lag, slopes
+2.2162 / 2.1295 ((i) HELD); rollout 4.196e-3 at g = 1 and DEGRADES_B from g = 8 (0.1116 to 0.1388), the first own run past 1e-1,
+3.1e4×–1.5e5× held-out ((ii) HELD); (iii) HELD; every step below 1e-4, so (iv) the backbone excess is UNREAD. (C) HALTED at the
+dump equivalence before any cell (`max_abs_diff` 0.125 against 2⁻⁵: one float16 step on a rounding tie at a layer-0 K element of
+magnitude 244; layer-0 K reaches 320, past the binade 0026 assumed); ruling (A) keeps the halt as the result, no re-run, no
+amended limit. The run's chat `prompt_token_counts` recorded 2 (a key count; descriptive, disclosed). Hub `ownrun-instruct/`
+(20,542 files).

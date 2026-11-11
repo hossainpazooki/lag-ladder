@@ -1959,3 +1959,104 @@ template are both confounded with family, and nothing here separates them; the f
 bases (0034's disclosure). Anything about an Instruct initialisation (0035, registered, not yet run), statistic (C) on the
 families, `agentic` on the 3B bases, a cache older than 32 steps, or any quantity a trainer computes. The rollout number is a
 reader's, on text the trainer serves.
+
+### 0039 — 2026-11-11 — Outcome: the Instruct-initialised own run (0035); (B) sealed clauses (i), (ii), (iii) HELD, (iv) the backbone excess UNREAD as registered; (C) HALTED at the dump equivalence
+
+prior-entries-sha256: 9184896b4e6d1d3d9cbd377f1bd84cc41e20b967a38498e1248dd494dec4c83b
+
+**Run.** One sitting on 2026-11-10 on one A100-SXM4-80GB on our own pod, not on external compute: a departure from 0035's
+"Run." paragraph, ruled 2026-11-02 with no new registration, together with the sitting's schedule — (B), then (C) at readers
+step_1 and step_32, the other four (C) readers to a second sitting. Instrument `5d4aa4a`; this repository at `2d7feeb`, one code
+commit past the registering `13fffd9` (`feat(task): --readers filter on task run`: "Run order only … No job, record or sealed
+value changes"); suite 292 passed, 5 skipped; thirteen `OK` lines from `seal verify`; `reader plan` 660 jobs. torch 2.14.1+cu130
+in the trainer's venv and in the instrument's. The trainer's ran TRL 1.15.0 and transformers 5.20.2, as 0035 registers; the
+instrument's, which writes the dumps and builds (C)'s live caches, ran transformers 5.22.2, where seed 2's sitting ran 5.20.2
+(the instrument pins `transformers>=4.51`, and the sitting's version gate read torch alone in that venv). Both sides of the (C)
+gate below ran in that one 5.22.2 environment; whether 5.20.2 writes the same layer-0 K values for this model is not established.
+The two-step smoke (the sitting's first stage, outputs discarded) read step-1 distance 2.1968e-5 against 0035's ≈ 2.40e-5, step-2
+2.7312e-5, 635 s per step, peak CUDA memory 27.0 GB of 80. The step-0 safetensors equal the snapshot by value in the smoke and in
+the run (`rel_delta_all` 0.0, 338 tensors compared, none only on either side), and own_run's provenance `out_sha256` (one sha256
+over the safetensors in name order) is the same in both, `7573a32b…835a`.
+Step-1 distance of the run 2.2034e-5 (the stop rule did not fire). The 32 steps took 681 s each including the save hook's dumps
+(the trainer's own step time 45.8 s), peak CUDA memory 27.2 GB; the 660 jobs ran 10:57:15–14:05:40Z without a halt. Every
+(reader, pair) unit passed its controls under 0014's limits, none carried by far: held-out pair, float16 floors 1.96e-8 to 6.18e-8
+nats/token, identity 0, scrambled 0.588; rollout pair, floors 5.08e-8 to 1.18e-7, identity 0, scrambled 0.519 to 0.604 (limit
+0.1), far 0.640 to 0.816 (1.23× to 1.35× scrambled). Records: four tars, not 0035's three — `instruct-results-final.tgz`
+`b62a39df…dddc` (660 reports, the pod's summary `6af92b08…`) and `instruct-aux-b.tgz` `f13bc8b7…8390` at the (B) checkpoint,
+`instruct-task-final.tgz` `e545aaac…3955` and `instruct-aux-final.tgz` `0ac2188f…f00d` at the close; digests equal both ends
+(evidence folder `2026-11-10-pod-sitting-instruct/`). The chain's upload stage failed at its first file; the operator's re-run
+backed up the kept weights {0, 1, 2, 4, 8, 16, 32}, every step's dumps, the token files and the tars to the private dataset under
+`ownrun-instruct/`: 20,538 files, 0 missing, 0 LFS-sha mismatches, 19,164 LFS-verified, `MANIFEST_OK`; then the (C) records, 4
+files, `MANIFEST_OK`; all off-repository. The record is the home summarizer's `summary.json` (`5576409d…`) on the pulled reports,
+equal to the pod's in every rung median and every seal verdict.
+
+**Trajectory.** Whole-vector relative distance to step 0: 2.2034e-5 (step 1), 3.4170e-5 (2), 5.1477e-5 (4), 7.2298e-5 (8),
+9.0200e-5 (16), 9.8230e-5 (32) — concave and saturating (d32/d1 = 4.46; the four base runs 4.48 to 4.65), and below 1e-4 at
+every step: step 1 at 0.92× the lr / RMS prediction of ≈ 2.40e-5, step 32 under the 1.05e-4 to 1.1e-4 0035 drew from the base's
+shape. Means over steps 1–8 and over 25–32, every figure from the trainer log: exact-match reward 0.620 → 0.739; the format term
+0.144 → 0.195; completion entropy 0.347 → 0.194; mean completion length 156 → 129 tokens, the share at the 256-token cap 0.137 →
+0.033. The step-0 policy's own batch (logged at step 1) answers at 44.5% exact-match under the chat prompt (steps 2 / 4 / 8: 0.438
+/ 0.734 / 0.781). **Disclosed:** the run's `prompt_token_counts` read min, median and max 2 over all 7,463 training prompts, in the
+smoke and in the run. `tools/own_run.py` :375 takes `len()` of what `apply_chat_template(…, tokenize=True, …)` returns, which
+under the trainer's transformers 5.20.2 (and 5.22.2) is a `BatchEncoding` of two keys, so the 2 is its key count — reproduced on
+this checkpoint's tokenizer at `989aa79`: 2 against 77 tokens for one GSM8K prompt. The counts are a 0035 descriptive and reach
+nothing but a print and a stats key; the true counts are unread. The line's fix is its own commit, outside this entry.
+
+**Reading** — median (B1), nats/token, at distance x; bands HOLDS_B ≤ 1e-3, DEGRADES_B ≥ 1e-1. *Held-out text* (corpus /
+on-path): lag 1 (x 2.20e-5) 1.36e-7 / 9.15e-8; 2 (3.42e-5) 3.43e-7 / 2.30e-7; 4 (5.15e-5) 8.89e-7 / 5.98e-7; 8 (7.23e-5) 1.96e-6
+/ 1.21e-6; 16 (9.02e-5) 2.99e-6 / 1.74e-6; 32 (9.82e-5) 3.63e-6 / 2.25e-6 — HOLDS_B at every lag, every rung 2.74× (lag 1, corpus)
+to 111× (lag 32, on-path) its reader's floor. On the same held-out sequences as both Qwen seeds (40–49 of the fifty windows, 0035's
+disclosure) these are 0.55× to 0.69× seed 1's corpus medians at equal lag (seed 2: 0.72× to 0.80×), on identical tokens
+(`continuation_sha256` equal 10 of 10 against both), and 0.63× to 0.84× its on-path (seed 2: 0.91× to 1.07×), where each run reads
+its own greedy text (equal 1 of 10), at 0.94× to 0.98× seed 1's distance (seed 2: 0.92× to 0.98×). *Rollout text*
+(the Instruct step-0 policy's own GSM8K completions under the chat
+prompt, prompt cache stale, completion teacher-forced): lag 1 4.196e-3; 2 2.061e-2; 4 8.959e-2; 8 0.1116; 16 0.1278; 32 0.1388 —
+UNRESOLVED at lags 1 to 4 and DEGRADES_B from lag 8, where every base run reads UNRESOLVED at every lag (at most 9.3e-2); 3.1e4×
+to 1.0e5× the same reader on corpus and 4.6e4× to 1.5e5× on on-path; the reader's argmax agreeing with its fresh cache at a mean
+per-sequence rate of 98.3% at lag 1 and 92.9% to 93.7% from lag 8; ESS/N 0.383 at lag 1, 0.101 at lag 32.
+Against seed 1's rollout medians at
+equal lag: 0.90× (lag 1), 1.58×, 3.05× (lag 4), then 1.44× to 1.75×; the texts differ (each policy's own completions on 0017's ten
+prompts).
+
+**The seal (`ownrun-instruct`, `9ea6461d…`), read by the summarizer** (0035's numbering; the summarizer's keys in parentheses).
+(i) HELD, both parts: HOLDS_B at all six held-out rungs on both texts, every rung above 2× floor (`i-holds`; the closest, lag 1
+corpus, 2.74×), and both slopes of log median on log distance inside [1.5, 2.5], 2.2162 corpus and 2.1295 on-path (`i`; seed 1
+2.26 / 2.19, seed 2 2.13 / 2.05). (ii) HELD, both halves: rollout median at g = 1 is 4.196e-3 ≥ 1e-3 (`ii-lost`; seed 1 4.68e-3),
+and rollout ≥ 1e3× held-out at every lag on both texts (`iii`; 3.1e4× to 1.5e5×). (iii) HELD: all twelve control units passed, none
+carried by far (`iv`). (iv) UNREAD (`iii-excess`, read against 0015's `summary.json` `5d761594…`): every rung's distance lies below
+1e-4 (2.20e-5 to 9.82e-5), none inside [1e-4, 1e-1], so the clause has nothing to read — the case 0035 named. The pod's summary
+reads the same six verdicts.
+
+**(C): HALTED at the dump equivalence; nothing read.** `task run --readers local:step_1`, the first of the two readers the
+2026-11-02 schedule set for this sitting, runs the equivalence first: the writer's live step-0 cache over the ten rollout prompts,
+rounded through float16, against its step-0 dump, then (B1) at reader step_32. `max_abs_diff` 0.125 against the absolute limit
+2⁻⁵ = 0.03125 (0026); (B1) 0.13880282 against the 0.13880730 the run's own (B) summary carries (`b1_expected_from`: the pod's
+`summary.json`, sha256 `6af92b08…`, rung `ownrun-instruct-rollout-lag-32`), relative gap 3.23e-5 against 1e-3; `max_rel_diff`
+0.4435 and `share_differing` 0.0211 descriptive. `task REFUSED: dump equivalence failed … the live cache is not the dump's`,
+14:18:40–14:19:00Z; no `cells` job ran, and clauses (i)–(vi) of `ownrun-instruct-task` (`c644d1d3…`) are unread. *Diagnosis*
+(read-only, under the instrument's interpreter on the sitting's machine, the same day; not a repository tool): the 0.125 is one
+element — sequence 4, layer 0 K, row 11, head 1, dim 124: dump −244.375, live float16 −244.5, live float32 −244.4375, the midpoint
+of the two exactly — one float16 step on a rounding tie. The live forward is deterministic and the gate's value reproduced in a
+fresh process; every other sequence's largest gap is 0.0078125. By magnitude, 11,823 elements in [1, 64) differ, each by one step;
+one in [128, 256); 243,014 in [0, 1), by up to 1,127 of their own steps — the noise 0026 described. Layer-0 K reaches 319.50 to
+320.25 on every sequence, with 1,628 to 2,552 elements ≥ 128 per sequence, where one float16 step is 2⁻³ to 2⁻². 0026 took 2⁻⁵ as
+"one float16 ulp in the top binade the caches occupy", which is [32, 64); this dump's layer-0 K reaches [256, 512). **Ruling
+(A)**, the operator, 2026-11-10: the halt is the registered result, read with this diagnosis; no re-run and no amended limit.
+
+**What the reading says.** From an Instruct initialisation the two sentences of 0018 hold in kind: held-out text is HOLDS_B at
+every lag with its slope inside the sealed band, and the trainer's own text loses HOLDS_B at the first optimizer step and sits
+four to five orders above held-out text at every lag. In degree the trainer's side reads higher from lag 2: from lag 8 its own
+text reads DEGRADES_B, the first own run past 1e-1 (the four base runs 6.1e-2 to 9.3e-2 at lag 32), while its held-out reading
+sits at 0.55× to 1.07× both Qwen seeds' on the same held-out sequences (corpus tokens identical, on-path each run's own greedy
+text) at 0.92× to 0.98× their distance. Its rollout text is its own
+completions on 0017's ten prompts, not seed 1's, so this entry does not separate the initialisation from the text it samples.
+Statistic (C) on this policy is unread.
+
+**Not ruled here.** Whether (B)'s statement of record (0016, read with 0019, 0024 and 0038) gains the Instruct initialisation —
+the joint ruling 0035 scheduled, of which 0038 took the families-only form; (C) on this policy, a (C) limit for caches past the
+binade 0026 assumed, and the four readers left to a second sitting; whether the instrument's venv at 5.20.2 writes the same dumps;
+the true training-prompt token counts.
+
+**Consequences in this commit set:** `README.md`, `CLAUDE.md`. Records and the Hub backup under the hashes above; nothing in
+`results/` is committed. Landed ahead as its own commit: `2d7feeb` (`src/lag_ladder/task.py`, `summarize_task.py`: `--readers`,
+run order only) with tests.

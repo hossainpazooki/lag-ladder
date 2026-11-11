@@ -59,8 +59,12 @@ recipe and plain prompts, its held-out windows byte-identical to Llama's because
 HOLDS_B at every lag with slopes 2.62 / 2.62 (both past the sealed 2.5), the policy's own text UNRESOLVED from the first step at 4e3×
 to 1e4× held-out text; every control passed; every step's distance below 1e-4, so the excess-over-noise clause had nothing to read, as
 registered. An
-Instruct-initialised run is registered (0035, not yet run; both halves, on external compute): Qwen2.5-1.5B-Instruct under 0017's
-recipe, statistic (B) at lags 1–32 and statistic (C) at a 768-token cap with two clauses on accuracy.
+Instruct-initialised run ran (0035 registered, 0039 read; on our own pod, not on external compute): Qwen2.5-1.5B-Instruct under
+0017's recipe and chat prompts. Held-out text HOLDS_B at every lag (slopes 2.22 / 2.13); the policy's own text leaves HOLDS_B at
+the first step (4.2e-3) and reads DEGRADES_B from lag 8 (0.112 to 0.139), the first own run past 1e-1, at 3.1e4× to 1.5e5×
+held-out text; every control passed; every step's distance below 1e-4, so the excess-over-noise clause had nothing to read, as
+registered. Its statistic (C) halted at the dump-equivalence gate before any cell — one float16 step on a rounding tie at a
+layer-0 K element of magnitude 244, against 0026's absolute 2⁻⁵ — and the operator kept the halt as the result.
 
 ## How a rung is measured
 
@@ -119,7 +123,8 @@ one seventh of an information-free one, with the floor, near and far controls of
 extends that clause to three base families (Qwen2.5-1.5B on two trainer seeds, Llama-3.2-3B, SmolLM3-3B-Base): held-out
 text is HOLDS_B at every lag with an exponent that belongs to the family (2.05 to 2.62, steeper than the backbone's 2.0),
 and on the trainer's own text (B1) leaves HOLDS_B at the first step and reads 6.1e-2 to 9.3e-2 at lag 32, 1.9e3× to
-5.1e4× held-out text. The Instruct initialisation (0035) has not run. (C) is not ruled on.
+5.1e4× held-out text. The Instruct initialisation ran (0039) and is not in the statement: on its own text (B1) reads
+DEGRADES_B from lag 8, and whether it enters is a ruling not taken. (C) is not ruled on.
 
 **The own run is complete (ledger 0017, 0018).** Qwen2.5-1.5B trained by GRPO for 32 steps (lr 1e-6, no
 reference-KL term, GSM8K); the reader at step g ∈ {1, 2, 4, 8, 16, 32} reads the step-0 cache. The weights moved
@@ -155,7 +160,7 @@ retained off-repository with the hashes the entries state.
 For statistic (B), cite the commit that carries entry 0016 (tag `statistic-b-closed`), read with 0019, 0024 and 0038;
 name 0015 for the ladder's numbers and 0011 for the statistic. For the own run, name 0018 for the numbers, 0017 for the
 registration and 0021 and 0023 for the controls on rollout text; for the second seed and the two other families, 0029,
-0032 and 0037.
+0032 and 0037; for the Instruct initialisation, 0039 (registered by 0035).
 
 ## How the record stays auditable
 
