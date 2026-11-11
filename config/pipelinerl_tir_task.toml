@@ -1,0 +1,68 @@
+# Reduced statistic (C) on the PipelineRL TIR arm (design 2026-11-09, reduced (C); decisions 3-5). The reader at step g
+# replays the 1,269 reserved GSM8K test prompts as greedy multi-turn tool episodes (upstream's TIR system prompt, tool
+# schema, chat template and Hermes tool-call format; run_python_code through SandboxFusion on loopback; MathAnswer) under
+# its own prompt cache (FRESH), the step-0 writer's cache of the rendered prompt (STALE-prompt, the ag-prompt span) and
+# the writer's cache of the system turn with the tool schema alone (STALE-shared, the span a prefix-caching engine keeps
+# across episodes). Caches are built live and rounded through float16; `tools/task_swap_tir.py` under the instrument's
+# interpreter: raw argmax, stop on the tokenizer's eos, at most 3 turns of 1,024 new tokens inside max_model_len 8192
+# with 256 tokens the minimum left for a turn (upstream's loop, domains/tir/rollouts.py:274-296 at the pin). Every turn
+# is re-rendered from the message list as upstream does; the cache is kept to the longest common prefix with the new
+# rendering and the rest prefilled under the reader, in every arm alike (the record says whether the stale span stayed
+# inside that prefix). UNREGISTERED until a numbered entry fixes every value below; the four *_PENDING hashes and
+# content_eos are pinned from the smoke's files and the off-pod fidelity run.
+#
+# The answer is the MathAnswer argument's last number (the raw argument is kept in the record); without a MathAnswer,
+# 0035's rule on the last assistant turn (last ####, else last number). Episodes ending without MathAnswer are counted.
+# The prompts file is the reserved partition the stream tool writes (the 1,319 of 0035's file minus the 50 frozen);
+# the driver checks the partition against the full file and the frozen draw before any cell.
+
+[task_tir]
+results_dir = "results/pipelinerl_tir_task"
+upstream_path = "../kv-transfer-replication"
+upstream_sha = "5d4aa4a98b40f5ab37dd83ebb6b2ee802203994a"
+registered_by = ""
+seal = "pipelinerl-tir-task"
+writer = "local:pltir-step_0"
+readers = ["local:pltir-step_1", "local:pltir-step_32"]
+# [{index, question, gold}] for every GSM8K test row: 0035's file, written by `task_swap.py prepare`.
+prompts_all = "data/tokens/gsm8k_test_prompts.json"
+prompts_all_sha256 = "918c7e67f051d41f7b153911f0497bc62c82b76cb04ef84f6f5ee0e66ab22450"
+# The frozen draw ({seed, n, total, indices}; make_rng(0), 50 of 1,319 without replacement, sorted) and the reserved
+# rows (every other row, file order), both written by `tools/pipelinerl_stream.py prompts`.
+frozen = "data/tokens/pltir_frozen50.json"
+frozen_sha256 = "FROZEN_PENDING"
+prompts = "data/tokens/gsm8k_test_reserved_pltir.json"
+prompts_sha256 = "RESERVED_PENDING"
+n_prompts = 1269
+# FAR prefixes: the held-out Qwen token file of 0008 (0012's pin), rows 40..49 cycled, cut to each prompt's length.
+far_tokens = "data/tokens/qwen2.5-1.5b-to-instruct_n50_len1024_seed0.npy"
+far_tokens_sha256 = "01bd7698f7413ab9a3b6958991487bbba626f5a8cc4f24142cd22091d96af747"
+far_seq = 40
+max_new = 1024
+max_turns = 3
+max_model_len = 8192
+min_generation_tokens = 256
+# Upstream's TIR system prompt byte for byte (conf/tir.yaml:8-28 at the pin; config/pipelinerl_tir.toml [trainer] names it).
+system_prompt = "config/pipelinerl_tir_system_prompt.txt"
+system_prompt_sha256 = "7ee8c06e19444789e29a71dcd483d954baae4cb5c2f4f617c90ca72513c12b41"
+# Whether the assistant `content` in the re-rendered message list keeps the trailing eos string vLLM returned; the
+# fidelity gate is run with both off the pod and the one that matches upstream's prompt tokens is pinned here.
+content_eos = "CONTENT_EOS_PENDING"
+seed = 0
+
+[task_tir.rule]
+# The statistic is the STALE final-answer flip rate against FRESH with a seeded bootstrap over prompts (0027's); the
+# positive controls NEAR and FAR fire when each flips at least control_min_flip_rate of the answers. Accuracy, the
+# tool-call-sequence flip rate, turns per episode, the tool-call and MathAnswer rates and the fresh-path (B1) are descriptive.
+bootstrap_reps = 2000
+control_min_flip_rate = 0.5
+
+[task_tir.controls]
+# RC3: the floor (FRESH built in float32 vs through float16, limit 0.01) on every reserved prompt; the identity (FRESH
+# twice, 0 flips) and the positive controls NEAR and FAR on the first n_prompts of them.
+n_prompts = 400
+floor_max_flip_rate = 0.01
+# The driver fidelity gate's input: the 50 actor-mode episodes of the frozen prompts (pltir-episode-v1, written by
+# `tools/pipelinerl_stream.py episodes` from upstream's stream); every turn's prompt must render token for token.
+fidelity_episodes = "data/tokens/pltir_episodes_n50_seed0.jsonl"
+fidelity_episodes_sha256 = "EPISODES_PENDING"
