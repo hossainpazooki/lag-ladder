@@ -27,7 +27,7 @@ every sha below; `tests/test_imports.py` asserts this file names exactly those s
   fitting and scoring are invoked there, by subprocess, in the upstream's own environment. Experiment
   gates check their OWN recorded pin by ancestry + invoked-paths-unchanged (`lag_ladder.upstream_gate`).
 
-## 2. Checkpoint producer — NOT PINNED (design §6, ruled 2026-09-22)
+## 2. Checkpoint producer — the pilot's producer is unpinned (design §6, ruled 2026-09-22); PipelineRL is pinned for the agentic arm (design 2026-11-09, subsection below)
 
 - The pilot uses published checkpoints (`allenai/OLMo-2-0425-1B-RLVR1`, 13 `step_*` revisions at stride
   200) and needs no trainer.
@@ -39,8 +39,9 @@ every sha below; `tests/test_imports.py` asserts this file names exactly those s
   moved. Checked that day: the repo's code search has no `recompute` / `kv_cache` /
   `reset_prefix_cache` hit (default branch only), so Figure 7's measurement code is not published;
   the smallest documented configuration is 4×H100.
-- When pinned: record the author sha (and a fork sha only if a fork ever becomes necessary); the gate
-  asserts the trainer paths are unchanged from the author sha.
+- Pinned for the agentic arm on 2026-11-09 (subsection below): the author sha is recorded; a fork sha only if a fork
+  ever becomes necessary; the byte-pinned inputs and the fidelity gate assert the trainer-side inputs are unchanged from
+  the author sha. The pilot's published checkpoints remain unpinned.
 
 ### PipelineRL — pinned for the agentic arm (design 2026-11-09, reduced scope)
 
@@ -48,13 +49,14 @@ every sha below; `tests/test_imports.py` asserts this file names exactly those s
   2026-08-05, Apache-2.0), the sha observed on 2026-09-22 above. Unmodified: every run changes it through
   Hydra overrides only (`config/pipelinerl_tir_overrides.txt`, `config/pipelinerl_tir_sample_overrides.txt`). PipelineRL is
   never imported, vendored or executed from lag-ladder; the pod scripts run it in its own environment and lag-ladder
-  reads its stream files and checkpoints. The producer's recipe values live in `config/pipelinerl_tir.toml` `[trainer]`.
+  reads its stream files and checkpoints. The recipe lives in the two override files; `[trainer]` carries the pin, file
+  names, model, and the step count and kept steps the driver reads.
 - Facts the driver `tools/task_swap_tir.py` and the stream tool `tools/pipelinerl_stream.py` depend on, read raw at the
   pin (`{sourceRepo: ServiceNow/PipelineRL, commitSha: 58d3934…}`):
 
 | Fact | filePath (at the pin) |
 |---|---|
-| TIR system prompt (a YAML `\|` block at :8-28, 20 lines, so the text ends with one newline; sha256 `7ee8c06e…c12b41`), `task_template: "{task}"`, `agent_max_loops: 3`, `sandbox_endpoint: ${oc.env:SANDBOX_ENDPOINT,…}` (an environment variable, loopback default), `sandbox_timeout: 10.0`; `_self_` sets `finetune.rl.policy_loss: gspo`, `seq_parallel: 8`, `gradient_accumulation_passes: 1024`, `vllm_config.vllm_kwargs.max_model_len: 32000`, `llm.parameters.max_tokens: 16000` | `conf/tir.yaml`:8-30, 55-56, 65-79, 84-90 |
+| TIR system prompt (a YAML `\|` block at :8-28, 20 lines, so the text ends with one newline; sha256 `7ee8c06e…c12b41`), `task_template: "{task}"`, `agent_max_loops: 3`, `sandbox_endpoint: ${oc.env:SANDBOX_ENDPOINT,…}` (an environment variable, loopback default), `sandbox_timeout: 10.0`; `_self_` sets `finetune.rl.policy_loss: gspo`, `seq_parallel: 8`, `gradient_accumulation_passes: 1024`, `vllm_config.vllm_kwargs.max_model_len: 32000`, `llm.parameters.max_tokens: 16000`, `finetune.seq_length: 32000` (`:85`, overridden to 8192), `finetune.rl.overlong_filtering: true` (`:90`, pinned explicitly by the override file) | `conf/tir.yaml`:8-30, 55-56, 65-79, 84-90 |
 | Defaults: `seed: 42`, `llm.parameters` (`max_tokens: 8192`, `temperature: 1.0`), `enable-prefix-caching: false`, `eval_every_n_versions: 78000`, `attempts: ${finetune.attempts}`, `debug.mode: ""`, `streams_from`, `wandb.use_wandb: true` | `conf/base.yaml`:7, 46-55, 66, 89, 107, 110-111, 124 |
 | Finetune defaults: `train_batch_size: 1`, lr 1e-6, cosine, 50 warmup steps, 1024 passes, `max_train_steps`, `seq_length: 12000`, `save_checkpoint_steps: 100`, `keep_intermediate_checkpoints`, `also_save_steps: []`, `use_safetensors: true`, `seq_parallel`, `attempts: 8`, `rl.policy_loss: reinforce`; `grpo.yaml`: `attempts: 8`, `rl.policy_loss: ppo`. Samples per optimizer step = `gradient_accumulation_passes × train_batch_size` over all lead trainers (`finetune_loop.py:629-637`; the passes must divide by the trainer count, :340-342), so 128 passes × 1 = 128 samples = 16 prompts × 8 attempts whatever the GPU split | `conf/finetune/base.yaml`:31, 37, 41, 43, 45, 53, 63, 69, 71, 85, 86, 88, 96, 101; `conf/finetune/grpo.yaml`; `pipelinerl/finetune_loop.py`:340-342, 629-637 |
 | Tool schema (`run_python_code`, `MathAnswer`), blocked-code patterns, sandbox output formatting (`[stderr]`, `[execution timed out]`, `[no output]`, `[execution error: …]`), `_parse_tool_arguments` fallbacks, tool messages `Answer submitted: …` / `Unknown tool: …`, the turn loop (messages = system + `task_template.format(task=problem["task"])`, the prompt rendered each turn with the tools, `min_generation_tokens = 256`, break on no tool calls, break after `MathAnswer`), `gold = problem["answer"]`, and `text.finished = ctx.submitted_final_answer` on every turn's TrainingText | `pipelinerl/domains/tir/rollouts.py`:25-37, 40-66, 69-116, 119-149, 152-188, 253-365 |
