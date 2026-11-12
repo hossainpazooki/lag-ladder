@@ -1,4 +1,4 @@
-# Byte-pinned PipelineRL inputs (tests check their sha256 and that they hold no CR): no line-ending conversion.
+# PipelineRL inputs read byte-for-byte (the prompt is sha256-pinned, the override files are checked for CR bytes and parsed to exact dicts): no line-ending conversion.
 config/pipelinerl_tir_system_prompt.txt -text
 config/pipelinerl_tir_overrides.txt -text
 config/pipelinerl_tir_sample_overrides.txt -text
