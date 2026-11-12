@@ -287,7 +287,7 @@ def test_cli_plan_prints_the_jobs_and_the_projection(repo, seal_cfg, monkeypatch
 
 
 def test_read_jsonl_splits_on_newline_only(tmp_path):
-    # amendment 1 (2026-11-10): str.splitlines() also breaks a line at U+2028 (and U+2029, U+0085), which a model's
+    # str.splitlines() also breaks a line at U+2028 (and U+2029, U+0085), which a model's
     # completion text may carry and json.dumps(ensure_ascii=False) would leave raw inside a string. The Task 4 writer
     # escapes it (ensure_ascii=True); the reader splits on "\n" only, so a record carrying one stays one row whichever
     # way it was written

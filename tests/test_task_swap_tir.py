@@ -500,7 +500,7 @@ def _sys_file(tmp_path):
     return p
 
 
-# --- the arm files: ASCII on write, newline-only on a resume (amendment 1, 2026-11-10) -----------------------------
+# --- the arm files: ASCII on write, newline-only on a resume -------------------------------------------------------
 
 TOOL_BREAKS = "tool output \u2028 a \u2029 b \u0085 caf\u00e9"   # str.splitlines() breaks on the first three
 
