@@ -461,6 +461,10 @@ def _episode_with(tok, question, assistant_texts, tool_results, index=5):
         msgs.append({"role": "assistant", "content": content, "tool_calls": calls})
         for tc, res in zip(calls, tool_results[k]):
             msgs.append({"role": "tool", "tool_call_id": tc["id"], "content": res})
+    # upstream writes whether the answer was submitted on every turn of the episode (rollouts.py:364-365)
+    fin = any(c["function"]["name"] == "MathAnswer" for c in tt.parse_tool_calls(assistant_texts[len(turns) - 1])[0])
+    for t in turns:
+        t["finished"] = fin
     return {"schema": "pltir-episode-v1", "index": index, "question": question, "gold": "42", "group_id": "g", "rollout_index": 0,
             "model_version": 0, "turns": turns}
 
@@ -614,3 +618,64 @@ def test_cells_writes_ascii_so_unicode_line_breaks_keep_one_record_per_line_and_
         p.write_bytes("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in recs).encode("utf-8"))
         assert len(p.read_text(encoding="utf-8").splitlines()) > len(want), arm
     assert tt.main(args) == 0 and EchoEngine.generated == ran
+
+
+def test_fidelity_fails_when_upstream_went_on_past_a_turn_where_the_port_parsed_no_tool_call():
+    # upstream recording a later turn means its loop continued. If this port parses no tool call
+    # in the turn before, that is a divergence, and every turn after it must count as mismatched, not be skipped.
+    # Three turns, so "each later turn" is pinned and not only the first
+    tok = FakeTok()
+    call = '<tool_call>\n{"name": "run_python_code", "arguments": {"code": "print(6*7)"}}\n</tool_call>'
+    ans = '<tool_call>\n{"name": "MathAnswer", "arguments": {"answer": "\\\\boxed{42}"}}\n</tool_call>'
+    ep = _episode_with(tok, "What is 6*7?", [call, call, ans], [["42"], ["42"], ["Answer submitted: \\boxed{42}"]])
+    assert len(ep["turns"]) == 3
+    bad = json.loads(json.dumps(ep))
+    pl = bad["turns"][0]["prompt_tokens"]
+    bad["turns"][0]["input_ids"] = bad["turns"][0]["input_ids"][:pl] + tok("I will think about it.")["input_ids"] + [tok.eos_token_id]
+    rep = tt.fidelity_report([bad], tok, SYSTEM, content_eos="strip", max_model_len=4096)
+    assert not rep["passed"] and rep["n_turns"] == 3 and rep["turns_matched"] == 1 and rep["turns_mismatched"] == 2
+    rows = rep["per_episode"][0]["turns"]
+    assert [r["step_index"] for r in rows] == [0, 1, 2] and rows[0]["match"] is True
+    for later, t in zip(rows[1:], bad["turns"][1:]):                  # each later turn, not only the first
+        assert later["match"] is False and later["first_divergence"] is None and later["ours_len"] is None
+        assert later["prompt_len"] == t["prompt_tokens"]
+    # an episode that really ends on a turn without a tool call is still one matched turn
+    last = _episode_with(tok, "What is 6*7?", ["The answer is 42."], [[]])
+    rep = tt.fidelity_report([last], tok, SYSTEM, content_eos="strip", max_model_len=4096)
+    assert rep["passed"] and rep["n_turns"] == 1 and rep["turns_mismatched"] == 0
+
+
+def test_fidelity_fails_when_the_last_turn_disagrees_with_upstreams_finished():
+    # upstream's `finished` says whether the answer was submitted. At the last recorded turn there
+    # is no later prompt to render, so a divergence in how the episode ends shows only here
+    tok = FakeTok()
+    call = '<tool_call>\n{"name": "run_python_code", "arguments": {"code": "print(6*7)"}}\n</tool_call>'
+    ans = '<tool_call>\n{"name": "MathAnswer", "arguments": {"answer": "\\\\boxed{42}"}}\n</tool_call>'
+    fid = lambda e: tt.fidelity_report([e], tok, SYSTEM, content_eos="strip", max_model_len=4096)
+    plain = _episode_with(tok, "What is 6*7?", [call, "The answer is 42."], [["42"], []])       # ends on a turn with no call
+    code = _episode_with(tok, "What is 6*7?", [call, call], [["42"], ["42"]])                    # ends on a call that is no answer
+    answer = _episode_with(tok, "What is 6*7?", [call, ans], [["42"], ["Answer submitted: \\boxed{42}"]])
+    assert [e["turns"][-1]["finished"] for e in (plain, code, answer)] == [False, False, True]
+    for e in (plain, code, answer):                                       # as upstream would have written them: all pass
+        rep = fid(e)
+        assert rep["passed"] and rep["n_turns"] == 2 and rep["turns_matched"] == 2
+    for e in (plain, code, answer):                                       # upstream's finished says the opposite: each fails
+        bad = json.loads(json.dumps(e))
+        for t in bad["turns"]:
+            t["finished"] = not t["finished"]
+        rep = fid(bad)
+        assert not rep["passed"] and rep["n_turns"] == 2 and rep["turns_matched"] == 1 and rep["turns_mismatched"] == 1
+        first, last = rep["per_episode"][0]["turns"]
+        assert first["match"] is True and last["match"] is False and last["first_divergence"] is None
+        assert last["ours_len"] == last["prompt_len"]                     # rendered and equal: the divergence is the ending
+    gone = json.loads(json.dumps(answer))                                 # a record without the field is refused, not guessed
+    del gone["turns"][-1]["finished"]
+    with pytest.raises(KeyError):
+        fid(gone)
+    both = json.loads(json.dumps(answer))                                 # mis-rendered and disagreeing: counted once
+    for t in both["turns"]:
+        t["finished"] = False
+    both["turns"][-1]["input_ids"][0] += 1
+    rep = fid(both)
+    assert not rep["passed"] and rep["turns_matched"] == 1 and rep["turns_mismatched"] == 1
+    assert rep["per_episode"][0]["turns"][-1]["first_divergence"] == 0

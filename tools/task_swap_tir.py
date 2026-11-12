@@ -482,7 +482,27 @@ def fidelity_report(episodes: list[dict], tok, system_prompt: str, *, content_eo
             prev_full = upstream_prompt + gen
             gen_text = tok.decode(gen, skip_special_tokens=False)
             calls, content = parse_tool_calls(gen_text)
-            if not calls or k + 1 >= len(ep["turns"]):
+            if k + 1 >= len(ep["turns"]):
+                # upstream writes `finished` = "the answer was submitted" on every turn of an episode (rollouts.py:364-365).
+                # At the last recorded turn this port must agree: it parses a MathAnswer there if and only if finished is
+                # true. A disagreement is a divergence in how the episode ends, which no rendering shows (there is no later
+                # turn); the turn then counts as mismatched, with first_divergence None and ours_len set
+                answered = any(c["function"]["name"] == "MathAnswer" for c in calls)
+                if ok and answered != bool(t["finished"]):
+                    matched -= 1
+                    mismatched += 1
+                    rows[-1]["match"] = False
+                break
+            if not calls:
+                # upstream recorded another turn, so its loop went on where this port parsed no tool call: a divergence
+                # of the parser or of the loop, not the end of the episode. The later turns cannot be rendered from here;
+                # each is counted as mismatched (first_divergence None), so the gate fails instead of passing on what it
+                # skipped
+                for later in ep["turns"][k + 1:]:
+                    n_turns += 1
+                    mismatched += 1
+                    rows.append({"step_index": int(later["step_index"]), "prompt_len": int(later["prompt_tokens"]),
+                                 "ours_len": None, "match": False, "first_divergence": None, "extends_previous": None})
                 break
             messages.append({"role": "assistant", "content": strip_content_eos(content or "", tok.eos_token or "", content_eos),
                              "tool_calls": calls})
