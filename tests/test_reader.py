@@ -609,3 +609,26 @@ def test_evaluable_under_far_needs_a_far_pair_and_a_bool(repo, seal_cfg):
     cpath.write_text(text.replace('heldout = [0, 4]\n', 'heldout = [0, 4]\nfar_pair = "olmo2-1b-rlvr1"\n', 1), encoding="utf-8")
     with pytest.raises(ValueError, match="evaluable_under_far"):
         load_reader_config(cpath, repo)
+
+
+def test_gate_refuses_a_ledger_entry_that_does_not_name_this_config(repo, seal_cfg):
+    # the same check task_tir.py's gate makes. A number alone is not a registration: the same number
+    # can head another entry once the ledger has grown under a rebase, so the entry registered_by names must itself name
+    # this config, by its path: the bare file name in the entry is not enough
+    cfg, tools = _setup_reader(repo, seal_cfg)
+    lpath = repo / "ledger" / "ledger.md"
+    text = lpath.read_text(encoding="utf-8")
+    assert text.count("registers config/reader.toml.") == 1
+    lpath.write_text(text.replace("registers config/reader.toml.", "the outcome of another run of reader.toml."), encoding="utf-8")
+    commit_all(repo, "entry 0014 is another entry")
+    with pytest.raises(reader.Refusal, match="does not name config/reader.toml"):
+        reader.run(cfg, repo, runner=FakeInstrument(), seal_cfg=seal_cfg, tools_dir=tools)
+    # the entry is the text under its own heading only: a later entry that names the config does not register it for 0014
+    later = "\n### 0015 \u2014 2026-11-11 \u2014 another entry (test)\n\nregisters config/reader.toml.\n"
+    lpath.write_text(text.replace("registers config/reader.toml.", "the outcome of another run of reader.toml.") + later, encoding="utf-8")
+    commit_all(repo, "a later entry names the config")
+    with pytest.raises(reader.Refusal, match="does not name config/reader.toml"):
+        reader.run(cfg, repo, runner=FakeInstrument(), seal_cfg=seal_cfg, tools_dir=tools)
+    lpath.write_text(text, encoding="utf-8")
+    commit_all(repo, "the registering entry again")
+    reader.run(cfg, repo, runner=FakeInstrument(), seal_cfg=seal_cfg, tools_dir=tools)

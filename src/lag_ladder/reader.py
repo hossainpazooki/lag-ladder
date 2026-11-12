@@ -241,6 +241,12 @@ def assert_ready(cfg: ReaderConfig, repo_root: Path, *, seal_cfg=None, upstream_
         raise _refuse("cannot read HEAD:ledger/ledger.md")
     if f"### {cfg.registered_by} " not in committed.stdout:
         raise _refuse(f"the committed ledger has no entry {cfg.registered_by}, which config/{cname} names")
+    # a number alone is not a registration: the same number can head another entry (a ledger that grew under a rebase),
+    # so the entry registered_by names must itself name this config
+    entry = committed.stdout.split(f"### {cfg.registered_by} ", 1)[1].split("\n### ", 1)[0]
+    if f"config/{cname}" not in entry:
+        raise _refuse(f"the committed ledger's entry {cfg.registered_by} does not name config/{cname}; registered_by must be "
+                      "the entry that registers this config")
     try:
         upstream_check(cfg.upstream_path, cfg.upstream_sha, UPSTREAM_PATHS, who="reader")
     except RuntimeError as e:
