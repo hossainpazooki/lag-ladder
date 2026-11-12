@@ -3,8 +3,8 @@
 # SandboxFusion, MathAnswer). UNREGISTERED: `registered_by` is empty and the ag-prompt hashes are *_PENDING until the
 # 50-prompt actor-mode sample exists; `reader run` refuses until a numbered entry fixes them.
 #
-# The producer is upstream PipelineRL at the pin below, unmodified, under the Hydra overrides in `overrides`; the pod
-# script reads this [trainer] table, the reader reads only [reader.*]. Checkpoints are the bf16 weights PipelineRL saved
+# The producer is upstream PipelineRL at the pin below, unmodified, under the Hydra overrides in `overrides`; no code
+# reads this [trainer] table (tests pin it), the reader reads only [reader.*]. Checkpoints are the bf16 weights PipelineRL saved
 # (`intermediate/<step>`, the final step from `current`), copied under results/distance/checkpoints/pltir-step_<g>; step 0
 # is the HF snapshot at the pinned revision. The pair `qwen2.5-1.5b-to-instruct` pins neither side (0035), so the trained
 # weights are dumped as its TARGET under the keys target@local-pltir-step_<g>, distinct from 0035's target@local-step_<g>.

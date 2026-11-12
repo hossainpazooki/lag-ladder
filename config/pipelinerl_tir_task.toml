@@ -63,6 +63,7 @@ control_min_flip_rate = 0.5
 n_prompts = 400
 floor_max_flip_rate = 0.01
 # The driver fidelity gate's input: the 50 actor-mode episodes of the frozen prompts (pltir-episode-v1, written by
-# `tools/pipelinerl_stream.py episodes` from upstream's stream); every turn's prompt must render token for token.
+# `tools/pipelinerl_stream.py episodes` from upstream's stream); every turn's prompt must render token for token,
+# every turn upstream recorded must be reached, and the last turn must agree with upstream's `finished`.
 fidelity_episodes = "data/tokens/pltir_episodes_n50_seed0.jsonl"
 fidelity_episodes_sha256 = "EPISODES_PENDING"
