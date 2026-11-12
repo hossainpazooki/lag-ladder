@@ -307,3 +307,26 @@ def test_read_jsonl_splits_on_newline_only(tmp_path):
         assert len(raw.read_text(encoding="utf-8").splitlines()) == 2           # the split the reader must not use
         rows = task_tir._read_jsonl(raw)
         assert len(rows) == 1 and rows[0]["completion_texts"] == [text]
+
+
+def test_gate_refuses_a_ledger_entry_that_does_not_name_this_config(repo, seal_cfg):
+    # a number alone is not a registration. The same number can head another entry once the
+    # ledger has grown under a rebase, so the entry registered_by names must itself name this config
+    cfg, tools = _setup_tir(repo, seal_cfg)
+    lpath = repo / "ledger" / "ledger.md"
+    text = lpath.read_text(encoding="utf-8")
+    assert text.count("registers config/pipelinerl_tir_task.toml.") == 1
+    lpath.write_text(text.replace("registers config/pipelinerl_tir_task.toml.", "the outcome of another run of pipelinerl_tir_task.toml."),
+                     encoding="utf-8")
+    commit_all(repo, "entry 0039 is another entry")
+    with pytest.raises(task_tir.Refusal, match="does not name config/pipelinerl_tir_task.toml"):
+        task_tir.run(cfg, repo, runner=FakeTaskSwapTir(), seal_cfg=seal_cfg, tools_dir=tools, env=ENV)
+    # the entry is the text under its own heading only: a later entry that names the config does not register it for 0039
+    later = "\n### 0040 \u2014 2026-11-11 \u2014 another entry (test)\n\nregisters config/pipelinerl_tir_task.toml.\n"
+    lpath.write_text(text.replace("registers config/pipelinerl_tir_task.toml.", "the outcome of another run.") + later, encoding="utf-8")
+    commit_all(repo, "a later entry names the config")
+    with pytest.raises(task_tir.Refusal, match="does not name config/pipelinerl_tir_task.toml"):
+        task_tir.run(cfg, repo, runner=FakeTaskSwapTir(), seal_cfg=seal_cfg, tools_dir=tools, env=ENV)
+    lpath.write_text(text, encoding="utf-8")
+    commit_all(repo, "the registering entry again")
+    task_tir.run(cfg, repo, runner=FakeTaskSwapTir(), seal_cfg=seal_cfg, tools_dir=tools, env=ENV)
