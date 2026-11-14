@@ -2060,3 +2060,31 @@ the true training-prompt token counts.
 **Consequences in this commit set:** `README.md`, `CLAUDE.md`. Records and the Hub backup under the hashes above; nothing in
 `results/` is committed. Landed ahead as its own commit: `2d7feeb` (`src/lag_ladder/task.py`, `summarize_task.py`: `--readers`,
 run order only) with tests.
+
+### 0040 — 2026-11-13 — Listing: the 26 entries of this ledger that the paper's first public form cites; 25 were on this ledger at 2026-11-10 16:00 UTC and one, 0039, was appended after it
+
+prior-entries-sha256: 4382465cdb0070aeefabb8198ff544b6a37748d4a0cc430d432ad34c7e5e84ad
+
+**What this entry is.** A listing. Nothing is measured here and no figure is restated. Entry 0066 of the
+handoff record's ledger (`ledger/ledger.md` in linear-ceiling) lets the paper's first public form draw on every figure that an
+entry states at 2026-11-10 16:00 UTC, and says that date applies to both ledgers. Until now this ledger had no entry listing
+the entries the paper cites. The handoff record's ledger carries its own listing.
+
+**The entries cited.** The paper's table of ledger entries cites 26 entries of this ledger by number: 0005, 0006, 0008, 0009,
+0011, 0012, 0013, 0014, 0015, 0017, 0018, 0020, 0021, 0025, 0027, 0028, 0029, 0030, 0031, 0032, 0034, 0035, 0036, 0037, 0038
+and 0039. Each figure is read as the entry states it and as the summary file the entry names states it, where it names one.
+
+**At the date.** Twenty-five of the 26 were on this repository's main branch before 2026-11-10 16:00 UTC. The last of them is
+0038, committed at `52736c5` on 2026-11-10 at 01:22 UTC. One was not: 0039, committed at `840098e` on 2026-11-11 at 06:51 UTC.
+0039 is the outcome of the run that 0035 registered on 2026-10-24. The registration, its sealed clauses and its limits were on
+this ledger at the date; the outcome was not. By 0066, the figures of an entry appended after that date are material for the
+full paper and not for its first public form. The paper cites 0039's figures all the same. This entry records that as a departure from the
+date. It does not move the date.
+
+**Not cited by number.** The other thirteen entries (0001, 0002, 0003, 0004, 0007, 0010, 0016, 0019, 0022, 0023, 0024, 0026
+and 0033) are not in that table.
+
+**What this does NOT touch.** No `verdict:` line; every cell as decided; every sealed prediction and every registered limit.
+No entry is amended. Nothing runs under this entry.
+
+**Consequences in this commit set.** `README.md` and `CLAUDE.md`, one clause each naming this listing.

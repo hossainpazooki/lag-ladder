@@ -27,7 +27,8 @@ entry 0036 the outcome of the agentic text (all four clauses HELD), and entry 00
 ((i-holds), (ii), (iii), (iv) HELD; (i) FALSIFIED; the backbone excess UNREAD), and entry 0038 the three base families in (B)'s
 statement of record (held-out HOLDS_B at every lag; the trainer's own text UNRESOLVED from the first step), and entry 0039 the
 outcome of the Instruct-initialised own run ((B): (i), (ii), (iii) HELD, the backbone excess UNREAD; (C) HALTED at the dump
-equivalence, the halt kept as the result).
+equivalence, the halt kept as the result), and entry 0040 the listing of the 26 entries the paper's first public form
+cites (25 on this ledger at 2026-11-10 16:00 UTC; 0039 appended after it, recorded as a departure from that date).
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never

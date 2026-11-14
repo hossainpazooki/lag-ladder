@@ -151,7 +151,8 @@ the one-seed caveat for base initialisations.
 
 The ledger holds the founding record (chassis provenance, inherited definitions, the first rulings), the
 ruling that the instrument serves statistic (A) only, two re-pins of the instrument, the registrations with
-their sealed predictions, the outcomes, and the two closures. Every number in it was recomputed from
+their sealed predictions, the outcomes, the two closures, and a listing of the entries the paper cites (0040).
+Every number in it was recomputed from
 `results/` by a summarizer that refuses on any mismatch, and the score records behind the outcomes are
 retained off-repository with the hashes the entries state.
 
