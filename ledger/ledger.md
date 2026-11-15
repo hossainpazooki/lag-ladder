@@ -2088,3 +2088,45 @@ and 0033) are not in that table.
 No entry is amended. Nothing runs under this entry.
 
 **Consequences in this commit set.** `README.md` and `CLAUDE.md`, one clause each naming this listing.
+
+### 0041 — 2026-11-15 — Read-out: on the record 0027 read, two of the descriptives 0025 names, first divergence and the rank correlation of flips with (B1) on the fresh path, neither of which 0027 states, and one summary new here, the median of that (B1): the STALE and FRESH completions differ on 0.916–0.993 of prompts; that median is 3.79e-3 at g = 1 and 2.77e-2 at g = 32
+
+prior-entries-sha256: ee052d9561a48a00f49e2a1d92d0a10113e5de22b50669a8fc52a76ae18f780d
+
+**Reads** the record of the sitting that 0025 registered and 0027 read (results tar `8e0c2381…`, Hub `ownrun-task/`).
+Nothing ran under this entry. 0025 names among its descriptives, not sealed, "first divergence; the rank correlation of
+flips with (B1) on the fresh path"; 0027 states neither of these two. This entry states both, from keys the summary already
+held (`diverged_rate`, `mean_first_divergence`, `rank_correlation_b1`). It adds two things 0025 does not name, for which
+`summarize_task` gains two keys per arm in this commit set, with tests: the median over prompts of that (B1)
+(`median_b1_fresh_path`), and a count that checks the record (`flips_without_divergence`). Recomputed from the records, every
+value 0027 read from the summary (each lag, the equivalence control, the sealed clauses) is unchanged.
+
+**What the record holds.** For each prompt and reader: the position of the first token at which the STALE completion
+differs from the FRESH one, or none when the two are equal token for token; and (B1) on the fresh path, the FRESH completion
+teacher-forced under the FRESH cache and under the STALE one, KL(fresh ‖ stale) averaged over that completion's tokens. Both
+are the caches the FRESH and STALE arms generate under, each rounded through float16. STALE against FRESH over the 1,319
+prompts:
+
+| g | 1 | 2 | 4 | 8 | 16 | 32 |
+|---|---|---|---|---|---|---|
+| flips, of 1,319 | 937 | 1104 | 1180 | 1177 | 1139 | 1146 |
+| completions differ, of 1,319 | 1208 | 1286 | 1308 | 1305 | 1288 | 1310 |
+| share that differ | 0.916 | 0.975 | 0.992 | 0.989 | 0.976 | 0.993 |
+| flips between equal completions | 0 | 0 | 0 | 0 | 0 | 0 |
+| median (B1) on the fresh path | 3.79e-3 | 8.88e-3 | 1.43e-2 | 2.25e-2 | 2.46e-2 | 2.77e-2 |
+| rank correlation of flips with it | -0.039 | -0.093 | -0.068 | +0.080 | +0.190 | +0.111 |
+| mean position of the first differing token (from 0), over the prompts that differ | 29.7 | 13.7 | 3.6 | 0.3 | 0.5 | 0.8 |
+
+**What it says and does not say.** At every reader the completions differ on more prompts than the answers do:
+1,208 against 937 at g = 1, 1,310 against 1,146 at g = 32. No flip lies between two equal completions. The answer is
+read from the completion, so that count is a check on the record and not a finding. The median (B1) on the fresh path is
+smallest at g = 1, 3.79e-3, and largest at g = 32, 2.77e-2. That text is the reader's own greedy completion of a test prompt.
+It is not a text (B) is registered on: no (B) band is read on it and it enters no statement of record. The rank correlation
+of a prompt's flip with its (B1) runs from -0.093 to +0.190 across the readers; it is negative at g = 1, 2 and 4 and
+positive at g = 8, 16 and 32. Descriptive throughout, under the limits 0027 states: greedy output, one seed, one model, one
+task.
+
+**What this does NOT touch.** No `verdict:` line, no seal, no registered limit. No entry is amended.
+
+**Consequences in this commit set.** `src/lag_ladder/summarize_task.py` and `tests/test_summarize_task.py` (the two keys and
+their tests, in the commit before this entry's); `README.md` and `CLAUDE.md`, one clause each naming this read-out.

@@ -28,7 +28,10 @@ entry 0036 the outcome of the agentic text (all four clauses HELD), and entry 00
 statement of record (held-out HOLDS_B at every lag; the trainer's own text UNRESOLVED from the first step), and entry 0039 the
 outcome of the Instruct-initialised own run ((B): (i), (ii), (iii) HELD, the backbone excess UNREAD; (C) HALTED at the dump
 equivalence, the halt kept as the result), and entry 0040 the listing of the 26 entries the paper's first public form
-cites (25 on this ledger at 2026-11-10 16:00 UTC; 0039 appended after it, recorded as a departure from that date).
+cites (25 on this ledger at 2026-11-10 16:00 UTC; 0039 appended after it, recorded as a departure from that date), and
+entry 0041 the read-out, on the record 0027 read, of two of the descriptives 0025 names (first divergence, as the share of
+prompts whose STALE and FRESH completions differ; the rank correlation of flips with (B1) on the fresh path) and of the
+median of that (B1), for which `summarize_task` gains a key.
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never
