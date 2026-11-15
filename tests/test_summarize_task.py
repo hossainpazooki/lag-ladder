@@ -99,6 +99,54 @@ def test_summary_recomputes_each_lag_from_the_records(repo, seal_cfg):
     assert (cfg.results_dir / "summary.json").exists()
 
 
+def test_summary_reads_the_fresh_path_median_and_counts_flips_between_equal_completions(repo, seal_cfg):
+    from tests.fake_task_swap import default_outcome
+
+    def silent_stale(i, step, arm, gold):
+        # at step 1 STALE gives no answer on index 1, where FRESH answers "0": the answers differ, and the fake writes
+        # the same completion for a missing answer as for "0", so the record holds one flip with no first divergence
+        if arm == "stale" and step == 1 and i == 1:
+            return None, False
+        return default_outcome(i, step, arm, gold)
+
+    cfg = _run(repo, seal_cfg, outcome=silent_stale)
+    s = st.summarize(cfg)
+    g1, g32 = (s["lags"][r]["arms"] for r in ("local:step_1", "local:step_32"))
+    # the fake writes (B1) on the fresh path as 0.001 * step * (1 + index % 3), on the STALE arm alone; over the twelve
+    # prompts each of the three values comes four times, so the median is the middle value
+    assert g1["stale"]["median_b1_fresh_path"] == pytest.approx(0.002)
+    assert g32["stale"]["median_b1_fresh_path"] == pytest.approx(0.064)
+    assert g1["near"]["median_b1_fresh_path"] is None and g32["far"]["median_b1_fresh_path"] is None
+    assert g1["stale"]["flips_without_divergence"] == 1 and g32["stale"]["flips_without_divergence"] == 0
+    # NEAR answers a wrong number everywhere: twelve flips, each with a completion that differs from FRESH's
+    assert g1["near"]["flip_rate"] == 1.0 and g1["near"]["flips_without_divergence"] == 0
+    assert g1["stale"]["diverged_rate"] == 0.0 and g1["stale"]["flip_rate"] == pytest.approx(1 / 12)
+
+
+def test_arm_stats_reads_a_median_that_is_not_the_mean_and_counts_flips_between_equal_completions():
+    from types import SimpleNamespace
+    cfg = SimpleNamespace(seed=0, rule={"bootstrap_reps": 50, "holds_abs_max": 1.0, "holds_ci_abs_max": 2.0,
+                                        "degrades_max": -5.0, "degrades_ci_max": -2.0})
+    b1 = [0.001, 0.002, 0.003, 0.004, 0.100]              # median 0.003, mean 0.022
+    answers = ["7", "7", "8", "7", None]                  # FRESH answers "7" on every prompt
+    div = [None, 3, 0, None, None]                        # prompt 4: the answers differ, the completions are equal
+    fresh = {i: {"correct": True, "answer": "7"} for i in range(5)}
+    arm = {i: {"correct": answers[i] == "7", "answer": answers[i], "reached_cap": False,
+               "first_divergence": div[i], "b1_fresh_path": b1[i]} for i in range(5)}
+    s = st._arm_stats(fresh, arm, cfg)
+    assert s["median_b1_fresh_path"] == pytest.approx(0.003) and np.mean(b1) == pytest.approx(0.022)
+    assert s["flip_rate"] == pytest.approx(2 / 5) and s["diverged_rate"] == pytest.approx(2 / 5)
+    assert s["flips_without_divergence"] == 1             # prompt 4 alone: prompt 1 differs in its completion only
+    # an even count: the median is the mean of the two middle values
+    arm[3]["b1_fresh_path"] = 0.050
+    del fresh[4], arm[4]
+    assert st._arm_stats(fresh, arm, cfg)["median_b1_fresh_path"] == pytest.approx(0.0025)
+    # (B1) missing on a prompt: no median, as for the rank correlation
+    arm[0]["b1_fresh_path"] = None
+    s = st._arm_stats(fresh, arm, cfg)
+    assert s["median_b1_fresh_path"] is None and s["rank_correlation_b1"] is None
+
+
 def test_summary_marks_a_lag_unevaluable_when_a_positive_control_flips_too_few_answers(repo, seal_cfg):
     from tests.fake_task_swap import default_outcome
 

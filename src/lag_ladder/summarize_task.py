@@ -2,8 +2,9 @@
 answer-flip rate against FRESH with a seeded bootstrap over prompts carrying its interval (verdict-bearing for STALE;
 the positive controls NEAR and FAR must flip at least `control_min_flip_rate`), the paired accuracy difference
 STALE − FRESH in points with its paired bootstrap and the (C) bands (descriptive since the probe read a 6% greedy
-baseline), the no-answer and cap rates, first divergence, and the rank correlation of per-prompt flips with (B1) on the
-fresh path. Pure functions first; the run-level summarizer refuses on any mismatch and is built with the driver."""
+baseline), the no-answer and cap rates, first divergence, the count of flips whose two completions are equal, and (B1)
+on the fresh path: its median over prompts and the rank correlation of per-prompt flips with it. Pure functions first;
+the run-level summarizer refuses on any mismatch and is built with the driver."""
 from __future__ import annotations
 
 import numpy as np
@@ -137,7 +138,8 @@ def _arm_stats(fresh: dict[int, dict], arm: dict[int, dict], cfg: TaskConfig) ->
     flips = [int(arm[i]["answer"] != fresh[i]["answer"]) for i in idx]
     b1 = [arm[i].get("b1_fresh_path") for i in idx]
     divs = [arm[i]["first_divergence"] for i in idx if arm[i]["first_divergence"] is not None]
-    rho = rank_correlation(flips, b1) if all(x is not None for x in b1) else None
+    scored = all(x is not None for x in b1)
+    rho = rank_correlation(flips, b1) if scored else None
     fi = flip_rate_interval(flips, reps=int(cfg.rule["bootstrap_reps"]), seed=cfg.seed)
     return {"delta": d, "band": band(d["delta_points"], d["ci_low"], d["ci_high"], cfg.rule),
             "flip_rate": flip_rate([arm[i]["answer"] for i in idx], [fresh[i]["answer"] for i in idx]),
@@ -146,6 +148,9 @@ def _arm_stats(fresh: dict[int, dict], arm: dict[int, dict], cfg: TaskConfig) ->
             "cap_rate": float(sum(bool(arm[i]["reached_cap"]) for i in idx) / len(idx)),
             "mean_first_divergence": (float(np.mean(divs)) if divs else None),
             "diverged_rate": float(len(divs) / len(idx)),
+            # an answer is read from the completion, so a flip between two equal completions is a fault in the record
+            "flips_without_divergence": int(sum(bool(f) and arm[i]["first_divergence"] is None for f, i in zip(flips, idx))),
+            "median_b1_fresh_path": float(np.median(b1)) if scored else None,
             "rank_correlation_b1": rho}
 
 
