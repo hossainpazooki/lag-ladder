@@ -306,6 +306,13 @@ def count_stats(counts: list[int]) -> dict:
     return {"n": len(counts), "min": int(min(counts)), "median": int(np.median(counts)), "max": int(max(counts))}
 
 
+def chat_prompt_token_count(tok, messages) -> int:
+    """Tokens in one chat prompt under the template with the generation prompt. `return_dict=True` pins the return
+    type: transformers 5.20.2 and 5.22.2 return a BatchEncoding by default, whose len() is its key count (the 0035
+    sitting recorded 2 for every prompt), and 4.51.3 a bare id list."""
+    return len(tok.apply_chat_template(messages, tokenize=True, add_generation_prompt=True, return_dict=True)["input_ids"])
+
+
 def cmd_sample_rollouts(a) -> int:
     import torch
     from datasets import load_dataset
@@ -372,7 +379,7 @@ def cmd_train(a) -> int:
                             "gold": gsm8k_gold(ex["answer"])}, remove_columns=["question", "answer"])
     # the prompt token counts as TRL will tokenize them (template under chat, text with special tokens under plain)
     if a.prompt_format == "chat":
-        prompt_tokens = [len(tok.apply_chat_template(p, tokenize=True, add_generation_prompt=True)) for p in ds["prompt"]]
+        prompt_tokens = [chat_prompt_token_count(tok, p) for p in ds["prompt"]]
     else:
         # a datasets Column is not a list[str] to the tokenizer (the 2026-10-24 smoke failed here); materialise it
         prompt_tokens = [len(ids) for ids in tok(list(ds["prompt"]))["input_ids"]]

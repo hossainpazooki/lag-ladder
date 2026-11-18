@@ -221,3 +221,25 @@ def test_train_cli_takes_kvt_which_with_source_default():
     assert ap.parse_args(common_t + ["--kvt-which", "target"]).kvt_which == "target"
     with pytest.raises(SystemExit):
         ap.parse_args(common_t + ["--kvt-which", "both"])
+
+
+class _ChatTok:
+    """`apply_chat_template(..., tokenize=True)` as transformers 5.20.2 and 5.22.2 return it (both read 2026-11-11 on
+    Qwen2.5-1.5B-Instruct@989aa79): a BatchEncoding, whose len() is its key count. `legacy` returns the bare id list
+    unless return_dict=True, as transformers 4.51.3 does (read the same day)."""
+    def __init__(self, n, legacy=False):
+        self.n, self.legacy = n, legacy
+
+    def apply_chat_template(self, messages, tokenize=False, add_generation_prompt=False, return_dict=None, **kw):
+        assert tokenize and add_generation_prompt
+        ids = list(range(self.n))
+        if self.legacy and not return_dict:
+            return ids
+        return {"input_ids": ids, "attention_mask": [1] * self.n}
+
+
+def test_chat_prompt_token_count_counts_tokens_not_batchencoding_keys():
+    """The 0035 sitting (2026-11-10) recorded chat prompt_token_counts min / median / max 2: len() of the BatchEncoding."""
+    msgs = own_run.train_prompt("q", "chat")
+    assert own_run.chat_prompt_token_count(_ChatTok(77), msgs) == 77
+    assert own_run.chat_prompt_token_count(_ChatTok(77, legacy=True), msgs) == 77
