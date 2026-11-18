@@ -1,0 +1,81 @@
+# Statistic (B), ledger 0042: the held-out prefix cut to 192 tokens.
+# Held-out sequence 40 + i is read with that prefix and a continuation as long as rollout row i's completion (146 to
+# 256 tokens), by a spans sidecar on the held-out pair made by tools/cut_spans.py from 0017's rollout spans file.
+# A cache is causal, so the scorer's first prefix_len - 1 rows of the existing dumps are the shorter prefix's cache:
+# nothing is re-dumped. The kept steps {1, 2, 4, 8, 16, 32} read step 0's dumps, texts corpus and on-path, with the
+# per-reader controls on the cut cells. Labels are 0017's held-out rungs, so each rung sits at 0017's measured distance.
+[reader]
+results_dir = "results/ownrun_cut_192"
+upstream_path = "../kv-transfer-replication"
+upstream_sha = "5d4aa4a98b40f5ab37dd83ebb6b2ee802203994a"
+heldout = [40, 50]
+prefix_len = 768
+dtype = "float32"
+seed = 0
+registered_by = "0042"
+seal = "ownrun-noise-cut"
+
+[reader.rule]
+statistic = "median over held-out sequences of the mean per-token KL(pi_fresh || pi_stale) over the continuation, per rung and text (design S13, ledger 0011)"
+holds_max = 1e-3
+degrades_min = 1e-1
+texts = ["corpus", "on-path"]
+generate_under = "stale"
+
+[reader.controls]
+# 0020: controls per (reader, pair) on the pair's own texts; limits as 0014, far_min as 0022.
+per_pair = true
+identity_max_logit_diff = 1e-5
+scrambled_min = 1e-1
+floor_max_median_kl = 1e-4
+
+# The held-out corpus sequences 40..49 (0008's Qwen token file, 0012's pin) with the cut's spans: rows 40..49 carry
+# prefix_len and length, every other row is null.
+[[reader.pairs]]
+name = "qwen2.5-1.5b-to-instruct"
+tokens = "data/tokens/qwen2.5-1.5b-to-instruct_n50_len1024_seed0.npy"
+tokens_sha256 = "01bd7698f7413ab9a3b6958991487bbba626f5a8cc4f24142cd22091d96af747"
+spans = "data/tokens/qwen2.5-1.5b-to-instruct_n50_len1024_seed0.cut-192.spans.json"
+spans_sha256 = "53f61d8b3517913fd00b8b56348584d66b2166ddbeaaa5d246a57d1251113b69"
+
+[[reader.rungs]]
+label = "ownrun-lag-1"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:step_1"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_1"
+
+[[reader.rungs]]
+label = "ownrun-lag-2"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:step_2"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_2"
+
+[[reader.rungs]]
+label = "ownrun-lag-4"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:step_4"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_4"
+
+[[reader.rungs]]
+label = "ownrun-lag-8"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:step_8"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_8"
+
+[[reader.rungs]]
+label = "ownrun-lag-16"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:step_16"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_16"
+
+[[reader.rungs]]
+label = "ownrun-lag-32"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:step_32"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-step_32"

@@ -1,0 +1,115 @@
+{
+  "pair": "ownrun-noise-cut",
+  "prediction": {
+    "configs": {
+      "config/ownrun_cut_192.toml": {
+        "jobs_by_the_planner": 360
+      },
+      "config/ownrun_cut_384.toml": {
+        "jobs_by_the_planner": 360
+      },
+      "config/ownrun_cut_prompt.toml": {
+        "jobs_by_the_planner": 360
+      },
+      "config/ownrun_noise.toml": {
+        "jobs_by_the_planner": 1100
+      },
+      "config/ownrun_replicate.toml": {
+        "jobs_by_the_planner": 660
+      }
+    },
+    "controls": "per (reader, pair) as 0020 (per_pair): float16 floor at most 1e-4 (over it halts the reader run, 0014), identity 1e-5, scrambled at least 0.1, on the pair's own texts at its own prefix and continuation lengths, so the cut configurations' controls run at the cut; the rollout pair of ownrun_noise and ownrun_replicate carries 0022's far control (far_pair the held-out pair, far_min 0.1) under evaluable_under_far = true as 0028",
+    "identity": "per lag g and held-out text: T_rollout / T_heldout = (T_rollout / N_rollout) x (N_rollout / N_heldout) x (N_heldout / T_heldout), T the trained reader at step g read in this sitting (ownrun_replicate), N the seed-0 noise reader at step g's distance",
+    "kept_weights": {
+      "model_safetensors_sha256": {
+        "0": "b8278aa181120b8a84dd5cbd9dcd333cf52b0d26f50c5a00f941021447bb104b",
+        "1": "df3d4f32dae04176020b4d88f303a252e27e5ac0da4da8ac03e6211ed078f28b",
+        "16": "339f044bd8ee402f209d5a615f115d20dc520456d2e5d17825f3d7861fbe6d7a",
+        "2": "0a01007d273540d7a2b168683bc320b0c6fd42d6673f51d557dc7b275b2caeb5",
+        "32": "3a17bfe675ebbf11929ec41e6b22bd053889cd2673748e2dfa5984bf201e9ec5",
+        "4": "29270d928a8926f26061f4c5ea562d6396d30dc36f9697c1e82f7912b92c9e74",
+        "8": "2d6190b9a137c9bc439db49875287521f39c8e766fd35115f6565bcce83cae60"
+      },
+      "rel_delta_all_to_step_0": {
+        "1": 2.2895683763734974e-05,
+        "16": 9.547494899946862e-05,
+        "2": 3.518530054413405e-05,
+        "32": 0.00010494302565318275,
+        "4": 5.267686242230837e-05,
+        "8": 7.476090097973842e-05
+      },
+      "source": "results/distance/ownrun/step_<g>.json, step 0 -> step g, as 0018 placed them"
+    },
+    "kind": "descriptive registration of two runs on the own run of 0017 and 0018 (Qwen2.5-1.5B, trainer seed 0): noise readers at the kept steps' distances, read on the rollout text and on held-out text, and the held-out text read with its prefix cut toward the rollout prompts' length; no clause is sealed, so nothing read under this seal is HELD or FALSIFIED",
+    "noise_readers": {
+      "checks_before_any_score": "tools/weight_distance.py from step 0 reads the realized norm to 1e-9 relative and the realized norm equals the target to 1e-4 relative (tools/noise_reader.py); a reader that misses either stops the sitting before its scores",
+      "made_where": "on the run machine, where they are dumped and scored (noise bytes do not travel, 0012)",
+      "matched": "the whole-vector distance, the ledger's axis (0007); the per-tensor profile of the trained change is not matched",
+      "names": [
+        "local:noise-ownrun-lag1-s0",
+        "local:noise-ownrun-lag1-s1",
+        "local:noise-ownrun-lag1-s2",
+        "local:noise-ownrun-lag2-s0",
+        "local:noise-ownrun-lag4-s0",
+        "local:noise-ownrun-lag8-s0",
+        "local:noise-ownrun-lag16-s0",
+        "local:noise-ownrun-lag32-s0",
+        "local:noise-ownrun-lag32-s1",
+        "local:noise-ownrun-lag32-s2"
+      ],
+      "rule": "step 0 plus s z, z ~ N(0, I) per element of every floating tensor (tools/perturb_checkpoint.py, CPU generator, the reader's seed), s chosen so that ||s z|| / ||step 0|| equals step g's rel_delta_all_to_step_0; float32"
+    },
+    "not_separated": [
+      "prompt format and task content: chat-formatted GSM8K prompts against web text",
+      "how the text was produced: the rollout completions were sampled from the step-0 policy, where the held-out continuations are the corpus's own (corpus) or the reader's own greedy continuation under the stale cache (on-path)",
+      "families and trainer seeds: one run, one model, one trainer seed"
+    ],
+    "predictions": {},
+    "prefix_cut": {
+      "rollout_completion_tokens": [
+        146,
+        256
+      ],
+      "rollout_prompt_tokens": [
+        75,
+        117
+      ],
+      "rollout_spans_sha256": "e631fd845aa7838186f5feebda66f13bb725b59d0cc7e8841e1a23639a977f15",
+      "rule": "held-out sequence 40 + i keeps its first P tokens as prefix and the next C_i as continuation, C_i the length of rollout row i's completion; P is rollout row i's prompt length (ownrun_cut_prompt), 192 (ownrun_cut_192) or 384 (ownrun_cut_384); the caches are the first P rows of the 768-token dumps",
+      "spans_by_config": {
+        "ownrun_cut_192": {
+          "spans": "data/tokens/qwen2.5-1.5b-to-instruct_n50_len1024_seed0.cut-192.spans.json",
+          "spans_sha256": "53f61d8b3517913fd00b8b56348584d66b2166ddbeaaa5d246a57d1251113b69"
+        },
+        "ownrun_cut_384": {
+          "spans": "data/tokens/qwen2.5-1.5b-to-instruct_n50_len1024_seed0.cut-384.spans.json",
+          "spans_sha256": "974d08a97ff5d4f1d949fc494daa096eb59495241457c6ad4b0adae0c5340277"
+        },
+        "ownrun_cut_prompt": {
+          "spans": "data/tokens/qwen2.5-1.5b-to-instruct_n50_len1024_seed0.cut-prompt.spans.json",
+          "spans_sha256": "8199ced5f4a7bd1a74eb4958f719ea7cf27af0767eda41a58fd88a158be859f9"
+        }
+      },
+      "spans_made_by": "tools/cut_spans.py from the rollout spans file at its pin"
+    },
+    "read_with": [
+      "the seed spread, max over min across seeds 0, 1 and 2 at lags 1 and 32 per text: the scale below which a ratio of noise readings is not read as a difference; at lags 2 to 16, where seed 0 alone is read, the larger of the two spreads on the same text",
+      "a median within 2x of its unit's float16 floor is at the floor (0012): a ratio with such a denominator is a lower bound, with such a numerator an upper bound, and with both unread",
+      "the replicate beside 0018's summary per rung and text (summary sha256 f3b8f00ff6ed2f94e684845e87fa4da1e0b1e820ea2510d3ac0aa165fe1d11a6); 0018 stays the record of the trained readings, and the ratios use this sitting's values",
+      "the cut cell continues from token P of the same document where the 768 cell continues from token 768, for C_i tokens where the 768 cell reads 256: the same documents at an earlier place, not the same tokens; the ladder shows whether that matters"
+    ],
+    "readings_stated_before_the_run": {
+      "cached_length_against": "the cut readings stay near the 768-token readings at every lag: length does not separate the two texts at these lengths, and what is left between them is the text itself, its task, its format and how it was produced, which neither run varies",
+      "cached_length_for": "the cut readings rise by orders toward the rollout reading at the same lag, steadily from 384 to 192 to the prompts' length",
+      "trained_direction_against": "T_rollout / N_rollout is of order one at every lag: the rollout text is then as sensitive to an undirected change of that size, and the gap between the texts sits in N_rollout / N_heldout",
+      "trained_direction_between": "the identity states how the gap splits between the factors",
+      "trained_direction_for": "T_rollout / N_rollout is large at every lag, above the 3.5x to 19x by which trained directions exceeded isotropic noise at matched distance on held-out text where that was read (0038)"
+    },
+    "readout": "src/lag_ladder/summarize_noise_cut.py, from the five summaries summarize_reader recomputes",
+    "registering_entry": "0042",
+    "statistic": "(B1): median over sequences of the mean per-token KL(pi_fresh || pi_stale) over the continuation, per rung and text (0011)",
+    "unit_that_misses_scrambled": "a unit whose scrambled median misses 0.1 and that has no far control, or misses far too, is UNEVALUABLE: its rungs are not scored and the read-out reports the unit with its scrambled median; the length ladder is read from the lengths whose units pass"
+  },
+  "prior_artifacts": [],
+  "sealed_pre_fit": true
+}

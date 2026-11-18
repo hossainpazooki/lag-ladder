@@ -2130,3 +2130,111 @@ task.
 
 **Consequences in this commit set.** `src/lag_ladder/summarize_task.py` and `tests/test_summarize_task.py` (the two keys and
 their tests, in the commit before this entry's); `README.md` and `CLAUDE.md`, one clause each naming this read-out.
+
+### 0042 — 2026-11-18 — Two descriptive runs on the own run registered: noise readers at the kept steps' distances, read on the trainer's text and on held-out text, and held-out text read with its prefix cut toward the prompts' length; nothing sealed
+
+prior-entries-sha256: c5fb1109c4c4c3867f2f110a9dea64f4d3d569ec90ff32c8f7b3f298f101cf5e
+
+**Registers** five configurations on the own run of 0017 and 0018 (Qwen2.5-1.5B, trainer seed 0, steps {0, 1, 2, 4, 8,
+16, 32}), each `registered_by = "0042"` under the seal `ownrun-noise-cut` (`ledger/predictions/ownrun-noise-cut.json`,
+sidecar `d83d1bda…`, committed before any score). Instrument `5d4aa4a`, float32, reader seed 0; statistic (B1) under
+0012's rule as amended by 0013 and 0014. Nothing is sealed: the seal holds no clause (`predictions` is empty), so no
+reading under it is HELD or FALSIFIED. It carries the readings this entry states before any score, the kept weights'
+digests and distances, and the rules below. At the same weights 0018 read the trainer's text, the stored completions of
+0017's rollout pair, at 4.679e-3 to 8.914e-2 (g = 1 to 32), 1.3e4× to 2.5e4× its reading on held-out corpus
+and 2.5e4× to 4.5e4× on on-path. Three candidates for that gap are not separated on the record: the direction
+the weights moved, the text, and the cached length. The noise readers separate direction from text; the prefix cut
+separates length from text.
+
+**The noise readers** (`config/ownrun_noise.toml`, 1,100 jobs). Ten readers, each step 0 plus seeded isotropic
+Gaussian noise over every floating tensor, scaled so that its relative L2 norm equals step g's whole-vector distance to
+step 0 (`rel_delta_all`, 2.2896e-5 at g = 1 to 1.0494e-4 at g = 32): seed 0 at every g, seeds 1 and 2 at g = 1 and g = 32.
+`tools/noise_reader.py` (new) makes each on the run machine with `tools/perturb_checkpoint.py` (noise bytes do not travel
+between machines, 0012), measures it from step 0 with `tools/weight_distance.py` and dumps both token sets from it; it
+refuses a reader before its scores unless the measured distance equals the perturbation's realized norm to 1e-9
+relative and the realized norm equals the target to 1e-4 relative. What is matched is the whole-vector distance, the
+ledger's axis (0007); the per-tensor profile of the trained change is not matched. Each reader is read as 0017's were,
+writer step 0: on the rollout pair (`7d6dec47…`, spans `e631fd84…`, text `rollout`) and on the held-out pair
+(`01bd7698…`, sequences 40–49, corpus and on-path at the 768-token prefix). Rungs `ownrun-rollout-noise-lag-<g>-s<s>`
+and `ownrun-noise-lag-<g>-s<s>`, each placed by its reader's realized norm.
+
+**The trained readers again** (`config/ownrun_replicate.toml`, 660 jobs): 0017's twelve rungs under their labels,
+at the steps whose digests the seal carries, in the same sitting, so that every term below is read on one machine in
+one environment. 0018 stays the record of those readings. The read-out sets the replicate beside 0018's summary
+(`f3b8f00f…`) per rung and text, and the ratios use the replicate's values. Controls of both configurations: per
+(reader, pair) as 0020 (`per_pair`), float16 floor (over 1e-4 halts the reader run, 0014), identity 1e-5, scrambled
+0.1, and on the rollout pair 0022's far control (`far_pair` the held-out pair, `far_min` 0.1) under
+`evaluable_under_far = true`, the rule 0028 committed. 0017 ran each reader's controls once, on the held-out pair;
+here each pair has its own.
+
+**What the noise readers are read for, stated before the run.** At each g and held-out text, with T the trained reader
+at step g and N the seed-0 noise reader at step g's distance, each a median (B1):
+
+T_rollout / T_heldout = (T_rollout / N_rollout) × (N_rollout / N_heldout) × (N_heldout / T_heldout).
+
+On on-path each reader is scored on its own greedy continuation, so N and T at the same g are read on continuations
+that may differ; on corpus and on the rollout text they share the stored tokens. The factors are read on corpus; the
+read-out reports the on-path values beside them, marked as read on continuations that may differ.
+
+- For the trained direction: T_rollout / N_rollout is large at every g, above the 3.5× to 19× by which trained
+  directions exceeded isotropic noise at matched distance on held-out text where that was read (0038).
+- Against it: T_rollout / N_rollout is of order one at every g. The trainer's text is then as sensitive to an
+  undirected change of that size, and the gap sits in N_rollout / N_heldout.
+- Between the two, the identity states how the gap splits.
+
+The spread over seeds 0, 1 and 2 at g = 1 and g = 32 is the scale below which a ratio of noise readings is not read as
+a difference; at g = 2 to 16, where seed 0 alone is read, the scale is the larger of the two spreads on the same text.
+A median within 2× of its unit's floor is at the floor (0012): a ratio with it as denominator is a lower
+bound and with it as numerator an upper bound, and the read-out marks each.
+
+**The prefix cut** (`config/ownrun_cut_prompt.toml`, `config/ownrun_cut_192.toml`, `config/ownrun_cut_384.toml`,
+360 jobs each). The six trained readers, writer step 0, on the held-out pair with a spans file: held-out sequence
+40 + i keeps its first P tokens as prefix and reads the next C_i, C_i the length of rollout row i's completion
+(146–256 tokens), and P is rollout row i's prompt length (75–117 tokens), 192 or 384.
+`tools/cut_spans.py` (new) writes each spans file from 0017's rollout spans file at its pin, and each configuration pins
+its file (`8199ced5…`, `53f61d8b…`, `974d08a9…`). The caches are the existing 768-token dumps: a cache is
+causal, so the first P rows of a dump are the cache of its P-token prefix. Six rungs per configuration under 0017's
+held-out labels, corpus and on-path; the controls per reader run on the cut cells, at the cut.
+
+**What the prefix cut is read for, stated before the run.** Against the same rung at 768 in the replicate:
+
+- For the cached length: the cut readings rise by orders toward the rollout reading at the same g, steadily from 384
+  to 192 to the prompts' length.
+- Against it: they stay near the 768-token readings at every g. Length then does not separate the two texts at these
+  lengths, and what is left between them is the text itself: its task, its format and how it was produced, which
+  neither run varies.
+
+The cut cell continues from token P of the same document where the 768 cell continues from token 768, and for C_i
+tokens where the 768 cell reads 256: the same documents at an earlier place, not the same tokens. The ladder shows
+whether that matters.
+
+**A scrambled control that misses at a short prefix.** The scrambled control has not been read at a held-out prefix
+this short; on the trainer's text, whose prompts are as long, it cleared 0.1 by 15–26% (0021). A cut unit has no far
+control: one whose scrambled median misses 0.1 is UNEVALUABLE under the standing rule. Its rungs are not scored, the
+read-out reports the unit with its scrambled median, and the length ladder is read from the lengths whose units pass.
+
+**Run and halting.** One sitting, 2,840 jobs by the planner. The kept steps, their dumps and both token files come
+from 0018's private backup, each step's weights checked against the digest the seal carries before any score; the cut
+spans files are written and checked against their pins; the ten noise readers are made, measured and dumped; then the
+replicate, the noise readers and the three cuts run, each is summarized, and `summarize_noise_cut` reads the five
+summaries. A floor over 1e-4 halts the reader run (0014). A noise reader that misses either norm check stops the
+sitting before its scores. The results, with each noise reader's provenance and distance records, go to the private
+backup with a manifest and off-repository with hashes.
+
+**Not separated by these runs.** Prompt format and task content: the rollout prompts are chat-formatted GSM8K prompts
+and the held-out text is web text (0022 names a chat-formatted non-GSM8K prompt as an intermediate control, not
+registered). How the text was produced: the rollout completions were sampled from the step-0 policy, where the
+held-out continuations are the corpus's own (corpus) or the reader's own greedy continuation under the stale cache
+(on-path). 0041 read (B1) on another text, each reader's greedy completion of a GSM8K test prompt under its own cache
+against step 0's (0025's sitting): the median over the 1,319 prompts is 3.79e-3 at g = 1 and 2.77e-2 at g = 32.
+That text differs from the rollout text in how it was produced, and from the held-out text in its task and in what
+is cached, a GSM8K prompt and not a prefix of web text; these runs do not read it. One run, one model, one trainer seed.
+
+**What this does NOT touch.** No `verdict:` line, no sealed clause, no registered limit. No entry is amended.
+
+**Consequences in this commit set.** `tools/cut_spans.py` and `tools/noise_reader.py` with their tests;
+`src/lag_ladder/summarize_noise_cut.py` (the read-out: per g, T and N on each text, the three factors and their
+product, floor bounds and withheld rungs, the seed spread, each cut over 768 and the rollout reading over each, the
+replicate beside 0018) with its tests; the five configurations; `ledger/predictions/ownrun-noise-cut.json` and
+`.sha256`; a clause in `README.md`; in `CLAUDE.md`, a clause naming this entry and the new read-out, tools and
+configurations in its command list and file map.

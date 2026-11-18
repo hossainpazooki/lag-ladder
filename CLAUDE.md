@@ -31,7 +31,9 @@ equivalence, the halt kept as the result), and entry 0040 the listing of the 26 
 cites (25 on this ledger at 2026-11-10 16:00 UTC; 0039 appended after it, recorded as a departure from that date), and
 entry 0041 the read-out, on the record 0027 read, of two of the descriptives 0025 names (first divergence, as the share of
 prompts whose STALE and FRESH completions differ; the rank correlation of flips with (B1) on the fresh path) and of the
-median of that (B1), for which `summarize_task` gains a key.
+median of that (B1), for which `summarize_task` gains a key, and entry 0042 the registration, descriptive and with
+nothing sealed, of two runs on the own run: noise readers at the kept steps' distances on the trainer's text and on
+held-out text, and held-out text with its prefix cut toward the prompts' length.
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never
@@ -71,6 +73,7 @@ median of that (B1), for which `summarize_task` gains a key.
 .venv/Scripts/python.exe -m lag_ladder.summarize_reader [--config config/ownrun.toml]
 .venv/Scripts/python.exe -m lag_ladder.task plan|check|run|probe [--config config/ownrun_task.toml]   # statistic (C), §15; probe: --out OUTSIDE results/, --n 64 [--max-new N overrides the config's cap]; run: [--readers a,b] runs the equivalence then only those readers, in the config's order (run order, not a statistic; `run.json` and the summary record `readers_run`)
 .venv/Scripts/python.exe -m lag_ladder.summarize_task [--config config/ownrun_task.toml]
+.venv/Scripts/python.exe -m lag_ladder.summarize_noise_cut   # 0042: the read-out over the five summaries it recomputes
 ```
 On macOS/Linux the interpreter is `.venv/bin/python`. The project pins Python 3.12.
 
@@ -96,7 +99,9 @@ nearest noise rung of another summary, pinned by sha256; 0017's prose-only form 
 dump-equivalence control first, then one `cells` job per reader with the floor and identity arms; halts on the
 equivalence, the floor or the identity) · `summarize_task` (recomputes Δ accuracy with a seeded paired bootstrap, the
 (C) bands, flip / no-answer / cap rates, the (B)→(C) rank correlation; withholds a lag whose positive controls do not
-fire; reads the sealed clauses out). `tools/` — `perturb_checkpoint.py`,
+fire; reads the sealed clauses out) · `summarize_noise_cut` (0042, nothing sealed: from the five summaries, per lag
+the trained and noise medians on each text, the three factors of their ratio, floor bounds, the seed spread, the prefix
+cut over 768, the replicate beside 0018). `tools/` — `perturb_checkpoint.py`,
 `convert_bin_checkpoint.py`, `weight_distance.py`, `score_continuation.py` (the (B) scorer: injects a stale vs fresh
 cache, scores the continuation; `--text rollout` teacher-forces a stored continuation cut at `--length`; `--text agentic`
 scores a stored continuation exactly as `corpus`): run with the instrument's interpreter, import nothing from it.
@@ -117,8 +122,14 @@ and seconds per step go to `run_config.json` / the spans sidecar; run with the t
 decoded completion text and the first-`####` answer beside the registered last-`####` answer; run with the instrument's
 interpreter). Built 2026-10-15, registered by 0025 after two probes: `config/ownrun_task.toml` pins the GSM8K test
 prompts file, floor 1%, positive controls at 0.5 flips, dump equivalence at an absolute 2⁻⁵ (0026; the relative
-gap and the share of differing elements descriptive).
-`config/` — `seal.toml`, `pilot.toml`, `distance.toml`, `reader.toml`, `ownrun.toml` (0017, as run), `ownrun_controls.toml` (0020; `per_pair` controls), `ownrun_far.toml` (0022; `far_pair` + `far_min`), `ownrun_task.toml` (0025; §15, the (C) arms and controls), `ownrun_seed2.toml` (0028; §14.3, the second trainer seed: `per_pair`, `far_pair`, `evaluable_under_far`), `ownrun_agentic.toml` (0030, read by 0036; the fourth text `agentic` on the seed-1 readers: six per-rung rungs on the pair `qwen2.5-1.5b-mlperf`, every row held out, the token file linear-ceiling's `data/e8m` draw id for id), `ownrun_smollm3.toml` (0034; §14.5 on the third family, `upstream_sha` de6ce9e, pair `smollm3-3b-base` + rollout pair `smollm3-3b-base-ownrun-rollout`, labels `ownrun-smollm3-*`), `ownrun_instruct.toml` (0035; (B) on Qwen2.5-1.5B-Instruct@989aa79, chat prompts, pair `qwen2.5-1.5b-to-instruct` with the Instruct side dumped as `target`, rollout pair `qwen2.5-1.5b-instruct-ownrun-rollout`, labels `ownrun-instruct-*`), `ownrun_instruct_task.toml` (0035; (C) on that run: cap 768, n 1,319, `equivalence_expect_b1` a pointer at the run's own (B) summary, seal `ownrun-instruct-task` with clauses (v) and (vi) on accuracy), `ownrun_llama.toml` (0031; §14.5: 0028's layout on the pair `llama3.2-3b-to-llama3.1-8b` plus the rollout pair `llama3.2-3b-ownrun-rollout`, hashes pinned; a `[trainer]` table the pod script and the entry read — `prompt_format = "plain"`, the model revision, the pins). `ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
+gap and the share of differing elements descriptive). `noise_reader.py` (0042: `plan` | `make` | `prune`; makes each
+noise reader of `config/ownrun_noise.toml` with `perturb_checkpoint.py`, measures it with `weight_distance.py`, refuses
+it off its norm and dumps both pairs from it; run on the run machine). `cut_spans.py` (0042: the held-out spans file of
+a prefix cut, written from 0017's rollout spans file at its pin).
+`config/` — `seal.toml`, `pilot.toml`, `distance.toml`, `reader.toml`, `ownrun.toml` (0017, as run), `ownrun_controls.toml` (0020; `per_pair` controls), `ownrun_far.toml` (0022; `far_pair` + `far_min`), `ownrun_task.toml` (0025; §15, the (C) arms and controls), `ownrun_seed2.toml` (0028; §14.3, the second trainer seed: `per_pair`, `far_pair`, `evaluable_under_far`), `ownrun_agentic.toml` (0030, read by 0036; the fourth text `agentic` on the seed-1 readers: six per-rung rungs on the pair `qwen2.5-1.5b-mlperf`, every row held out, the token file linear-ceiling's `data/e8m` draw id for id), `ownrun_smollm3.toml` (0034; §14.5 on the third family, `upstream_sha` de6ce9e, pair `smollm3-3b-base` + rollout pair `smollm3-3b-base-ownrun-rollout`, labels `ownrun-smollm3-*`), `ownrun_instruct.toml` (0035; (B) on Qwen2.5-1.5B-Instruct@989aa79, chat prompts, pair `qwen2.5-1.5b-to-instruct` with the Instruct side dumped as `target`, rollout pair `qwen2.5-1.5b-instruct-ownrun-rollout`, labels `ownrun-instruct-*`), `ownrun_instruct_task.toml` (0035; (C) on that run: cap 768, n 1,319, `equivalence_expect_b1` a pointer at the run's own (B) summary, seal `ownrun-instruct-task` with clauses (v) and (vi) on accuracy), `ownrun_llama.toml` (0031; §14.5: 0028's layout on the pair `llama3.2-3b-to-llama3.1-8b` plus the rollout pair `llama3.2-3b-ownrun-rollout`, hashes pinned; a `[trainer]` table the pod script and the entry read — `prompt_format = "plain"`, the model revision, the pins), and the five 0042 registers, nothing sealed: `ownrun_replicate.toml` (0017's twelve
+rungs again, in that sitting), `ownrun_noise.toml` (ten noise readers `local:noise-ownrun-lag<g>-s<s>` on both pairs)
+and `ownrun_cut_prompt.toml`, `ownrun_cut_192.toml`, `ownrun_cut_384.toml` (the held-out pair with a cut spans file).
+`ledger/` — `ledger.md`, `predictions/`. `results/fstar/` and
 `mappers/` — seal artifact roots, gitignored past their placeholders. `docs/` — the design doc; `docs/provenance/` — verbatim outside records with their hashes (the Instruct Step-1 baseline probe of 2026-10-21, run by a co-author; not evidence, the readings it informed are 0035's rulings).
 
 ## State

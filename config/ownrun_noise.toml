@@ -1,0 +1,204 @@
+# Statistic (B), ledger 0042: noise readers at the own run's distances. Each reader is step 0 plus seeded
+# isotropic Gaussian noise (tools/perturb_checkpoint.py) scaled so its whole-vector relative L2 distance to step 0 equals
+# step g's (rel_delta_all of results/distance/ownrun/step_<g>.json, as the run machine measured it in 0017), made,
+# measured by tools/weight_distance.py and dumped on the run machine by tools/noise_reader.py; seed 0 at every kept lag,
+# seeds 1 and 2 at lags 1 and 32. Each is read on both pairs, as 0017's readers: the held-out corpus (texts corpus and
+# on-path, the 768-token prefix) and the rollout text (the stored completions, teacher-forced), writer step 0's dumps.
+# Per (reader, pair) controls with the far control on the rollout pair, as config/ownrun_far.toml.
+[reader]
+results_dir = "results/ownrun_noise"
+upstream_path = "../kv-transfer-replication"
+upstream_sha = "5d4aa4a98b40f5ab37dd83ebb6b2ee802203994a"
+heldout = [40, 50]
+prefix_len = 768
+dtype = "float32"
+seed = 0
+registered_by = "0042"
+seal = "ownrun-noise-cut"
+
+[reader.rule]
+statistic = "median over held-out sequences of the mean per-token KL(pi_fresh || pi_stale) over the continuation, per rung and text (design S13, ledger 0011)"
+holds_max = 1e-3
+degrades_min = 1e-1
+texts = ["corpus", "on-path"]
+generate_under = "stale"
+
+[reader.controls]
+# 0020: controls per (reader, pair) on the pair's own texts; limits as 0014, far_min as 0022.
+per_pair = true
+identity_max_logit_diff = 1e-5
+scrambled_min = 1e-1
+floor_max_median_kl = 1e-4
+far_min = 1e-1
+# 0028's rule, committed before the run: a unit whose scrambled median misses scrambled_min is evaluable when its far
+# control passes.
+evaluable_under_far = true
+
+# The held-out corpus sequences: 0008's Qwen token file (0012's pin), sequences 40..49.
+[[reader.pairs]]
+name = "qwen2.5-1.5b-to-instruct"
+tokens = "data/tokens/qwen2.5-1.5b-to-instruct_n50_len1024_seed0.npy"
+tokens_sha256 = "01bd7698f7413ab9a3b6958991487bbba626f5a8cc4f24142cd22091d96af747"
+
+# The rollout sequences (R-C6): rows 0..9, prompt = prefix, sampled completion = continuation; hashes pinned at 0017.
+# 0022: far_pair names the held-out pair; rollout sequence i's far prefix is that pair's reader dump of sequence 40 + i.
+[[reader.pairs]]
+name = "qwen2.5-1.5b-ownrun-rollout"
+tokens = "data/tokens/qwen2.5-1.5b-ownrun_rollout_n10_seed0.npy"
+tokens_sha256 = "7d6dec47ad87a6860094287f736ebbe44582864c2ba2918a927e5851025e80de"
+spans = "data/tokens/qwen2.5-1.5b-ownrun_rollout_n10_seed0.spans.json"
+spans_sha256 = "e631fd845aa7838186f5feebda66f13bb725b59d0cc7e8841e1a23639a977f15"
+heldout = [0, 10]
+far_pair = "qwen2.5-1.5b-to-instruct"
+
+# Per noise reader: the held-out rung, then the rollout rung. Labels name the lag g and the seed s.
+
+[[reader.rungs]]
+label = "ownrun-noise-lag-1-s0"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:noise-ownrun-lag1-s0"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-noise-ownrun-lag1-s0"
+
+[[reader.rungs]]
+label = "ownrun-rollout-noise-lag-1-s0"
+pair = "qwen2.5-1.5b-ownrun-rollout"
+reader = "local:noise-ownrun-lag1-s0"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-noise-ownrun-lag1-s0"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-noise-lag-2-s0"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:noise-ownrun-lag2-s0"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-noise-ownrun-lag2-s0"
+
+[[reader.rungs]]
+label = "ownrun-rollout-noise-lag-2-s0"
+pair = "qwen2.5-1.5b-ownrun-rollout"
+reader = "local:noise-ownrun-lag2-s0"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-noise-ownrun-lag2-s0"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-noise-lag-4-s0"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:noise-ownrun-lag4-s0"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-noise-ownrun-lag4-s0"
+
+[[reader.rungs]]
+label = "ownrun-rollout-noise-lag-4-s0"
+pair = "qwen2.5-1.5b-ownrun-rollout"
+reader = "local:noise-ownrun-lag4-s0"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-noise-ownrun-lag4-s0"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-noise-lag-8-s0"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:noise-ownrun-lag8-s0"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-noise-ownrun-lag8-s0"
+
+[[reader.rungs]]
+label = "ownrun-rollout-noise-lag-8-s0"
+pair = "qwen2.5-1.5b-ownrun-rollout"
+reader = "local:noise-ownrun-lag8-s0"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-noise-ownrun-lag8-s0"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-noise-lag-16-s0"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:noise-ownrun-lag16-s0"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-noise-ownrun-lag16-s0"
+
+[[reader.rungs]]
+label = "ownrun-rollout-noise-lag-16-s0"
+pair = "qwen2.5-1.5b-ownrun-rollout"
+reader = "local:noise-ownrun-lag16-s0"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-noise-ownrun-lag16-s0"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-noise-lag-32-s0"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:noise-ownrun-lag32-s0"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-noise-ownrun-lag32-s0"
+
+[[reader.rungs]]
+label = "ownrun-rollout-noise-lag-32-s0"
+pair = "qwen2.5-1.5b-ownrun-rollout"
+reader = "local:noise-ownrun-lag32-s0"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-noise-ownrun-lag32-s0"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-noise-lag-1-s1"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:noise-ownrun-lag1-s1"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-noise-ownrun-lag1-s1"
+
+[[reader.rungs]]
+label = "ownrun-rollout-noise-lag-1-s1"
+pair = "qwen2.5-1.5b-ownrun-rollout"
+reader = "local:noise-ownrun-lag1-s1"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-noise-ownrun-lag1-s1"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-noise-lag-32-s1"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:noise-ownrun-lag32-s1"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-noise-ownrun-lag32-s1"
+
+[[reader.rungs]]
+label = "ownrun-rollout-noise-lag-32-s1"
+pair = "qwen2.5-1.5b-ownrun-rollout"
+reader = "local:noise-ownrun-lag32-s1"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-noise-ownrun-lag32-s1"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-noise-lag-1-s2"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:noise-ownrun-lag1-s2"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-noise-ownrun-lag1-s2"
+
+[[reader.rungs]]
+label = "ownrun-rollout-noise-lag-1-s2"
+pair = "qwen2.5-1.5b-ownrun-rollout"
+reader = "local:noise-ownrun-lag1-s2"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-noise-ownrun-lag1-s2"
+texts = ["rollout"]
+
+[[reader.rungs]]
+label = "ownrun-noise-lag-32-s2"
+pair = "qwen2.5-1.5b-to-instruct"
+reader = "local:noise-ownrun-lag32-s2"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-noise-ownrun-lag32-s2"
+
+[[reader.rungs]]
+label = "ownrun-rollout-noise-lag-32-s2"
+pair = "qwen2.5-1.5b-ownrun-rollout"
+reader = "local:noise-ownrun-lag32-s2"
+writer_dump = "source@local-step_0"
+reader_dump = "source@local-noise-ownrun-lag32-s2"
+texts = ["rollout"]
