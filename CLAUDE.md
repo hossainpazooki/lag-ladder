@@ -33,7 +33,9 @@ entry 0041 the read-out, on the record 0027 read, of two of the descriptives 002
 prompts whose STALE and FRESH completions differ; the rank correlation of flips with (B1) on the fresh path) and of the
 median of that (B1), for which `summarize_task` gains a key, and entry 0042 the registration, descriptive and with
 nothing sealed, of two runs on the own run: noise readers at the kept steps' distances on the trainer's text and on
-held-out text, and held-out text with its prefix cut toward the prompts' length.
+held-out text, and held-out text with its prefix cut toward the prompts' length, and entry 0043 the listing of
+the 28 entries the arXiv version of the paper cites (the 26 of 0040, and 0041 and 0042, appended after it; 0042
+is cited as a registration whose runs have not run).
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never

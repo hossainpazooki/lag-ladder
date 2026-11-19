@@ -2238,3 +2238,31 @@ product, floor bounds and withheld rungs, the seed spread, each cut over 768 and
 replicate beside 0018) with its tests; the five configurations; `ledger/predictions/ownrun-noise-cut.json` and
 `.sha256`; a clause in `README.md`; in `CLAUDE.md`, a clause naming this entry and the new read-out, tools and
 configurations in its command list and file map.
+
+### 0043 — 2026-11-19 — Listing: the 28 entries of this ledger that the arXiv version of the paper cites; 26 are the entries 0040 lists, and 0041 and 0042 were appended after it
+
+prior-entries-sha256: 5b1320e2d1c0b6235a7266954fd1f7510a45348868c4154f6bae4ec0eec1a4db
+
+**What this entry is.** A listing. Nothing is measured here and no figure is restated. Entry 0040 lists the 26 entries of this
+ledger that the paper's first public form cites. The arXiv version of the paper is the full paper in preprint form. Its table of
+ledger entries cites those 26 and two more, and this entry lists them.
+
+**The entries cited.** The 26 that 0040 lists: 0005, 0006, 0008, 0009, 0011, 0012, 0013, 0014, 0015, 0017, 0018, 0020, 0021,
+0025, 0027, 0028, 0029, 0030, 0031, 0032, 0034, 0035, 0036, 0037, 0038 and 0039. And two appended after 0040: 0041, the read-out
+on the record 0027 read, and 0042, the registration of two descriptive runs on the own run. Each figure is read as the entry
+states it and as the summary file the entry names states it, where it names one. 0042 reports no result: its two runs have not
+run. The arXiv version describes them as registered designs and reports no figure from them.
+
+**At the date.** Entry 0066 of the handoff record's ledger (`ledger/ledger.md` in linear-ceiling) sets 2026-11-10 16:00 UTC for
+the paper's first public form, on both ledgers, and says that the figures of an entry appended after that date are material for
+the full paper. The arXiv version is the full paper in preprint form, so it cites 0039 and 0041 under that sentence. 0041 was
+committed at `fadc29f` on 2026-11-15 at 19:16 UTC; nothing ran under it. 0042 was committed at `430523a` on 2026-11-18 at 22:19
+UTC: its two runs were registered after the date, as descriptions with no sealed clause. This entry does not move the date.
+
+**Not cited by number.** The other fourteen entries (0001, 0002, 0003, 0004, 0007, 0010, 0016, 0019, 0022, 0023, 0024, 0026,
+0033 and 0040) are not in that table.
+
+**What this does NOT touch.** No `verdict:` line; every cell as decided; every sealed prediction and every registered limit.
+No entry is amended. Nothing runs under this entry.
+
+**Consequences in this commit set.** `README.md` and `CLAUDE.md`, one clause each naming this listing.
