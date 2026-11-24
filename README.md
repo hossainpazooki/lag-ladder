@@ -153,8 +153,8 @@ The ledger holds the founding record (chassis provenance, inherited definitions,
 ruling that the instrument serves statistic (A) only, two re-pins of the instrument, the registrations with
 their sealed predictions, the outcomes, the two closures, a listing of the entries the paper cites (0040), a
 read-out of two descriptives the (C) registration names and of one median (0041), the registration of two
-descriptive runs on the own run, nothing sealed (0042), and a listing of the entries the arXiv version of the
-paper cites (0043).
+descriptive runs on the own run, nothing sealed (0042), a listing of the entries the arXiv version of the paper
+cites (0043), and the outcome of those two runs (0044).
 Every number in it was recomputed from
 `results/` by a summarizer that refuses on any mismatch, and the score records behind the outcomes are
 retained off-repository with the hashes the entries state.
@@ -164,7 +164,8 @@ retained off-repository with the hashes the entries state.
 For statistic (B), cite the commit that carries entry 0016 (tag `statistic-b-closed`), read with 0019, 0024 and 0038;
 name 0015 for the ladder's numbers and 0011 for the statistic. For the own run, name 0018 for the numbers, 0017 for the
 registration and 0021 and 0023 for the controls on rollout text; for the second seed and the two other families, 0029,
-0032 and 0037; for the Instruct initialisation, 0039 (registered by 0035).
+0032 and 0037; for the Instruct initialisation, 0039 (registered by 0035); for the noise readers and the prefix cut,
+0044 (registered by 0042; descriptive, nothing sealed).
 
 ## How the record stays auditable
 

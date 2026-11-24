@@ -35,7 +35,10 @@ median of that (B1), for which `summarize_task` gains a key, and entry 0042 the 
 nothing sealed, of two runs on the own run: noise readers at the kept steps' distances on the trainer's text and on
 held-out text, and held-out text with its prefix cut toward the prompts' length, and entry 0043 the listing of
 the 28 entries the arXiv version of the paper cites (the 26 of 0040, and 0041 and 0042, appended after it; 0042
-is cited as a registration whose runs have not run).
+is cited as a registration whose runs had not run at that listing), and entry 0044 the outcome of 0042's two runs,
+nothing sealed (every noise reader at the float16 floor on every text, so T_rollout / N_rollout is a lower bound of
+1.16e5 to 6.14e5 and N_rollout / N_heldout is unread; every prefix-cut reading within a factor of 2.3 of its
+768-token reading).
 
 ## Rules
 - `../kv-transfer-replication` is **read-only** and pinned (`UPSTREAM.md`). Never write there, never

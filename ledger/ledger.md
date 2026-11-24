@@ -2266,3 +2266,94 @@ UTC: its two runs were registered after the date, as descriptions with no sealed
 No entry is amended. Nothing runs under this entry.
 
 **Consequences in this commit set.** `README.md` and `CLAUDE.md`, one clause each naming this listing.
+
+### 0044 — 2026-11-24 — Outcome: the noise readers and the prefix cut (0042), nothing sealed; every noise reader reads at the float16 floor on every text, and every cut reading stays within a factor of 2.3 of its 768-token reading
+
+prior-entries-sha256: b52825a81202816251df6129ce180e3416b0a0c2b78a695246b307791edfb4a3
+
+**Run.** One sitting on 2026-11-21 and 22, on one NVIDIA A40, at this repository's `430523a`, the registering commit;
+instrument `5d4aa4a`, its venv at torch 2.15.0+cu132 and transformers 5.24.0 (0018 ran on an A100 under torch
+2.14.1+cu130). Suite 328 passed, 8 skipped; fourteen `OK` lines from `seal verify`; the five gates planned 2,840 jobs, the
+seal's count. Before any score: the 4,405 files fetched from the private backup matched its manifest with 0 mismatches;
+each step's weights hashed to the digest the seal carries, and 0018's distance records equalled the seal's; the step 0 to
+step 1 distance, re-measured on the run machine, read 2.2895683763734974e-05, 0018's to the digit; the three cut spans
+files equalled their pins. A smoke before the run made the lag-1 seed-0 reader (weights digest equal to the run's,
+`068123b1`) and a 20-job float16 probe on step 32; its outputs enter no figure. The ten noise readers passed both norm
+checks: measured distance equal to the realized norm (relative gap 0 for all ten), realized norm within 3.71e-7 relative
+of the target (limits 1e-9 and 1e-4). The jobs ran from 2026-11-21 21:29:39Z to 2026-11-22 04:50:40Z without a halt
+(replicate 660, noise 1,100, each cut 360), and `summarize_noise_cut` read the five summaries.
+
+**Controls.** All fifty (reader, pair) units passed under their registered limits (12 replicate, 20 noise, 18 cut), none
+carried by far, no rung withheld. Float16 floors (nats/token, limit 1e-4): corpus 3.70e-8 to 6.30e-8, on-path 1.83e-8 to
+4.25e-8, rollout 1.53e-7 to 2.30e-7. Identity: max |logit| 0 throughout. Scrambled (limit 0.1): rollout pair 0.115 to
+0.128, with far 0.432 to 0.669 (`far_min` 0.1); held-out pair 0.552 at 768 and, on the cut cells, 0.426 at the prompts'
+length, 0.563 at 192 and 0.605 at 384. No cut unit is UNEVALUABLE.
+
+**Records.** `0042-results-final.tgz` `242fdb423083` (2,840 reports, the five summaries, the read-out `6136b189`) and
+`0042-aux-final.tgz` `f098cd049d70` (each noise reader's provenance, distance and noise records, the spans files,
+`dist-check.json`, the logs); digests equal both ends. At home the summarizers recomputed the five summaries and the
+read-out from the pulled reports: within 6.6e-16 relative in every numeric value of the five summaries, and the read-out
+exactly. Both tars and the loose records are backed up with a `SHA256SUMS` to the private dataset under
+`ownrun-noise-cut/final/` (38 files, 0 missing, 0 mismatches). The noise readers' weights and dumps were not kept: noise
+bytes are made where they are read (0012). All off-repository.
+
+**Reading: the noise readers.** Median (B1), nats/token. T is the trained reader at step g; N is the seed-0 noise reader
+at step g's distance (noise over trained distance 1.0000000 to 1.0000003). Every noise reading, at every g, seed and text,
+is 0.08 to 1.92 times its unit's floor, so all of them are at the floor (0012). At g = 1, 2, 4, 8, 16, 32:
+
+- T_rollout 4.679e-3, 1.303e-2, 2.937e-2, 6.379e-2, 8.881e-2, 8.914e-2. T_rollout / N_rollout ≥ 1.16e5, 2.47e5, 3.85e5,
+  6.14e5, 5.03e5, 4.58e5 (lower bounds).
+- T_heldout on corpus 2.20e-7 to 6.69e-6. T_heldout / N_heldout ≥ 21, 31, 56, 86, 99, 128 on corpus, and ≥ 15, 46, 69,
+  66, 70, 103 on on-path, read on continuations that may differ (lower bounds).
+- N_rollout / N_heldout is a ratio of two floor readings: unread on both texts.
+
+The identity's left side, T_rollout / T_heldout, is 2.12e4, 2.46e4, 2.04e4, 2.25e4, 1.81e4, 1.33e4 on corpus (on-path
+2.50e4 to 4.53e4). Of its three factors the first is bounded below and the third above; the second is unread. The split
+is therefore bounded on one side, not read. The spread over seeds 0, 1 and 2 (max over min) is 2.37 / 1.12 on rollout,
+1.66 / 1.22 on corpus and 2.33 / 1.04 on on-path (continuations that may differ), at g = 1 / 32. Every seed's reading is
+at its floor, so the spread, which 0042 makes the scale, is the floor's scatter; N_rollout / N_heldout exceeds the
+larger of the two texts' spreads at every g but is unread under the floor rule, which governs. Of the readings 0042
+stated: T_rollout / N_rollout is large at every g, above the 3.5 to 19 of 0038, as a lower bound. 0038's figures were
+read against 0015's isotropic backbone, not against noise readers on this model. The reading against it, T_rollout /
+N_rollout of order one, did not occur: its lower bound is five orders above one at every g.
+
+**Reading: the prefix cut.** Each cut reading over the same rung at 768 in the replicate. On corpus: 0.44 to 0.49 at the
+prompts' length, 0.61 to 0.68 at 192 and 0.89 to 1.00 at 384 (1.004 at g = 2), falling from 384 to 192 to the prompts'
+length at every g. On on-path: 0.70 to 0.92, 0.83 to 1.07 and 0.84 to 1.04. The rollout reading over each cut reading is
+1.50e4 to 5.54e4 on both texts. Of the readings 0042 stated, the one for the cached length did not occur: the cut
+readings do not rise toward the rollout reading (none is above 1.07 times its 768-token reading). On corpus they fall
+steadily, by at most 2.28 times, a pattern neither stated reading names; whether the shorter cache or the other tokens
+the cut cells read (0042) produce it is not separated. Either way, at the prompts' length the cut moves held-out text
+away from the trainer's text on both texts: there the rollout reading is 2.90e4 to 5.13e4 times the corpus cut reading,
+against 1.33e4 to 2.46e4 at 768. 0042 stated the reading against the cached length as the cut readings staying "near the
+768-token readings at every g" and gave "near" no size. This entry reads a change of at most 2.28 times as near, against
+the four orders between the two texts; that is this entry's judgment, not a registered threshold.
+
+**Replicate beside 0018** (0018's summary `f3b8f00f`). The six rollout rungs are within 4.8e-5 relative of 0018's
+medians. The twelve held-out rungs are 0.947 to 1.079 times 0018's, farthest at lag 1, where the rungs sit nearest their
+floor (5.15 times it on corpus and 3.62 on on-path, the lowest of the twelve). The cause is not separated: the card and
+the torch version differ from 0018's, and 0021 and 0023 replicated rollout rungs only. The ratios above use the
+replicate's values, as registered. With 0018's in their place, T_heldout / N_heldout at g = 1 is 19.5 on corpus and 15.9
+on on-path, the g = 1 corpus cut at the prompts' length is 0.52 of the 768-token reading, and the largest fall stays 2.28
+times; no reading here changes.
+
+**What the reading says.** An undirected change of each kept step's size leaves all three texts at their float16 floor.
+The trained change of the same size lifts held-out text at least 21 to 128 times above its noise reading on corpus, and
+the trainer's text at least 1.16e5 times. So the size of the change alone does not produce the trainer's text's reading.
+The noise readers do not match the trained change's per-tensor profile (0042), so what they separate from size includes
+how the change is spread over tensors. They bound the split of the gap between the texts; they do not measure it.
+Cutting the prefix leaves held-out text within a factor of 2.3 of its 768-token reading and four orders below the
+trainer's text at every g, so on that scale length does not separate the two texts at these lengths. What is left
+between them is the text itself, read under the trained change: its task, its format and how it was produced, which
+neither run varies (0042). One run, one model, one trainer seed.
+
+**Not ruled here.** What 0042 names as not separated: prompt format, task content, and how the text was produced. A noise
+reader far enough from step 0 to read off the floor, which the second factor would need, is not registered. Nothing here
+enters (B)'s statement of record.
+
+**What this does NOT touch.** No `verdict:` line, no sealed clause, no registered limit. No entry is amended.
+
+**Consequences in this commit set.** `README.md`, two clauses (the ledger paragraph, and the citing paragraph, where this
+entry is marked descriptive, nothing sealed), and `CLAUDE.md`, one clause naming this outcome, with 0043's clause made to
+say that 0042's runs had not run at that listing. The records and the backup are under the hashes above; nothing in
+`results/` is committed.
