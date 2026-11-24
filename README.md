@@ -90,7 +90,10 @@ Statistic (A) needs no generation. It is read from cache dumps alone by the pinn
   on a published run puts almost no weight distance on the axis: an isotropic-noise backbone on the same
   model at seven relative norms from 1e-4 to 1e-1, and six real training directions as labelled points
   (OLMo-2 1B SFT → DPO → RLVR; Qwen2.5-1.5B base → Instruct, base → Math, Math → R1-Distill).
-- **An own RL run** for the short end: not run.
+- **An own RL run** for the short end (ledger 0017, 0018): Qwen2.5-1.5B trained by GRPO for 32 steps, the
+  readers at steps 1, 2, 4, 8, 16 and 32 reading the step-0 cache. It ran again on a second trainer seed (0028,
+  0029), on Llama-3.2-3B (0031, 0032) and SmolLM3-3B-Base (0034, 0037), and from an Instruct initialisation
+  (0035, 0039); two descriptive runs on it, noise readers and a prefix cut, were registered by 0042 and read by 0044.
 
 ## Result and status
 
@@ -141,17 +144,18 @@ texts and makes rollout-text controls the prerequisite for any rollout number to
 0020 registers those controls and the sliding writer on held-out text; entry 0021 reads them from the run's dumps: the
 controls pass per reader on rollout text (floor 1.5e-7 to 1.9e-7, scrambled 0.12), the rollout numbers stand 2.5e4× to
 5.8e5× their floors and replicate across GPUs to 5e-5, and with the writer moved off step 0 the held-out law keeps its
-slope (1.96 / 1.97) within a factor of two of the step-0 fit. 0019's prerequisite is met; whether the rollout reading
-enters the statement of record is a ruling not yet taken: the scrambled control on rollout text is a near neighbour
+slope (1.96 / 1.97) within a factor of two of the step-0 fit. 0019's prerequisite is met. The scrambled control on
+rollout text is a near neighbour
 (another GSM8K prompt, 0.12 against held-out text's 0.55), so entry 0022 registers a far control — a web prefix of the
 prompt's length, carrying no information about it — and entry 0023 reads it: 0.45 to 0.67, 3.6 to 5.8 times the near
 control; the step-0 cache at lag 16 to 32 moves the reader one seventh as far as an information-free cache and three
-quarters as far as a different GSM8K prompt's. Both sealed clauses held; 0029's second seed and 0038's families answer
-the one-seed caveat for base initialisations.
+quarters as far as a different GSM8K prompt's. Both sealed clauses held, and entry 0024 adds the trainer's own text to
+(B)'s statement of record, on one seed; 0029's second seed and 0038's families answer the one-seed caveat for base
+initialisations.
 
 The ledger holds the founding record (chassis provenance, inherited definitions, the first rulings), the
-ruling that the instrument serves statistic (A) only, two re-pins of the instrument, the registrations with
-their sealed predictions, the outcomes, the two closures, a listing of the entries the paper cites (0040), a
+ruling that the instrument serves statistic (A) only, three re-pins of the instrument (the third for one family), the
+registrations with their sealed predictions, the outcomes, the two closures, a listing of the entries the paper cites (0040), a
 read-out of two descriptives the (C) registration names and of one median (0041), the registration of two
 descriptive runs on the own run, nothing sealed (0042), a listing of the entries the arXiv version of the paper
 cites (0043), and the outcome of those two runs (0044).
