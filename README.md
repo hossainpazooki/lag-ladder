@@ -154,7 +154,8 @@ quarters as far as a different GSM8K prompt's. Both sealed clauses held, and ent
 initialisations.
 
 The ledger holds the founding record (chassis provenance, inherited definitions, the first rulings), the
-ruling that the instrument serves statistic (A) only, three re-pins of the instrument (the third for one family), the
+ruling that the instrument serves statistic (A) only, three re-pin entries of the instrument (0003, 0004, and 0033,
+pair-only for one family; 0005 and 0008 re-pin within their registrations), the
 registrations with their sealed predictions, the outcomes, the two closures, a listing of the entries the paper cites (0040), a
 read-out of two descriptives the (C) registration names and of one median (0041), the registration of two
 descriptive runs on the own run, nothing sealed (0042), a listing of the entries the arXiv version of the paper
